@@ -66,9 +66,17 @@ def t_internet():
 
 
 def t_cvm_rede():
-    """Testa IPv4 e IPv6 separadamente — distingue rota quebrada de bloqueio."""
+    """Testa IPv4 e IPv6 separadamente — distingue rota quebrada de bloqueio.
+
+    Falha rápido: se nenhuma família de endereço conecta, não adianta gastar
+    minutos repetindo as outras verificações da CVM.
+    """
     from magicb3 import rede
-    return rede.relatorio("dados.cvm.gov.br")
+    d = rede.diagnosticar("dados.cvm.gov.br", timeout=10.0)
+    texto = rede.relatorio_de(d)
+    if not (d["ipv4"] or d["ipv6"]):
+        raise RuntimeError("sem rota até o servidor da CVM\n" + texto)
+    return texto
 
 
 def t_cvm_portal():
@@ -259,13 +267,17 @@ def main() -> int:
         return 1
 
     _titulo("2. CVM — demonstrações financeiras")
-    _checar("Rota de rede até a CVM (IPv4 vs IPv6)", t_cvm_rede)
-    _checar("Portal de dados abertos acessível", t_cvm_portal)
-    _checar("Download e estrutura do zip DFP", t_cvm_zip)
-    _checar("Leitura e códigos de conta (EBIT, balanço)", t_cvm_parse)
-    _checar("ITR trimestral (para os 12 meses móveis)", t_cvm_itr)
-    _checar("Data de entrega (DT_RECEB)", t_cvm_dt_receb)
-    _checar("Cadastro de companhias e setor", t_cadastro)
+    if _checar("Rota de rede até a CVM (IPv4 vs IPv6)", t_cvm_rede):
+        _checar("Portal de dados abertos acessível", t_cvm_portal)
+        _checar("Download e estrutura do zip DFP", t_cvm_zip)
+        _checar("Leitura e códigos de conta (EBIT, balanço)", t_cvm_parse)
+        _checar("ITR trimestral (para os 12 meses móveis)", t_cvm_itr)
+        _checar("Data de entrega (DT_RECEB)", t_cvm_dt_receb)
+        _checar("Cadastro de companhias e setor", t_cadastro)
+    else:
+        print(f"{AVISO} Demais verificações da CVM: PULADAS")
+        print("         Sem rota até o servidor, repetir os downloads só gastaria")
+        print("         minutos para falhar igual. O diagnóstico acima já diz o motivo.")
 
     _titulo("3. B3 — mapeamento de tickers")
     _checar("API de companhias listadas", t_b3)
