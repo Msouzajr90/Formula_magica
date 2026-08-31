@@ -59,7 +59,15 @@ echo.
 echo  Abrindo no navegador. Para encerrar, feche esta janela
 echo  ou pressione Ctrl+C.
 echo.
-call .venv\Scripts\python.exe -m streamlit run app.py
+REM As opcoes de tema vao aqui na linha de comando, e nao num arquivo
+REM .streamlit\config.toml. Pastas que comecam com ponto dao trabalho para
+REM subir ao GitHub, entao o projeto nao depende de nenhuma.
+call .venv\Scripts\python.exe -m streamlit run app.py ^
+  --theme.primaryColor "#2a78d6" ^
+  --theme.backgroundColor "#ffffff" ^
+  --theme.secondaryBackgroundColor "#f5f5f4" ^
+  --theme.textColor "#0b0b0b" ^
+  --browser.gatherUsageStats false
 goto fim
 
 :erro
