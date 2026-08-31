@@ -20,8 +20,8 @@ import logging
 from pathlib import Path
 
 import pandas as pd
-import requests
 
+from . import rede
 from .config import CACHE_DIR
 
 log = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ def _pagina_b3(pagina: int, tamanho: int = 120) -> dict:
     payload = base64.b64encode(json.dumps(
         {"language": "pt-br", "pageNumber": pagina, "pageSize": tamanho}
     ).encode()).decode()
-    r = requests.get(B3_URL.format(payload=payload), headers=HEADERS, timeout=60)
+    r = rede.sessao().get(B3_URL.format(payload=payload), headers=HEADERS, timeout=90)
     r.raise_for_status()
     return r.json()
 
@@ -65,6 +65,7 @@ def baixar_empresas_b3(usar_cache: bool = True) -> pd.DataFrame:
     df = pd.DataFrame(linhas)
     if df.empty:
         return df
+    bruto = len(df)
     df = df.rename(columns={
         "codeCVM": "CD_CVM", "issuingCompany": "PREFIXO",
         "companyName": "DENOM_CIA", "tradingName": "NOME_PREGAO",
@@ -73,6 +74,17 @@ def baixar_empresas_b3(usar_cache: bool = True) -> pd.DataFrame:
     df["CD_CVM"] = pd.to_numeric(df["CD_CVM"], errors="coerce")
     df = df.dropna(subset=["CD_CVM", "PREFIXO"])
     df["CD_CVM"] = df["CD_CVM"].astype(int)
+
+    # A API devolve todos os emissores registrados (~3.300), não apenas as
+    # companhias com ações negociadas (~400). Sem esta limpeza, o passo
+    # seguinte tentaria baixar milhares de tickers inexistentes do Yahoo.
+    if "typeBDR" in df.columns:                    # BDRs: lastro estrangeiro
+        vazio = df["typeBDR"].isna() | (df["typeBDR"].astype(str).str.strip() == "")
+        df = df[vazio]
+    df["PREFIXO"] = df["PREFIXO"].astype(str).str.strip().str.upper()
+    df = df[df["PREFIXO"].str.fullmatch(r"[A-Z]{4}")]          # prefixo é sempre 4 letras
+    df = df.sort_values("CD_CVM").drop_duplicates(subset=["PREFIXO"], keep="first")
+    log.info("B3: %d emissores registrados -> %d companhias com ações", bruto, len(df))
     cols = [c for c in ["CD_CVM", "PREFIXO", "DENOM_CIA", "NOME_PREGAO", "CNPJ", "SEGMENTO"]
             if c in df.columns]
     df = df[cols].drop_duplicates()

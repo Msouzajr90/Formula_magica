@@ -13,8 +13,8 @@ import zipfile
 from pathlib import Path
 
 import pandas as pd
-import requests
 
+from . import rede
 from .config import CACHE_DIR
 
 log = logging.getLogger(__name__)
@@ -37,10 +37,30 @@ def _cache_path(name: str) -> Path:
     return CACHE_DIR / name
 
 
-def _baixar_zip(url: str, *, timeout: int = 180) -> zipfile.ZipFile:
+def _erro_de_rede(url: str, exc: Exception) -> RuntimeError:
+    """Erro de rede com o diagnóstico já embutido, em vez de um traceback cru."""
+    try:
+        diag = rede.relatorio("dados.cvm.gov.br")
+    except Exception:                                          # noqa: BLE001
+        diag = "(diagnóstico indisponível)"
+    return RuntimeError(
+        f"Não consegui acessar {url}\n"
+        f"{type(exc).__name__}: {exc}\n\n"
+        f"Diagnóstico da conexão:\n{diag}\n\n"
+        "Se IPv4 e IPv6 falharem os dois, o servidor da CVM não aceita conexões "
+        "desta máquina. Isso acontece em servidores fora do Brasil (incluindo os "
+        "do GitHub Actions). Nesse caso, gere o arquivo de dados a partir de um "
+        "computador no Brasil."
+    )
+
+
+def _baixar_zip(url: str, *, timeout: int = 300) -> zipfile.ZipFile:
     log.info("Baixando %s", url)
-    r = requests.get(url, timeout=timeout)
-    r.raise_for_status()
+    try:
+        r = rede.sessao().get(url, timeout=timeout)
+        r.raise_for_status()
+    except Exception as exc:                                   # noqa: BLE001
+        raise _erro_de_rede(url, exc) from exc
     return zipfile.ZipFile(io.BytesIO(r.content))
 
 
@@ -199,8 +219,11 @@ def carregar_cadastro(usar_cache: bool = True) -> pd.DataFrame:
     cache = _cache_path("cad_cia_aberta.parquet")
     if usar_cache and cache.exists():
         return pd.read_parquet(cache)
-    r = requests.get(CAD_URL, timeout=120)
-    r.raise_for_status()
+    try:
+        r = rede.sessao().get(CAD_URL, timeout=180)
+        r.raise_for_status()
+    except Exception as exc:                                   # noqa: BLE001
+        raise _erro_de_rede(CAD_URL, exc) from exc
     df = pd.read_csv(io.BytesIO(r.content), sep=";", encoding="ISO-8859-1", low_memory=False)
     df["CNPJ_CIA"] = df["CNPJ_CIA"].astype("string")
     if usar_cache:
