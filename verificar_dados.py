@@ -65,6 +65,25 @@ def t_internet():
     return "conexão de saída funcionando"
 
 
+def t_fundamentos_arquivo():
+    """O arquivo gerado no Brasil, que substitui o acesso direto à CVM."""
+    from pathlib import Path
+    from magicb3 import arquivo_fundamentos as arqf
+    caminho = Path("web/public/fundamentos.json")
+    if not caminho.exists():
+        raise RuntimeError(
+            "web/public/fundamentos.json não existe.\n"
+            "Rode `python baixar_fundamentos.py` num computador no Brasil e "
+            "suba o arquivo para o repositório. Sem ele, fora do Brasil não há "
+            "como obter as demonstrações financeiras.")
+    ebit, bp, setores = arqf.importar(caminho)
+    idade = arqf.idade_em_dias(caminho)
+    aviso = "  <-- ATENÇÃO: passou de um trimestre, convém regerar" if (idade or 0) > 120 else ""
+    return (f"{len(ebit):,} empresas com EBIT | {len(setores):,} com setor\n"
+            f"gerado há {idade} dias{aviso}\n"
+            f"tamanho: {caminho.stat().st_size/1024:,.0f} KB")
+
+
 def t_cvm_rede():
     """Testa IPv4 e IPv6 separadamente — distingue rota quebrada de bloqueio.
 
@@ -89,15 +108,16 @@ def t_cvm_portal():
 
 def t_cvm_zip():
     """Baixa o DFP do último ano fechado e confere o conteúdo do zip."""
-    import requests
+    from magicb3 import rede
     from magicb3.cvm import BASE_DFP
+    s = rede.sessao()                     # força IPv4 e repete em erro de rede
     ano = date.today().year - 1
     url = f"{BASE_DFP}/dfp_cia_aberta_{ano}.zip"
-    r = requests.get(url, timeout=300)
+    r = s.get(url, timeout=300)
     if r.status_code == 404:
         ano -= 1
         url = f"{BASE_DFP}/dfp_cia_aberta_{ano}.zip"
-        r = requests.get(url, timeout=300)
+        r = s.get(url, timeout=300)
     r.raise_for_status()
     zf = zipfile.ZipFile(io.BytesIO(r.content))
     nomes = zf.namelist()
@@ -266,7 +286,11 @@ def main() -> int:
     if not _checar("Acesso à internet", t_internet):
         return 1
 
-    _titulo("2. CVM — demonstrações financeiras")
+    _titulo("2. Demonstrações financeiras")
+    tem_arquivo = _checar("Arquivo fundamentos.json (gerado no Brasil)",
+                          t_fundamentos_arquivo)
+    if tem_arquivo:
+        print("         Com este arquivo, o acesso direto à CVM é dispensável.")
     if _checar("Rota de rede até a CVM (IPv4 vs IPv6)", t_cvm_rede):
         _checar("Portal de dados abertos acessível", t_cvm_portal)
         _checar("Download e estrutura do zip DFP", t_cvm_zip)
@@ -278,6 +302,9 @@ def main() -> int:
         print(f"{AVISO} Demais verificações da CVM: PULADAS")
         print("         Sem rota até o servidor, repetir os downloads só gastaria")
         print("         minutos para falhar igual. O diagnóstico acima já diz o motivo.")
+        if tem_arquivo:
+            print("         Isso NÃO é um problema aqui: o fundamentos.json acima")
+            print("         já traz as demonstrações. Esta máquina não precisa da CVM.")
 
     _titulo("3. B3 — mapeamento de tickers")
     _checar("API de companhias listadas", t_b3)

@@ -107,7 +107,10 @@ def _normalizar(df: pd.DataFrame, dt_receb: pd.DataFrame | None = None) -> pd.Da
         df[c] = pd.to_datetime(df[c], errors="coerce")
 
     # 1) escala monetária -> reais
-    fator = df["ESCALA_MOEDA"].map(_ESCALA).fillna(1.0)
+    # ESCALA_MOEDA vem como dtype 'category' na leitura em blocos; sem o
+    # astype("string") o .map devolve outra categoria e a multiplicação falha.
+    fator = (df["ESCALA_MOEDA"].astype("string").str.strip().str.upper()
+             .map(_ESCALA).astype("float64").fillna(1.0))
     df["VL_CONTA"] = pd.to_numeric(df["VL_CONTA"], errors="coerce") * fator
 
     # 2) apenas o exercício corrente do arquivo
@@ -163,6 +166,17 @@ def _achar_membro(zf: zipfile.ZipFile, tipo: str, grupo: str, suf: str,
     return None
 
 
+def _zip_local(pasta: Path, tipo: str, ano: int) -> Path | None:
+    """Procura o zip já baixado na pasta, tolerando maiúsculas e sufixos."""
+    alvo = f"{tipo}_cia_aberta_{ano}.zip".lower()
+    for arq in pasta.glob("*.zip"):
+        nome = arq.name.lower()
+        if nome == alvo or (nome.startswith(f"{tipo}_cia_aberta_{ano}") and
+                            nome.endswith(".zip")):
+            return arq
+    return None
+
+
 def carregar_demonstracoes(
     anos: list[int],
     *,
@@ -170,11 +184,14 @@ def carregar_demonstracoes(
     consolidado: bool = True,
     usar_cache: bool = True,
     contas: set[str] | None = None,
+    pasta_zips: str | Path | None = None,
 ) -> dict[str, pd.DataFrame]:
     """Retorna {'DRE': df, 'BPA': df, 'BPP': df} já normalizados.
 
     `tipo` = 'dfp' (anual) ou 'itr' (trimestral).
     `contas` restringe a leitura aos códigos de conta usados (economia de RAM).
+    `pasta_zips` lê arquivos já baixados em vez de acessar a rede — necessário
+    quando a máquina não alcança a CVM (ver `rede.py`).
     """
     tipo = tipo.lower()
     base = BASE_DFP if tipo == "dfp" else BASE_ITR
@@ -189,11 +206,19 @@ def carregar_demonstracoes(
                 saida[grp].append(df[df["_GRUPO"] == grp])
             continue
 
-        try:
-            zf = _baixar_zip(f"{base}/{tipo}_cia_aberta_{ano}.zip")
-        except Exception as exc:                      # noqa: BLE001
-            log.warning("Falha ao baixar %s %s: %s", tipo, ano, exc)
-            continue
+        if pasta_zips:
+            local = _zip_local(Path(pasta_zips), tipo, ano)
+            if local is None:
+                log.warning("Zip de %s %s não encontrado em %s", tipo, ano, pasta_zips)
+                continue
+            log.info("Lendo %s (%.1f MB)", local.name, local.stat().st_size / 1e6)
+            zf = zipfile.ZipFile(local)
+        else:
+            try:
+                zf = _baixar_zip(f"{base}/{tipo}_cia_aberta_{ano}.zip")
+            except Exception as exc:                  # noqa: BLE001
+                log.warning("Falha ao baixar %s %s: %s", tipo, ano, exc)
+                continue
 
         dt_receb = _ler_datas_recebimento(zf, tipo, ano)
         pedacos = []
@@ -214,8 +239,13 @@ def carregar_demonstracoes(
             for k, v in saida.items()}
 
 
-def carregar_cadastro(usar_cache: bool = True) -> pd.DataFrame:
+def carregar_cadastro(usar_cache: bool = True,
+                      arquivo_local: str | Path | None = None) -> pd.DataFrame:
     """Cadastro de companhias abertas: CNPJ, CD_CVM, razão social, setor, situação."""
+    if arquivo_local:
+        df = pd.read_csv(arquivo_local, sep=";", encoding="ISO-8859-1", low_memory=False)
+        df["CNPJ_CIA"] = df["CNPJ_CIA"].astype("string")
+        return df
     cache = _cache_path("cad_cia_aberta.parquet")
     if usar_cache and cache.exists():
         return pd.read_parquet(cache)

@@ -119,6 +119,9 @@ def main() -> int:
                     help="quantas empresas do ranking exportar")
     ap.add_argument("--liquidez", type=float, default=1_000_000)
     ap.add_argument("--saida", default=str(SAIDA))
+    ap.add_argument("--fundamentos", default=None,
+                    help="caminho do fundamentos.json; com ele a CVM nao e acessada "
+                         "(obrigatorio fora do Brasil, ver baixar_fundamentos.py)")
     args = ap.parse_args()
 
     params = C.Params(n_acoes_ranking=args.pool,
@@ -132,7 +135,8 @@ def main() -> int:
     else:
         from magicb3 import pipeline
         res = pipeline.montar_carteira(
-            params, progresso=lambda m, v=None: print(f"  {m}", flush=True))
+            params, progresso=lambda m, v=None: print(f"  {m}", flush=True),
+            arquivo_fundamentos=args.fundamentos)
 
     dados = montar_json(res, params, args.pool)
 

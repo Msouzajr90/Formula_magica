@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from . import config as C
+from . import arquivo_fundamentos as arqf
 from . import cvm, fundamentals, optimizer, prices, ranking, tickers
 
 log = logging.getLogger(__name__)
@@ -42,35 +43,56 @@ def _nada(msg: str, pct: float | None = None) -> None:  # callback padrão
 
 
 def montar_universo(params: C.Params, *, anos: list[int] | None = None,
-                    progresso=_nada, usar_cache: bool = True) -> pd.DataFrame:
-    """Universo investível com ROIC e EY calculados."""
+                    progresso=_nada, usar_cache: bool = True,
+                    arquivo_fundamentos: str | None = None) -> pd.DataFrame:
+    """Universo investível com ROIC e EY calculados.
+
+    `arquivo_fundamentos` aponta para um fundamentos.json já baixado. Com ele,
+    a CVM não é acessada — o que é obrigatório em servidores fora do Brasil,
+    onde `dados.cvm.gov.br` recusa conexões. Ver `baixar_fundamentos.py`.
+    """
     hoje = date.today()
     anos = anos or [hoje.year, hoje.year - 1, hoje.year - 2]
+    setores_arquivo = pd.DataFrame()
 
-    progresso("Baixando cadastro de companhias abertas (CVM)...", 0.05)
-    cadastro = cvm.carregar_cadastro(usar_cache=usar_cache)
+    if arquivo_fundamentos:
+        progresso("Lendo fundamentos do arquivo (sem acessar a CVM)...", 0.10)
+        ebit, bp, setores_arquivo = arqf.importar(arquivo_fundamentos)
+        idade = arqf.idade_em_dias(arquivo_fundamentos)
+        if idade is not None and idade > 120:
+            log.warning("fundamentos.json tem %d dias — rode baixar_fundamentos.py "
+                        "de novo num computador no Brasil.", idade)
+        progresso("Baixando lista de companhias listadas (B3)...", 0.20)
+        empresas = tickers.baixar_empresas_b3(usar_cache=usar_cache)
+        if not setores_arquivo.empty:
+            empresas = empresas.merge(setores_arquivo, on="CD_CVM", how="left")
+        elif "SETOR" not in empresas.columns:
+            empresas["SETOR"] = pd.NA
+    else:
+        progresso("Baixando cadastro de companhias abertas (CVM)...", 0.05)
+        cadastro = cvm.carregar_cadastro(usar_cache=usar_cache)
 
-    progresso("Baixando lista de companhias listadas (B3)...", 0.12)
-    empresas = tickers.baixar_empresas_b3(usar_cache=usar_cache)
-    empresas = tickers.mapa_setorial(empresas, cadastro)
+        progresso("Baixando lista de companhias listadas (B3)...", 0.12)
+        empresas = tickers.baixar_empresas_b3(usar_cache=usar_cache)
+        empresas = tickers.mapa_setorial(empresas, cadastro)
 
-    progresso("Baixando demonstrações anuais (DFP)...", 0.25)
-    dfp = cvm.carregar_demonstracoes(anos, tipo="dfp", usar_cache=usar_cache,
-                                     contas=CONTAS_USADAS)
+        progresso("Baixando demonstrações anuais (DFP)...", 0.25)
+        dfp = cvm.carregar_demonstracoes(anos, tipo="dfp", usar_cache=usar_cache,
+                                         contas=CONTAS_USADAS)
 
-    progresso("Baixando demonstrações trimestrais (ITR)...", 0.40)
-    itr = (cvm.carregar_demonstracoes(anos, tipo="itr", usar_cache=usar_cache,
-                                      contas=CONTAS_USADAS)
-           if params.usar_ltm else {"DRE": pd.DataFrame(), "BPA": pd.DataFrame(),
-                                    "BPP": pd.DataFrame()})
+        progresso("Baixando demonstrações trimestrais (ITR)...", 0.40)
+        itr = (cvm.carregar_demonstracoes(anos, tipo="itr", usar_cache=usar_cache,
+                                          contas=CONTAS_USADAS)
+               if params.usar_ltm else {"DRE": pd.DataFrame(), "BPA": pd.DataFrame(),
+                                        "BPP": pd.DataFrame()})
 
-    progresso("Calculando EBIT dos últimos 12 meses...", 0.50)
-    ebit = cvm.ebit_ltm(dfp["DRE"], itr.get("DRE", pd.DataFrame()), C.CD_EBIT)
+        progresso("Calculando EBIT dos últimos 12 meses...", 0.50)
+        ebit = cvm.ebit_ltm(dfp["DRE"], itr.get("DRE", pd.DataFrame()), C.CD_EBIT)
 
-    progresso("Consolidando balanços...", 0.55)
-    bpa = pd.concat([dfp["BPA"], itr.get("BPA", pd.DataFrame())], ignore_index=True)
-    bpp = pd.concat([dfp["BPP"], itr.get("BPP", pd.DataFrame())], ignore_index=True)
-    bp = cvm.balanco_mais_recente(bpa, bpp, CONTAS_BP)
+        progresso("Consolidando balanços...", 0.55)
+        bpa = pd.concat([dfp["BPA"], itr.get("BPA", pd.DataFrame())], ignore_index=True)
+        bpp = pd.concat([dfp["BPP"], itr.get("BPP", pd.DataFrame())], ignore_index=True)
+        bp = cvm.balanco_mais_recente(bpa, bpp, CONTAS_BP)
 
     progresso("Baixando cotações da B3...", 0.65)
     cand = tickers.candidatos_de_ticker(empresas[empresas["CD_CVM"].isin(ebit["CD_CVM"])])
@@ -116,9 +138,10 @@ def montar_universo(params: C.Params, *, anos: list[int] | None = None,
     return fundamentals.montar_indicadores(ebit, bp, mercado, params)
 
 
-def montar_carteira(params: C.Params, *, progresso=_nada,
-                    usar_cache: bool = True) -> Resultado:
-    universo = montar_universo(params, progresso=progresso, usar_cache=usar_cache)
+def montar_carteira(params: C.Params, *, progresso=_nada, usar_cache: bool = True,
+                    arquivo_fundamentos: str | None = None) -> Resultado:
+    universo = montar_universo(params, progresso=progresso, usar_cache=usar_cache,
+                               arquivo_fundamentos=arquivo_fundamentos)
     aprovados, rejeitados = fundamentals.aplicar_filtros(universo, params)
 
     rk = ranking.ranquear(aprovados, n=params.n_acoes_ranking)

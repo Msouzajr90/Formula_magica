@@ -137,3 +137,83 @@ def test_acha_membro_com_nome_alternativo():
     zf = _zip_sintetico([_csv(1, "3.05", 1)], "DFP_CIA_ABERTA_DRE_CON_2024.CSV")
     assert _achar_membro(zf, "dfp", "DRE", "con", 2024) == "DFP_CIA_ABERTA_DRE_CON_2024.CSV"
     assert _achar_membro(zf, "dfp", "BPA", "con", 2024) is None
+
+
+# ---------------------------------------------------------------------------
+# Arquivo de fundamentos (ponte Brasil -> nuvem)
+# ---------------------------------------------------------------------------
+def test_fundamentos_ida_e_volta(tmp_path):
+    """Exportar e reimportar tem que devolver exatamente os mesmos números."""
+    from magicb3 import arquivo_fundamentos as arqf
+    from magicb3.cvm import balanco_mais_recente, ebit_ltm
+
+    dfp = _normalizar(pd.DataFrame([
+        _linha(1, "2024-12-31", "3.05", 1_000),
+        _linha(2, "2024-12-31", "3.05", 250),
+    ]))
+    itr = _normalizar(pd.DataFrame([
+        _linha(1, "2024-06-30", "3.05", 400, dt_ini="2024-01-01", dt_fim="2024-06-30"),
+        _linha(1, "2025-06-30", "3.05", 500, dt_ini="2025-01-01", dt_fim="2025-06-30"),
+    ]))
+    bpa = _normalizar(pd.DataFrame([
+        _linha(1, "2025-06-30", C.CD_ATIVO_CIRCULANTE, 2_000),
+        _linha(1, "2025-06-30", C.CD_CAIXA, 300),
+        _linha(1, "2025-06-30", C.CD_IMOBILIZADO, 1_200),
+        _linha(2, "2024-12-31", C.CD_ATIVO_CIRCULANTE, 900),
+    ]))
+    bpp = _normalizar(pd.DataFrame([
+        _linha(1, "2025-06-30", C.CD_PASSIVO_CIRCULANTE, 900),
+        _linha(1, "2025-06-30", C.CD_EMPRESTIMOS_CP, 200),
+        _linha(1, "2025-06-30", C.CD_EMPRESTIMOS_LP, 800),
+        _linha(2, "2024-12-31", C.CD_PASSIVO_CIRCULANTE, 400),
+    ]))
+
+    contas = list(arqf.CONTAS.values())
+    ebit = ebit_ltm(dfp, itr, "3.05")
+    bp = balanco_mais_recente(bpa, bpp, contas)
+    setores = pd.DataFrame({"CD_CVM": [1, 2], "SETOR": ["Comércio", "Bancos"]})
+
+    destino = tmp_path / "fundamentos.json"
+    saida = arqf.exportar(ebit, bp, setores, destino, anos=[2024, 2025])
+    assert destino.exists() and len(saida["empresas"]) == 2
+
+    ebit2, bp2, setores2 = arqf.importar(destino)
+
+    # EBIT LTM = 1000 - 400 + 500 = 1100 (mil) -> 1.100.000
+    e1 = ebit2.set_index("CD_CVM")
+    assert e1.loc[1, "EBIT_LTM"] == pytest.approx(1_100_000)
+    assert e1.loc[1, "FONTE"] == "DFP+ITR (LTM)"
+    assert e1.loc[2, "EBIT_LTM"] == pytest.approx(250_000)
+
+    b1 = bp2.set_index("CD_CVM")
+    assert b1.loc[1, C.CD_ATIVO_CIRCULANTE] == pytest.approx(2_000_000)
+    assert b1.loc[1, C.CD_EMPRESTIMOS_LP] == pytest.approx(800_000)
+    assert set(setores2["SETOR"]) == {"Comércio", "Bancos"}
+
+    # e os indicadores calculados em cima disso batem com o caminho direto
+    from magicb3 import fundamentals
+    ct = fundamentals.capital_tangivel(b1.loc[[1]])
+    # giro = (2000 - 300 - 0) - (900 - 200) = 1000 ; + imob 1200 = 2200 (mil)
+    assert float(ct.iloc[0]) == pytest.approx(2_200_000)
+
+
+def test_fundamentos_arquivo_ausente_da_mensagem_util(tmp_path):
+    from magicb3 import arquivo_fundamentos as arqf
+    with pytest.raises(FileNotFoundError, match="baixar_fundamentos"):
+        arqf.importar(tmp_path / "nao_existe.json")
+
+
+def test_leitura_em_blocos_seguida_de_normalizacao():
+    """Regressão: ESCALA_MOEDA vinha como 'category' da leitura em blocos e
+    quebrava a multiplicação pelo fator de escala. Só apareceu com dado real,
+    porque os testes exercitavam os dois passos separadamente."""
+    from magicb3.cvm import _ler_membro, _normalizar
+    linhas = [_csv(1, "3.05", 100), _csv(2, "3.05", 200)]
+    linhas.append("00.000.000/0001-00;2024-12-31;1;CIA;3;DF Consolidado;REAL;"
+                  "UNIDADE;ÚLTIMO;2024-01-01;2024-12-31;3.05;desc;300000;S")
+    zf = _zip_sintetico(linhas, "dfp_cia_aberta_DRE_con_2024.csv")
+    bruto = _ler_membro(zf, "dfp_cia_aberta_DRE_con_2024.csv", contas={"3.05"}, chunk=2)
+    out = _normalizar(bruto).set_index("CD_CVM")
+    assert out.loc[1, "VL_CONTA"] == 100_000        # MIL -> reais
+    assert out.loc[3, "VL_CONTA"] == 300_000        # UNIDADE -> inalterado
+    assert out["VL_CONTA"].dtype.kind == "f"
