@@ -65,10 +65,16 @@ def t_internet():
     return "conexão de saída funcionando"
 
 
+def t_cvm_rede():
+    """Testa IPv4 e IPv6 separadamente — distingue rota quebrada de bloqueio."""
+    from magicb3 import rede
+    return rede.relatorio("dados.cvm.gov.br")
+
+
 def t_cvm_portal():
-    import requests
+    from magicb3 import rede
     from magicb3.cvm import BASE_DFP
-    r = requests.get(f"{BASE_DFP}/", timeout=60)
+    r = rede.sessao().get(f"{BASE_DFP}/", timeout=90)
     r.raise_for_status()
     return f"portal de dados abertos respondeu ({len(r.content):,} bytes)"
 
@@ -253,6 +259,7 @@ def main() -> int:
         return 1
 
     _titulo("2. CVM — demonstrações financeiras")
+    _checar("Rota de rede até a CVM (IPv4 vs IPv6)", t_cvm_rede)
     _checar("Portal de dados abertos acessível", t_cvm_portal)
     _checar("Download e estrutura do zip DFP", t_cvm_zip)
     _checar("Leitura e códigos de conta (EBIT, balanço)", t_cvm_parse)
