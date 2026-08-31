@@ -266,3 +266,59 @@ def test_backtest_com_rebalanceamento(retornos):
     assert not res.retornos_diarios.index.has_duplicates
     assert len(res.composicoes) == 2
     assert np.isfinite(res.metricas.sharpe)
+
+
+# ---------------------------------------------------------------------------
+# Regressões vindas da execução real no GitHub Actions
+# ---------------------------------------------------------------------------
+def test_filtros_com_universo_vazio_nao_quebram():
+    """Regressão: `df[campos].agg(" | ".join, axis=1)` devolve um DataFrame
+    quando o DataFrame está vazio, e o `.str` seguinte estourava com
+    AttributeError. Derrubou a execução #5 no GitHub Actions."""
+    cols = ["CD_CVM", "TICKER", "SETOR", "SEGMENTO", "LIQUIDEZ_MEDIA",
+            "EBIT_LTM", "EV", "ROIC", "EY"]
+    vazio = pd.DataFrame(columns=cols)
+    ok, fora = fundamentals.aplicar_filtros(vazio, C.Params())
+    assert ok.empty and fora.empty
+
+
+def test_filtros_usam_setor_e_segmento_juntos():
+    df = pd.DataFrame({
+        "CD_CVM": [1, 2, 3],
+        "TICKER": ["AAA3.SA", "BBB3.SA", "CCC3.SA"],
+        "SETOR": ["Comércio", "Comércio", "Comércio"],
+        "SEGMENTO": ["Novo Mercado", "Bancos", "Energia Elétrica"],
+        "LIQUIDEZ_MEDIA": [50e6] * 3,
+        "EBIT_LTM": [1e9] * 3, "EV": [5e9] * 3,
+        "ROIC": [0.2] * 3, "EY": [0.2] * 3,
+    })
+    ok, fora = fundamentals.aplicar_filtros(df, C.Params(liquidez_minima_diaria=1e6))
+    assert set(ok["TICKER"]) == {"AAA3.SA"}          # os outros caem pelo SEGMENTO
+    assert len(fora) == 2
+
+
+def test_cruzamento_vazio_da_erro_explicativo():
+    """Antes o universo saía vazio em silêncio e só estourava lá adiante."""
+    ebit = pd.DataFrame({"CD_CVM": [1, 2], "EBIT_LTM": [1e9, 2e9]})
+    bp = pd.DataFrame({"CD_CVM": [1, 2], C.CD_ATIVO_CIRCULANTE: [1e9, 1e9]})
+    mercado = pd.DataFrame({"CD_CVM": [99], "TICKER": ["ZZZ3.SA"],
+                            "VALOR_MERCADO": [1e9], "ACOES": [1e8],
+                            "LIQUIDEZ_MEDIA": [1e6]})
+    with pytest.raises(ValueError, match="não devolveu"):
+        fundamentals.montar_indicadores(ebit, bp, mercado, C.Params())
+
+
+def test_cd_cvm_como_texto_ou_float_ainda_cruza():
+    """CD_CVM vem de três fontes; tipos diferentes não podem zerar o cruzamento."""
+    ebit = pd.DataFrame({"CD_CVM": [906, 4170], "EBIT_LTM": [1e9, 2e9]})
+    bp = pd.DataFrame({"CD_CVM": [906.0, 4170.0],       # float
+                       C.CD_ATIVO_CIRCULANTE: [2e9, 2e9], C.CD_CAIXA: [1e8, 1e8],
+                       C.CD_PASSIVO_CIRCULANTE: [5e8, 5e8], C.CD_IMOBILIZADO: [1e9, 1e9]})
+    mercado = pd.DataFrame({"CD_CVM": ["906", "4170"],   # texto
+                            "TICKER": ["AAA3.SA", "BBB3.SA"],
+                            "VALOR_MERCADO": [5e9, 6e9], "ACOES": [1e9, 1e9],
+                            "LIQUIDEZ_MEDIA": [1e7, 1e7], "SETOR": ["Comércio"] * 2})
+    out = fundamentals.montar_indicadores(ebit, bp, mercado, C.Params())
+    assert len(out) == 2
+    assert set(out["TICKER"]) == {"AAA3.SA", "BBB3.SA"}
+    assert (out["EY"] > 0).all()
