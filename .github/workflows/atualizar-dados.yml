@@ -1,0 +1,35 @@
+name: Atualizar dados
+on:
+  workflow_dispatch:
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar o repositorio
+        uses: actions/checkout@v4
+      - name: Instalar o Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+      - name: Verificar as fontes de dados
+        continue-on-error: true
+        run: python verificar_dados.py
+      - name: Rodar os testes
+        run: python -m pytest tests -q
+      - name: Gerar o dados.json
+        run: python atualizar_dados.py --pool 80
+      - name: Conferir o resultado
+        run: python validar_dados.py
+      - name: Publicar
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add web/public/dados.json
+          git diff --staged --quiet && echo "Nada mudou." && exit 0
+          git commit -m "Atualizacao automatica dos dados"
+          git push
