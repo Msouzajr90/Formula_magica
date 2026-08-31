@@ -44,7 +44,7 @@ def forcar_ipv4() -> None:
         log.warning("Não foi possível forçar IPv4: %s", exc)
 
 
-def sessao(tentativas: int = 4, backoff: float = 2.0) -> requests.Session:
+def sessao(tentativas: int = 2, backoff: float = 1.0) -> requests.Session:
     """Sessão HTTP que repete em erro de rede e em 5xx, com espera crescente."""
     from urllib3.util.retry import Retry
 
@@ -137,7 +137,10 @@ def diagnosticar(host: str = "dados.cvm.gov.br", porta: int = 443,
 
 
 def relatorio(host: str = "dados.cvm.gov.br") -> str:
-    d = diagnosticar(host)
+    return relatorio_de(diagnosticar(host))
+
+
+def relatorio_de(d: dict) -> str:
     linhas = [
         f"host        : {d['host']}",
         f"IPv4        : {'OK' if d['ipv4'] else 'FALHA'} — {d['ipv4_detalhe']}",
