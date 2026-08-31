@@ -14,10 +14,14 @@ variantes originais continuam disponíveis para comparação.
 """
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 import pandas as pd
 
 from . import config as C
+
+log = logging.getLogger(__name__)
 
 
 def capital_tangivel(bp: pd.DataFrame) -> pd.Series:
@@ -52,7 +56,32 @@ def montar_indicadores(
 
     `mercado` precisa de: CD_CVM, TICKER, PRECO, VALOR_MERCADO, LIQUIDEZ_MEDIA, SETOR
     """
+    # CD_CVM percorre três fontes (CVM, B3, Yahoo) e basta uma delas trazer o
+    # código como texto ou float para o merge não casar nada — e o universo sair
+    # vazio, sem erro nenhum. Padronizar o tipo antes elimina essa classe inteira
+    # de falha silenciosa.
+    def _chave(d: pd.DataFrame, nome: str) -> pd.DataFrame:
+        d = d.copy()
+        d["CD_CVM"] = pd.to_numeric(d["CD_CVM"], errors="coerce").astype("Int64")
+        antes = len(d)
+        d = d.dropna(subset=["CD_CVM"])
+        if len(d) < antes:
+            log.warning("%s: %d linhas sem CD_CVM válido", nome, antes - len(d))
+        return d
+
+    ebit, bp, mercado = (_chave(ebit, "ebit"), _chave(bp, "balanço"),
+                         _chave(mercado, "mercado"))
+
     df = ebit.merge(bp, on="CD_CVM", how="inner").merge(mercado, on="CD_CVM", how="inner")
+    log.info("cruzamento: ebit=%d balanço=%d mercado=%d -> universo=%d",
+             len(ebit), len(bp), len(mercado), len(df))
+    if df.empty:
+        comuns = set(ebit["CD_CVM"]) & set(bp["CD_CVM"]) & set(mercado["CD_CVM"])
+        raise ValueError(
+            "O cruzamento entre demonstrações, balanço e mercado não devolveu "
+            f"nenhuma empresa (ebit={len(ebit)}, balanço={len(bp)}, "
+            f"mercado={len(mercado)}, CD_CVM em comum={len(comuns)}). "
+            "Verifique se o mapeamento CD_CVM <-> ticker da B3 está atualizado.")
 
     df["CAPITAL_TANGIVEL"] = capital_tangivel(df)
     df["DIVIDA_BRUTA"] = divida_bruta(df)
@@ -94,10 +123,15 @@ def aplicar_filtros(df: pd.DataFrame, params: C.Params) -> tuple[pd.DataFrame, p
             motivos.append(fora)
         return df[~mask]
 
-    if params.excluir_setores:
+    if params.excluir_setores and not df.empty:
         campos = [c for c in ("SETOR", "SEGMENTO") if c in df.columns]
         if campos:
-            texto = df[campos].fillna("").astype(str).agg(" | ".join, axis=1)
+            # Concatenação explícita: `df[campos].agg(" | ".join, axis=1)` devolve
+            # um DataFrame (não uma Series) quando o DataFrame está vazio, e aí
+            # o .str seguinte quebra. Aconteceu em produção.
+            texto = df[campos[0]].fillna("").astype(str)
+            for c in campos[1:]:
+                texto = texto + " | " + df[c].fillna("").astype(str)
             padrao = "|".join(f"(?:{p})" for p in params.excluir_setores)
             mask = texto.str.contains(padrao, case=False, na=False, regex=True)
             df = corta(mask, "setor excluído (financeiro/seguros/utilidade pública)")

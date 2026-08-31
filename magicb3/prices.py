@@ -41,22 +41,36 @@ def _achatar(df: pd.DataFrame, campo: str, tickers: list[str]) -> pd.DataFrame:
     return out.sort_index()
 
 
-TAMANHO_LOTE = 150       # o Yahoo rejeita pedidos com muitos símbolos de uma vez
+# O Yahoo devolve "Too Many Requests. Rate limited" quando o pedido é grande
+# demais ou os lotes vêm rápido demais. Aconteceu em produção: 129 símbolos
+# perdidos num lote só, o que esvaziou o cruzamento adiante.
+TAMANHO_LOTE = 50
+PAUSA_ENTRE_LOTES = 1.5          # segundos
+PAUSA_APOS_BLOQUEIO = 20.0
 
 
-def _baixar_lote(tickers: list[str], inicio, fim, tentativas: int = 3):
-    """Um lote, com nova tentativa em caso de erro de rede ou throttling."""
+def _bloqueado(exc: Exception) -> bool:
+    t = str(exc).lower()
+    return "too many requests" in t or "rate limit" in t or "429" in t
+
+
+def _baixar_lote(tickers: list[str], inicio, fim, tentativas: int = 4):
+    """Um lote, com nova tentativa e recuo maior quando o Yahoo bloqueia."""
     yf = _yf()
     for n in range(tentativas):
         try:
             raw = yf.download(tickers, start=str(inicio), end=str(fim),
                               auto_adjust=False, progress=False,
-                              group_by="column", threads=True)
+                              group_by="column", threads=False)
             if raw is not None and not raw.empty:
                 return raw
+            log.warning("Lote voltou vazio (tentativa %d/%d)", n + 1, tentativas)
+            time.sleep(PAUSA_ENTRE_LOTES * (n + 1))
         except Exception as exc:                            # noqa: BLE001
-            log.warning("Lote falhou (tentativa %d/%d): %s", n + 1, tentativas, exc)
-        time.sleep(2 ** n)
+            espera = PAUSA_APOS_BLOQUEIO if _bloqueado(exc) else 2 ** n
+            log.warning("Lote falhou (tentativa %d/%d, esperando %.0fs): %s",
+                        n + 1, tentativas, espera, str(exc)[:160])
+            time.sleep(espera)
     return None
 
 
@@ -82,12 +96,15 @@ def baixar_historico(tickers: list[str], inicio: str | date, fim: str | date,
     else:
         lotes = [tickers[i:i + TAMANHO_LOTE]
                  for i in range(0, len(tickers), TAMANHO_LOTE)]
-        partes = []
+        partes, perdidos = [], 0
         for i, lote in enumerate(lotes):
             if progresso:
                 progresso(f"Cotações: lote {i+1} de {len(lotes)}...", None)
+            if i:
+                time.sleep(PAUSA_ENTRE_LOTES)
             bloco = _baixar_lote(lote, inicio, fim)
             if bloco is None:
+                perdidos += len(lote)
                 log.warning("Lote %d de %d sem dados (%d tickers perdidos)",
                             i + 1, len(lotes), len(lote))
                 continue
@@ -95,6 +112,11 @@ def baixar_historico(tickers: list[str], inicio: str | date, fim: str | date,
                 bloco.columns = pd.MultiIndex.from_product([bloco.columns, [lote[0]]])
             partes.append(bloco)
 
+        if perdidos:
+            log.warning("%d de %d tickers ficaram sem cotação (%.0f%%). "
+                        "Se a proporção for alta, o Yahoo esta limitando as "
+                        "requisicoes — rode de novo mais tarde.",
+                        perdidos, len(tickers), 100 * perdidos / len(tickers))
         if not partes:
             vazio = pd.DataFrame()
             return {"preco": vazio, "fechamento": vazio, "volume": vazio}
