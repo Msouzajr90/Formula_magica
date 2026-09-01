@@ -413,3 +413,56 @@ def test_investimentos_entram_no_capital_tangivel():
     assert com - sem == pytest.approx(20.0e9)
     assert ebit / sem > 10          # ROIC > 1.000%, o artefato
     assert 0.02 < ebit / com < 0.15  # ROIC plausível depois da correção
+
+
+# ---------------------------------------------------------------------------
+# Histórico do backtest (o arquivo que o site consome)
+# ---------------------------------------------------------------------------
+def test_historico_demo_tem_estrutura_valida(tmp_path):
+    from magicb3 import demo_historico
+    import json
+    destino = tmp_path / "historico.json"
+    d = demo_historico.gerar(destino, anos=3)
+    assert destino.exists()
+
+    n = len(d["pregoes"])
+    assert n > 500
+    assert len(d["benchmark"]) == n
+    for t, serie in d["retornos"].items():
+        assert len(serie) == n, f"{t} com tamanho diferente"
+    assert d["meta"]["pointInTime"] is True
+    assert len(d["rebalances"]) >= 3
+    for r in d["rebalances"]:
+        assert r["acoes"], f"{r['data']} sem ranking"
+        assert {"t", "yf", "f", "q", "p"} <= set(r["acoes"][0])
+
+    # os retornos são inteiros escalados; reconstituir tem que dar valores plausíveis
+    esc = d["meta"]["escalaRetornos"]
+    algum = next(iter(d["retornos"].values()))
+    vals = [v / esc for v in algum if v is not None]
+    assert all(-0.5 < v < 0.5 for v in vals), "retorno diário fora de faixa plausível"
+
+
+def test_validador_de_historico_reprova_demonstracao(tmp_path):
+    """O gate tem que barrar o arquivo sintético, como faz com o dados.json."""
+    import json, subprocess, sys
+    from magicb3 import demo_historico
+    destino = tmp_path / "historico.json"
+    demo_historico.gerar(destino, anos=3)
+    r = subprocess.run([sys.executable, "validar_historico.py", str(destino)],
+                       capture_output=True, text=True)
+    assert r.returncode == 1
+    assert "demonstracao" in r.stdout.lower()
+
+
+def test_validador_de_historico_aprova_arquivo_bom(tmp_path):
+    import json
+    from magicb3 import demo_historico
+    import subprocess, sys
+    destino = tmp_path / "historico.json"
+    d = demo_historico.gerar(destino, anos=3)
+    d["meta"].pop("modo")            # simula o arquivo real
+    destino.write_text(json.dumps(d), encoding="utf-8")
+    r = subprocess.run([sys.executable, "validar_historico.py", str(destino)],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout
