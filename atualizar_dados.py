@@ -49,7 +49,8 @@ def _texto(x):
     return s if s and s.lower() != "nan" else None
 
 
-def montar_json(res, params: C.Params, pool: int) -> dict:
+def montar_json(res, params: C.Params, pool: int,
+                vagas_padrao: int = 0) -> dict:
     """Empacota ranking, retornos esperados e covariância."""
     rk = res.ranking.head(pool).copy()
 
@@ -99,7 +100,9 @@ def montar_json(res, params: C.Params, pool: int) -> dict:
             "janelaRetornos": params.janela_retornos_dias,
             "taxaLivreRisco": params.taxa_livre_risco_aa,
             "custoBps": params.custo_transacao_bps,
-            "vagasFinanceiras": params.vagas_financeiras,
+            # quantas vagas o site sugere; o arquivo carrega mais que isso
+            "vagasFinanceiras": vagas_padrao,
+            "financeirasNoArquivo": params.vagas_financeiras,
             "diagnostico": {k: (str(v) if not isinstance(v, (int, float, type(None))) else v)
                             for k, v in res.diagnostico.items()},
         },
@@ -129,9 +132,17 @@ def main() -> int:
                          "(obrigatorio fora do Brasil, ver baixar_fundamentos.py)")
     args = ap.parse_args()
 
+    # O arquivo exportado é matéria-prima, não decisão tomada: o site tem um
+    # controle de "vagas para financeiras" e aplica a cota no navegador. Se a
+    # coleta já excluísse bancos e seguradoras, esse controle não teria o que
+    # selecionar — foi o que aconteceu, e o site voltou a ficar sem bancos.
+    # Por isso a exportação sempre reserva parte do pool para financeiras;
+    # quantas entram de fato na carteira continua sendo escolha de quem usa.
+    vagas_no_arquivo = max(args.vagas_financeiras, args.pool // 4)
+
     params = C.Params(n_acoes_ranking=args.pool,
                       liquidez_minima_diaria=args.liquidez,
-                      vagas_financeiras=args.vagas_financeiras,
+                      vagas_financeiras=vagas_no_arquivo,
                       n_carteiras_fronteira=5)
 
     if args.demo:
@@ -144,7 +155,8 @@ def main() -> int:
             params, progresso=lambda m, v=None: print(f"  {m}", flush=True),
             arquivo_fundamentos=args.fundamentos)
 
-    dados = montar_json(res, params, args.pool)
+    dados = montar_json(res, params, args.pool,
+                        vagas_padrao=args.vagas_financeiras)
 
     saida = Path(args.saida)
     saida.parent.mkdir(parents=True, exist_ok=True)
