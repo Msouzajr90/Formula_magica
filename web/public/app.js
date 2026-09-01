@@ -758,10 +758,15 @@ async function iniciar() {
 
   idx = new Map(D.empresas.map(e => [e.ticker, e]));
   el('stamp').textContent = D.meta.geradoEm;
-  const modo = String(D.meta.diagnostico?.modo || '');
-  el('stampFonte').textContent = modo.startsWith('DEMONSTRA')
+  // Uma linha cinza ao lado da data não é aviso suficiente para uma tela que
+  // imprime ordem de compra com quantidade e valor em reais. Se os números
+  // forem sorteados, isso tem que gritar no topo da página.
+  const modo = String(D.meta.diagnostico?.modo || '').toUpperCase();
+  const dadosSinteticos = modo.startsWith('DEMONSTRA');
+  el('stampFonte').textContent = dadosSinteticos
     ? '⚠ dados sintéticos de demonstração'
     : `${D.empresas.length} empresas no universo`;
+  el('dadosDemo').classList.toggle('hidden', !dadosSinteticos);
 
   el('tbExc').querySelector('tbody').innerHTML = (D.excluidas || []).map(e =>
     `<tr><td class="l tk">${e.ticker || '—'}</td>
