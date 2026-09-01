@@ -63,8 +63,11 @@ def _achatar(df: pd.DataFrame, campo: str, tickers: list[str]) -> pd.DataFrame:
 TAMANHO_LOTE = 50
 PAUSA_ENTRE_LOTES = 1.5          # segundos
 PAUSA_MAXIMA = 15.0              # teto do recuo entre lotes
-ESPERA_BLOQUEIO = (60.0, 180.0, 300.0)   # recuo real quando o Yahoo barra
-LOTES_BLOQUEADOS_SEGUIDOS = 3            # depois disso, desistir da rodada
+ESPERA_BLOQUEIO = (60.0, 180.0, 300.0)   # recuo dentro do lote (uso pontual)
+RODADAS_DE_REPESCAGEM = 3                # ondas de retorno aos barrados
+ESPERA_ENTRE_RODADAS = (120.0, 300.0, 600.0)
+ORCAMENTO_ESPERA_S = 30 * 60             # teto do tempo total parado esperando
+FRACAO_MAXIMA_PERDIDA = 0.15             # acima disso o histórico não presta
 
 
 ARQ_INEXISTENTES = "tickers_inexistentes.json"
@@ -254,8 +257,7 @@ def baixar_historico(tickers: list[str], inicio: str | date, fim: str | date,
             log.info("Pulando %d símbolos já conhecidos como inexistentes.",
                      len(tickers) - len(vivos))
 
-        estado = {"partes": [], "perdidos": 0, "seguidos": 0,
-                  "mortos": set(), "repescar": set(),
+        estado = {"partes": [], "mortos": set(), "repescar": set(),
                   "pausa": PAUSA_ENTRE_LOTES}
 
         def processar(lote: list[str], rotulo: str, primeiro: bool) -> None:
@@ -271,7 +273,10 @@ def baixar_historico(tickers: list[str], inicio: str | date, fim: str | date,
 
             if not primeiro:
                 time.sleep(estado["pausa"])
-            bloco, bloqueados, mortos = _baixar_lote(lote, inicio, fim)
+            # Uma tentativa só: quem for barrado volta na próxima rodada, não
+            # aqui. Esperar 9 minutos parado dentro de cada lote era o que
+            # estourava o relógio antes de a varredura chegar ao fim.
+            bloco, bloqueados, mortos = _baixar_lote(lote, inicio, fim, tentativas=1)
             barrado = bool(bloqueados)
             estado["mortos"].update(mortos)
 
@@ -281,23 +286,12 @@ def baixar_historico(tickers: list[str], inicio: str | date, fim: str | date,
                 estado["pausa"] = min(estado["pausa"] * 2, PAUSA_MAXIMA)
 
             if bloco is None:
-                estado["perdidos"] += len(lote)
                 if barrado:
-                    estado["seguidos"] += 1
-                    log.warning("%s barrado pelo Yahoo (%d seguidos).",
-                                rotulo, estado["seguidos"])
-                    if estado["seguidos"] >= LOTES_BLOQUEADOS_SEGUIDOS:
-                        _gravar_inexistentes(estado["mortos"])
-                        raise BloqueioYahoo(
-                            f"O Yahoo barrou {estado['seguidos']} lotes seguidos. "
-                            f"Parei em {rotulo} em vez de gastar horas coletando "
-                            "nada. O que já baixou ficou em cache: rode de novo "
-                            "mais tarde e ele continua daqui.")
-                else:
-                    estado["seguidos"] = 0
+                    log.warning("%s barrado; %d símbolos vão para a próxima "
+                                "rodada.", rotulo, len(bloqueados))
+                    estado["repescar"].update(bloqueados)
                 return
 
-            estado["seguidos"] = 0
             if not isinstance(bloco.columns, pd.MultiIndex):
                 bloco.columns = pd.MultiIndex.from_product([bloco.columns, [lote[0]]])
             estado["partes"].append(bloco)
@@ -316,36 +310,52 @@ def baixar_historico(tickers: list[str], inicio: str | date, fim: str | date,
                 plano.to_parquet(arq_lote)
                 estado["pausa"] = max(PAUSA_ENTRE_LOTES, estado["pausa"] * 0.8)
 
-        lotes = [vivos[i:i + TAMANHO_LOTE]
-                 for i in range(0, len(vivos), TAMANHO_LOTE)]
-        for i, lote in enumerate(lotes):
-            if progresso:
-                progresso(f"Cotações: lote {i+1} de {len(lotes)}...", None)
-            processar(lote, f"Lote {i+1} de {len(lotes)}", primeiro=(i == 0))
+        # Varre tudo depressa e só depois volta para os barrados, em ondas.
+        # O bloqueio do Yahoo é intermitente: esperar entre as ondas dá tempo
+        # de a janela dele reabrir, enquanto esperar dentro do lote apenas
+        # gasta o relógio sem que o resto do universo avance.
+        pendentes, gasto = list(vivos), 0.0
+        for rodada in range(1 + RODADAS_DE_REPESCAGEM):
+            if not pendentes:
+                break
+            if rodada:
+                espera = ESPERA_ENTRE_RODADAS[min(rodada - 1,
+                                                  len(ESPERA_ENTRE_RODADAS) - 1)]
+                if gasto + espera > ORCAMENTO_ESPERA_S:
+                    log.warning("Orçamento de espera esgotado; %d símbolos "
+                                "ficam sem cotação.", len(pendentes))
+                    break
+                log.warning("Rodada %d: %d símbolos barrados. Esperando %.0f min.",
+                            rodada, len(pendentes), espera / 60)
+                time.sleep(espera)
+                gasto += espera
 
-        # Segunda passada só com quem caiu por bloqueio (não com quem não
-        # existe). Uma única repescagem: o que faltar depois disso é reportado.
-        if estado["repescar"]:
-            pendentes = sorted(estado["repescar"])
             estado["repescar"] = set()
-            log.info("Repescagem: %d símbolos que o bloqueio derrubou.",
-                     len(pendentes))
-            time.sleep(estado["pausa"])
-            grupos = [pendentes[i:i + TAMANHO_LOTE]
-                      for i in range(0, len(pendentes), TAMANHO_LOTE)]
-            for j, lote in enumerate(grupos):
-                processar(lote, f"Repescagem {j+1} de {len(grupos)}",
-                          primeiro=(j == 0))
-            if estado["repescar"]:
-                log.warning("%d símbolos seguiram sem cotação depois da "
-                            "repescagem.", len(estado["repescar"]))
+            lotes = [pendentes[i:i + TAMANHO_LOTE]
+                     for i in range(0, len(pendentes), TAMANHO_LOTE)]
+            nome = "Lote" if not rodada else f"Repescagem {rodada}"
+            for i, lote in enumerate(lotes):
+                if progresso:
+                    progresso(f"Cotações: {nome.lower()} {i+1} de {len(lotes)}...", None)
+                processar(lote, f"{nome} {i+1} de {len(lotes)}", primeiro=(i == 0))
+            pendentes = sorted(estado["repescar"])
 
         partes = estado["partes"]
         _gravar_inexistentes(estado["mortos"])
-        if estado["perdidos"]:
-            log.warning("%d de %d tickers ficaram sem cotação (%.0f%%).",
-                        estado["perdidos"], len(vivos),
-                        100 * estado["perdidos"] / max(len(vivos), 1))
+
+        if pendentes:
+            # A base é o universo que existe de verdade, não os ~2.000 chutes:
+            # perder 300 papéis reais não pode passar por "15% de 2.000".
+            reais = max(len(vivos) - len(estado["mortos"]), 1)
+            fracao = len(pendentes) / reais
+            log.warning("%d de %d símbolos existentes ficaram sem cotação por "
+                        "bloqueio (%.0f%%).", len(pendentes), reais, 100 * fracao)
+            if fracao > FRACAO_MAXIMA_PERDIDA:
+                raise BloqueioYahoo(
+                    f"O Yahoo barrou {len(pendentes)} de {reais} papéis "
+                    f"({100*fracao:.0f}%) e não liberou nas repescagens. Prefiro "
+                    "parar a entregar um histórico furado: o que já baixou ficou "
+                    "em cache, rode de novo mais tarde e ele continua daqui.")
         if not partes:
             vazio = pd.DataFrame()
             return {"preco": vazio, "fechamento": vazio, "volume": vazio}
