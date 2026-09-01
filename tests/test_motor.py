@@ -537,15 +537,66 @@ def test_lote_barrado_uma_vez_ainda_e_recuperado(monkeypatch, sem_espera, tmp_pa
     assert not bloqueados and dados is not None and not dados.empty
 
 
-def test_bloqueio_seguido_interrompe_em_vez_de_gastar_horas(monkeypatch, sem_espera, tmp_path):
+def test_bloqueio_persistente_interrompe_em_vez_de_gastar_horas(monkeypatch, sem_espera, tmp_path):
+    """Sem isso a rodada gasta os 180 minutos do workflow e nao entrega nada."""
     from magicb3 import prices as _p
     fake = _YFFalso("bloqueio")
     prices = _instalar(monkeypatch, fake, tmp_path)
     universo = [f"A{i:03d}3.SA" for i in range(500)]      # 10 lotes
     with pytest.raises(_p.BloqueioYahoo):
         prices.baixar_historico(universo, "2026-01-01", "2026-02-01")
-    # 3 lotes barrados x 4 tentativas: para no freio, nao percorre os 10.
-    assert fake.chamadas == 12
+    # 1 tentativa por lote, 10 lotes, 4 rodadas: varredura + 3 repescagens.
+    assert fake.chamadas == 40
+
+
+def test_nao_espera_dentro_do_lote_na_varredura(monkeypatch, sem_espera, tmp_path):
+    """O bloqueio e intermitente: adiar custa menos que esperar parado."""
+    from magicb3 import prices as _p
+    fake = _YFFalso("bloqueio")
+    prices = _instalar(monkeypatch, fake, tmp_path)
+    original, usados = prices._baixar_lote, []
+
+    def espiao(lote, ini, fim, tentativas=4):
+        usados.append(tentativas)
+        return original(lote, ini, fim, tentativas=tentativas)
+
+    monkeypatch.setattr(prices, "_baixar_lote", espiao)
+    esperas = []
+    monkeypatch.setattr(prices.time, "sleep", lambda s: esperas.append(s))
+    with pytest.raises(_p.BloqueioYahoo):
+        prices.baixar_historico([f"A{i:03d}3.SA" for i in range(50)],
+                                "2026-01-01", "2026-02-01")
+    assert usados and set(usados) == {1}, \
+        "cada lote leva uma tentativa so; a espera fica entre as rodadas"
+    assert sum(esperas) <= _p.ORCAMENTO_ESPERA_S, "orcamento de espera estourado"
+
+
+def test_perda_pequena_por_bloqueio_nao_derruba_a_rodada(monkeypatch, sem_espera, tmp_path):
+    """Perder 2 de 100 papeis e aceitavel; perder 40 nao e."""
+    entregues = [f"A{i:03d}3.SA" for i in range(98)]
+    teimosos = ["X0013.SA", "X0023.SA"]
+    fake = _YFMisto(set(entregues), set(teimosos), set())
+    fake.entregues = set(entregues)
+
+    class Teimoso(_YFMisto):
+        def download(self, tickers, **kw):
+            import logging
+            self.chamadas += 1
+            lg = logging.getLogger("yfinance")
+            vivos = [t for t in tickers if t in self.entregues]
+            barrados = [t for t in tickers if t in self.bloqueados]
+            if barrados:
+                lg.error("%s: YFRateLimitError('Too Many Requests.')", barrados)
+            if not vivos:
+                return pd.DataFrame()
+            idx = pd.date_range("2026-01-02", periods=8, freq="B")
+            cols = pd.MultiIndex.from_product([["Adj Close", "Close", "Volume"], vivos])
+            return pd.DataFrame(1.0, index=idx, columns=cols)
+
+    fake = Teimoso(set(entregues), set(teimosos), set())
+    prices = _instalar(monkeypatch, fake, tmp_path)
+    out = prices.baixar_historico(entregues + teimosos, "2026-01-01", "2026-02-01")
+    assert len(out["preco"].columns) == 98
 
 
 def test_inexistentes_ficam_anotados_e_nao_sao_reconsultados(monkeypatch, sem_espera, tmp_path):
@@ -659,7 +710,8 @@ def test_pausa_entre_lotes_cresce_quando_o_yahoo_barra(monkeypatch, sem_espera, 
     universo = [f"A{i:03d}3.SA" for i in range(150)]
     with pytest.raises(_p.BloqueioYahoo):
         prices.baixar_historico(universo, "2026-01-01", "2026-02-01")
-    entre_lotes = [e for e in esperas if e not in _p.ESPERA_BLOQUEIO]
+    longas = set(_p.ESPERA_BLOQUEIO) | set(_p.ESPERA_ENTRE_RODADAS)
+    entre_lotes = [e for e in esperas if e not in longas]
     assert entre_lotes and entre_lotes[-1] > entre_lotes[0], \
         "a pausa entre lotes tinha que subir depois de um bloqueio"
     assert max(entre_lotes) <= _p.PAUSA_MAXIMA
@@ -674,3 +726,33 @@ def test_cache_antigo_de_lote_e_aposentado(tmp_path, monkeypatch):
     (tmp_path / "lt_deadbeefdeadbeef.parquet").write_bytes(b"lixo antigo")
     prices.baixar_historico(["AAAA3.SA"], "2026-01-01", "2026-02-01")
     assert fake.chamadas == 1, "nao pode reaproveitar o cache da versao anterior"
+
+
+def test_fracao_perdida_e_medida_sobre_os_papeis_que_existem(monkeypatch, sem_espera, tmp_path):
+    """Perder 60 papeis reais nao pode passar por '3% de 2.000 chutes'."""
+    from magicb3 import prices as _p
+    reais = [f"R{i:03d}3.SA" for i in range(100)]
+    chutes = [f"C{i:04d}9.SA" for i in range(1900)]
+
+    class Cenario:
+        def __init__(self):
+            self.chamadas = 0
+
+        def download(self, tickers, **kw):
+            import logging
+            self.chamadas += 1
+            lg = logging.getLogger("yfinance")
+            pedidos = list(tickers)
+            mortos = [t for t in pedidos if t.startswith("C")]
+            barrados = [t for t in pedidos if t.startswith("R")]
+            if mortos:
+                lg.error("%s: possibly delisted; no timezone found", mortos)
+            if barrados:
+                lg.error("%s: YFRateLimitError('Too Many Requests.')", barrados)
+            return pd.DataFrame()
+
+    fake = Cenario()
+    prices = _instalar(monkeypatch, fake, tmp_path)
+    with pytest.raises(_p.BloqueioYahoo) as erro:
+        prices.baixar_historico(reais + chutes, "2026-01-01", "2026-02-01")
+    assert "de 100 papéis" in str(erro.value), str(erro.value)
