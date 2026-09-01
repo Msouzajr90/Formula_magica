@@ -1,0 +1,50 @@
+name: Atualizar historico
+on:
+  workflow_dispatch:
+    inputs:
+      anos:
+        description: "Quantos anos de backtest (padrao 5)"
+        required: false
+        default: "5"
+      freq:
+        description: "Rebalanceamento: anual, semestral ou trimestral"
+        required: false
+        default: "anual"
+jobs:
+  historico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar o repositorio
+        uses: actions/checkout@v4
+      - name: Instalar o Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+      - name: Reaproveitar downloads da CVM
+        uses: actions/cache@v4
+        with:
+          path: ~/.magicb3_cache
+          key: magicb3-historico-${{ github.run_id }}
+          restore-keys: magicb3-
+      - name: Rodar os testes
+        run: python -m pytest tests -q
+      - name: Gerar o historico.json
+        run: |
+          python gerar_historico.py \
+            --anos "${{ inputs.anos || '5' }}" \
+            --freq "${{ inputs.freq || 'anual' }}"
+      - name: Conferir o resultado
+        run: python validar_historico.py
+      - name: Publicar
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add web/public/historico.json
+          git diff --staged --quiet && echo "Nada mudou." && exit 0
+          git commit -m "historico: backtest point-in-time atualizado"
+          git push
