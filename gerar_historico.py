@@ -214,7 +214,14 @@ def main() -> int:
         from magicb3 import demo_historico
         dados = demo_historico.gerar(saida, anos=args.anos, freq=args.freq)
     else:
-        dados = gerar(args.anos, args.freq, args.pool, args.liquidez, saida)
+        try:
+            dados = gerar(args.anos, args.freq, args.pool, args.liquidez, saida)
+        except prices.BloqueioYahoo as exc:
+            # Sair com erro é o comportamento certo: o arquivo bom que já está
+            # publicado continua no ar, em vez de ser trocado por um histórico
+            # furado que renderia um backtest bonito e falso.
+            print(f"\nINTERROMPIDO: {exc}")
+            return 2
 
     kb = saida.stat().st_size / 1024
     m = dados["meta"]
