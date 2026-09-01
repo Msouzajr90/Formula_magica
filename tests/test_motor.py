@@ -466,3 +466,122 @@ def test_validador_de_historico_aprova_arquivo_bom(tmp_path):
     r = subprocess.run([sys.executable, "validar_historico.py", str(destino)],
                        capture_output=True, text=True)
     assert r.returncode == 0, r.stdout
+
+
+# ---------------------------------------------------------------------------
+# Cotações: bloqueio do Yahoo vs. ticker que não existe
+#
+# Em produção a Action rodou 46 minutos levando YFRateLimitError em lotes
+# inteiros. O recuo de 20s nunca era aplicado porque o yf.download não levanta
+# exceção quando é barrado — ele registra "Failed downloads" no logger e
+# devolve um DataFrame vazio, que o código antigo lia como "lote sem dados".
+# ---------------------------------------------------------------------------
+class _YFFalso:
+    """Dublê do yfinance que reproduz os três desfechos reais."""
+
+    def __init__(self, modo, falhas=0):
+        self.modo, self.falhas, self.chamadas = modo, falhas, 0
+
+    def download(self, tickers, **kw):
+        import logging
+        self.chamadas += 1
+        lg = logging.getLogger("yfinance")
+        modo = self.modo
+        if modo == "bloqueio_temporario":
+            modo = "bloqueio" if self.chamadas <= self.falhas else "ok"
+        if modo == "bloqueio":
+            lg.error("%d Failed downloads:", len(tickers))
+            lg.error("%s: YFRateLimitError('Too Many Requests. Rate limited.')", tickers)
+            return pd.DataFrame()
+        if modo == "inexistente":
+            lg.error("%d Failed downloads:", len(tickers))
+            lg.error("%s: possibly delisted; no timezone found", tickers)
+            return pd.DataFrame()
+        idx = pd.date_range("2026-01-02", periods=8, freq="B")
+        cols = pd.MultiIndex.from_product([["Adj Close", "Close", "Volume"], list(tickers)])
+        return pd.DataFrame(1.0, index=idx, columns=cols)
+
+
+@pytest.fixture
+def sem_espera(monkeypatch):
+    from magicb3 import prices
+    monkeypatch.setattr(prices.time, "sleep", lambda s: None)
+
+
+def _instalar(monkeypatch, fake, tmp_path):
+    from magicb3 import prices
+    monkeypatch.setattr(prices, "_yf", lambda: fake)
+    monkeypatch.setattr(prices, "_cache",
+                        lambda nome: tmp_path / nome)
+    return prices
+
+
+def test_bloqueio_do_yahoo_e_distinguido_de_ticker_inexistente(monkeypatch, sem_espera, tmp_path):
+    fake = _YFFalso("bloqueio")
+    prices = _instalar(monkeypatch, fake, tmp_path)
+    dados, barrado = prices._baixar_lote(["AAAA3.SA"], "2026-01-01", "2026-02-01")
+    assert dados is None and barrado is True
+    assert fake.chamadas == 4, "bloqueio merece nova tentativa"
+
+    fake2 = _YFFalso("inexistente")
+    _instalar(monkeypatch, fake2, tmp_path)
+    dados, barrado = prices._baixar_lote(["ZZZZ9.SA"], "2026-01-01", "2026-02-01")
+    assert dados is None and barrado is False
+    assert fake2.chamadas == 1, "ticker inexistente nao pode gastar 4 tentativas"
+
+
+def test_lote_barrado_uma_vez_ainda_e_recuperado(monkeypatch, sem_espera, tmp_path):
+    fake = _YFFalso("bloqueio_temporario", falhas=2)
+    prices = _instalar(monkeypatch, fake, tmp_path)
+    dados, barrado = prices._baixar_lote(["AAAA3.SA"], "2026-01-01", "2026-02-01")
+    assert barrado is False and dados is not None and not dados.empty
+
+
+def test_bloqueio_seguido_interrompe_em_vez_de_gastar_horas(monkeypatch, sem_espera, tmp_path):
+    from magicb3 import prices as _p
+    fake = _YFFalso("bloqueio")
+    prices = _instalar(monkeypatch, fake, tmp_path)
+    universo = [f"A{i:03d}3.SA" for i in range(500)]      # 10 lotes
+    with pytest.raises(_p.BloqueioYahoo):
+        prices.baixar_historico(universo, "2026-01-01", "2026-02-01")
+    # 3 lotes barrados x 4 tentativas: para no freio, nao percorre os 10.
+    assert fake.chamadas == 12
+
+
+def test_inexistentes_ficam_anotados_e_nao_sao_reconsultados(monkeypatch, sem_espera, tmp_path):
+    fake = _YFFalso("inexistente")
+    prices = _instalar(monkeypatch, fake, tmp_path)
+    universo = [f"Z{i:03d}9.SA" for i in range(100)]      # 2 lotes
+    prices.baixar_historico(universo, "2026-01-01", "2026-02-01")
+    assert fake.chamadas == 2
+    assert len(prices._carregar_inexistentes()) == 100
+
+    fake2 = _YFFalso("inexistente")
+    _instalar(monkeypatch, fake2, tmp_path)
+    prices.baixar_historico(universo, "2026-01-01", "2026-02-01")
+    assert fake2.chamadas == 0, "a segunda rodada nao pode repetir o desperdicio"
+
+
+def test_cache_por_lote_sobrevive_a_rodada_interrompida(monkeypatch, sem_espera, tmp_path):
+    """O que ja baixou tem que valer na proxima tentativa."""
+    fake = _YFFalso("ok")
+    prices = _instalar(monkeypatch, fake, tmp_path)
+    universo = [f"A{i:03d}3.SA" for i in range(100)]
+    prices.baixar_historico(universo, "2026-01-01", "2026-02-01")
+    assert fake.chamadas == 2
+
+    fake2 = _YFFalso("bloqueio")            # rede pessima na segunda rodada
+    _instalar(monkeypatch, fake2, tmp_path)
+    out = prices.baixar_historico(universo, "2026-01-01", "2026-02-01")
+    assert fake2.chamadas == 0
+    assert not out["preco"].empty
+
+
+def test_chave_de_cache_e_estavel_entre_processos():
+    """hash() do Python muda a cada processo; o cache antigo nunca era reusado."""
+    import subprocess, sys
+    codigo = ("from magicb3.prices import _chave;"
+              "print(_chave(('PETR4.SA','VALE3.SA'), '2020-01-01', '2026-01-01'))")
+    a = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True)
+    b = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True)
+    assert a.stdout.strip() and a.stdout == b.stdout
