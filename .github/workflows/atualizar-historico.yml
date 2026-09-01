@@ -44,10 +44,28 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add web/public/historico.json
-          git diff --staged --quiet && echo "Nada mudou." && exit 0
-          git commit -m "historico: backtest point-in-time atualizado"
-          git push
+          test -f web/public/historico.json || (echo "Arquivo nao foi gerado." && exit 1)
+          cp web/public/historico.json /tmp/gerado.json
+          for tentativa in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p $(dirname web/public/historico.json)
+            cp /tmp/gerado.json web/public/historico.json
+            git add web/public/historico.json
+            if git diff --staged --quiet; then
+              echo "Nada mudou."
+              exit 0
+            fi
+            git commit -m "historico: backtest point-in-time atualizado"
+            if git push; then
+              echo "Publicado na tentativa $tentativa."
+              exit 0
+            fi
+            echo "Alguem publicou antes; refazendo em cima do main atual."
+            sleep 5
+          done
+          echo "Nao consegui publicar depois de 5 tentativas."
+          exit 1
       - name: Guardar o progresso mesmo se falhar
         if: always()
         uses: actions/cache/save@v4

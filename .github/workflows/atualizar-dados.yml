@@ -22,14 +22,32 @@ jobs:
       - name: Rodar os testes
         run: python -m pytest tests -q
       - name: Gerar o dados.json
-        run: python atualizar_dados.py --pool 80
+        run: python atualizar_dados.py --pool 80 --fundamentos web/public/fundamentos.json
       - name: Conferir o resultado
         run: python validar_dados.py
       - name: Publicar
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add web/public/dados.json
-          git diff --staged --quiet && echo "Nada mudou." && exit 0
-          git commit -m "Atualizacao automatica dos dados"
-          git push
+          test -f web/public/dados.json || (echo "Arquivo nao foi gerado." && exit 1)
+          cp web/public/dados.json /tmp/gerado.json
+          for tentativa in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p $(dirname web/public/dados.json)
+            cp /tmp/gerado.json web/public/dados.json
+            git add web/public/dados.json
+            if git diff --staged --quiet; then
+              echo "Nada mudou."
+              exit 0
+            fi
+            git commit -m "Atualizacao automatica dos dados"
+            if git push; then
+              echo "Publicado na tentativa $tentativa."
+              exit 0
+            fi
+            echo "Alguem publicou antes; refazendo em cima do main atual."
+            sleep 5
+          done
+          echo "Nao consegui publicar depois de 5 tentativas."
+          exit 1
