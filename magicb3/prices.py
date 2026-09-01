@@ -1,8 +1,12 @@
 """Cotações, liquidez e valor de mercado via Yahoo Finance, com cache em disco."""
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
+import re
 import time
+from contextlib import contextmanager
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -23,6 +27,18 @@ def _yf():
 def _cache(nome: str) -> Path:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     return CACHE_DIR / nome
+
+
+def _chave(*partes) -> str:
+    """Identificador estável para nome de arquivo de cache.
+
+    O `hash()` do Python é embaralhado a cada processo (PYTHONHASHSEED
+    aleatório), então a chave antiga mudava a cada execução e o cache de
+    cotações nunca era reaproveitado entre uma rodada e a seguinte. Com
+    blake2b a mesma lista de tickers gera sempre o mesmo arquivo.
+    """
+    bruto = "|".join(str(p) for p in partes).encode("utf-8")
+    return hashlib.blake2b(bruto, digest_size=8).hexdigest()
 
 
 def _achatar(df: pd.DataFrame, campo: str, tickers: list[str]) -> pd.DataFrame:
@@ -46,32 +62,126 @@ def _achatar(df: pd.DataFrame, campo: str, tickers: list[str]) -> pd.DataFrame:
 # perdidos num lote só, o que esvaziou o cruzamento adiante.
 TAMANHO_LOTE = 50
 PAUSA_ENTRE_LOTES = 1.5          # segundos
-PAUSA_APOS_BLOQUEIO = 20.0
+ESPERA_BLOQUEIO = (60.0, 180.0, 300.0)   # recuo real quando o Yahoo barra
+LOTES_BLOQUEADOS_SEGUIDOS = 3            # depois disso, desistir da rodada
 
 
-def _bloqueado(exc: Exception) -> bool:
-    t = str(exc).lower()
-    return "too many requests" in t or "rate limit" in t or "429" in t
+ARQ_INEXISTENTES = "tickers_inexistentes.json"
+
+
+class BloqueioYahoo(RuntimeError):
+    """O Yahoo está barrando as requisições — não adianta insistir agora."""
+
+
+def _carregar_inexistentes() -> set[str]:
+    """Símbolos que o Yahoo já confirmou não existir.
+
+    A B3 devolve o prefixo do emissor, não os papéis negociados, então o
+    código testa PREFIXO + 3/4/5/6/11 — cerca de 2.000 tentativas para ~400
+    empresas. Guardar as que não existem evita repetir o mesmo desperdício a
+    cada rodada, que é justamente o que atrai o bloqueio.
+    """
+    arq = _cache(ARQ_INEXISTENTES)
+    if not arq.exists():
+        return set()
+    try:
+        return set(json.loads(arq.read_text(encoding="utf-8")))
+    except (json.JSONDecodeError, OSError):
+        return set()
+
+
+def _gravar_inexistentes(novos: set[str]) -> None:
+    if not novos:
+        return
+    todos = _carregar_inexistentes() | set(novos)
+    _cache(ARQ_INEXISTENTES).write_text(
+        json.dumps(sorted(todos)), encoding="utf-8")
+    log.info("%d símbolos inexistentes anotados (%d no total).",
+             len(novos), len(todos))
+
+
+# Um "429" solto não serve como sinal: a mensagem de erro traz a lista de
+# símbolos, e tickers como Z0429 ou GLPO4 dariam falso positivo — foi assim que
+# um lote de papéis inexistentes passou por bloqueio no teste.
+_SINAL_BLOQUEIO = re.compile(
+    r"too many requests|rate.?limit|\b(?:http|status|code|erro?r?)\D{0,12}429\b",
+    re.IGNORECASE)
+
+
+def _bloqueado(texto) -> bool:
+    return bool(_SINAL_BLOQUEIO.search(str(texto)))
+
+
+class _EscutaYF(logging.Handler):
+    """Guarda o que o yfinance reclama durante um lote.
+
+    Isto existe porque o `yf.download` NÃO levanta exceção quando o Yahoo
+    bloqueia: ele registra "Failed downloads" no logger dele e devolve um
+    DataFrame vazio. Sem ler esse log, um bloqueio fica indistinguível de um
+    ticker que não existe — e era por isso que a espera longa nunca era
+    aplicada: o código só olhava para exceções, que não vinham.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.WARNING)
+        self.linhas: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            self.linhas.append(record.getMessage())
+        except Exception:                                   # noqa: BLE001
+            pass
+
+    @property
+    def texto(self) -> str:
+        return " ".join(self.linhas)
+
+
+@contextmanager
+def _escutando_yfinance():
+    h = _EscutaYF()
+    lg = logging.getLogger("yfinance")
+    lg.addHandler(h)
+    try:
+        yield h
+    finally:
+        lg.removeHandler(h)
 
 
 def _baixar_lote(tickers: list[str], inicio, fim, tentativas: int = 4):
-    """Um lote, com nova tentativa e recuo maior quando o Yahoo bloqueia."""
+    """Um lote. Devolve (dados, bloqueado).
+
+    `bloqueado=True` significa que o Yahoo barrou a requisição — os papéis
+    podem existir e vale tentar de novo. `bloqueado=False` com dados vazios
+    significa que nenhum dos símbolos existe (combinações de sufixo que a B3
+    nunca negociou); repetir não inventa cotação, então seguimos em frente.
+    """
     yf = _yf()
     for n in range(tentativas):
         try:
-            raw = yf.download(tickers, start=str(inicio), end=str(fim),
-                              auto_adjust=False, progress=False,
-                              group_by="column", threads=False)
+            with _escutando_yfinance() as escuta:
+                raw = yf.download(tickers, start=str(inicio), end=str(fim),
+                                  auto_adjust=False, progress=False,
+                                  group_by="column", threads=False)
             if raw is not None and not raw.empty:
-                return raw
-            log.warning("Lote voltou vazio (tentativa %d/%d)", n + 1, tentativas)
-            time.sleep(PAUSA_ENTRE_LOTES * (n + 1))
+                return raw, False
+            barrado = _bloqueado(escuta.texto)
         except Exception as exc:                            # noqa: BLE001
-            espera = PAUSA_APOS_BLOQUEIO if _bloqueado(exc) else 2 ** n
-            log.warning("Lote falhou (tentativa %d/%d, esperando %.0fs): %s",
-                        n + 1, tentativas, espera, str(exc)[:160])
-            time.sleep(espera)
-    return None
+            barrado = _bloqueado(exc)
+            log.warning("Lote falhou: %s", str(exc)[:160])
+
+        if not barrado:
+            log.info("Lote sem cotação e sem bloqueio: %d símbolos inexistentes.",
+                     len(tickers))
+            return None, False
+
+        espera = ESPERA_BLOQUEIO[min(n, len(ESPERA_BLOQUEIO) - 1)]
+        if n == tentativas - 1:
+            break
+        log.warning("Yahoo bloqueou (tentativa %d/%d). Esperando %.0fs.",
+                    n + 1, tentativas, espera)
+        time.sleep(espera)
+    return None, True
 
 
 def baixar_historico(tickers: list[str], inicio: str | date, fim: str | date,
@@ -87,36 +197,70 @@ def baixar_historico(tickers: list[str], inicio: str | date, fim: str | date,
         vazio = pd.DataFrame()
         return {"preco": vazio, "fechamento": vazio, "volume": vazio}
 
-    chave = f"px_{hash((tuple(tickers), str(inicio), str(fim))) & 0xFFFFFFFF:x}.parquet"
-    arq = _cache(chave)
+    arq = _cache(f"px_{_chave(tuple(tickers), inicio, fim)}.parquet")
     if usar_cache and arq.exists():
         raw = pd.read_parquet(arq)
         raw.columns = pd.MultiIndex.from_tuples(
             [tuple(c.split("|", 1)) for c in raw.columns])
     else:
-        lotes = [tickers[i:i + TAMANHO_LOTE]
-                 for i in range(0, len(tickers), TAMANHO_LOTE)]
-        partes, perdidos = [], 0
+        mortos = _carregar_inexistentes() if usar_cache else set()
+        vivos = [t for t in tickers if t not in mortos]
+        if mortos:
+            log.info("Pulando %d símbolos já conhecidos como inexistentes.",
+                     len(tickers) - len(vivos))
+
+        lotes = [vivos[i:i + TAMANHO_LOTE]
+                 for i in range(0, len(vivos), TAMANHO_LOTE)]
+        partes, perdidos, bloqueados_seguidos, novos_mortos = [], 0, 0, set()
         for i, lote in enumerate(lotes):
             if progresso:
                 progresso(f"Cotações: lote {i+1} de {len(lotes)}...", None)
+
+            # Cache por lote: uma rodada interrompida (ou barrada no meio)
+            # não joga fora o que já baixou. A seguinte continua de onde parou.
+            arq_lote = _cache(f"lt_{_chave(tuple(lote), inicio, fim)}.parquet")
+            if usar_cache and arq_lote.exists():
+                bloco = pd.read_parquet(arq_lote)
+                bloco.columns = pd.MultiIndex.from_tuples(
+                    [tuple(c.split("|", 1)) for c in bloco.columns])
+                partes.append(bloco)
+                continue
+
             if i:
                 time.sleep(PAUSA_ENTRE_LOTES)
-            bloco = _baixar_lote(lote, inicio, fim)
+            bloco, barrado = _baixar_lote(lote, inicio, fim)
+
             if bloco is None:
                 perdidos += len(lote)
-                log.warning("Lote %d de %d sem dados (%d tickers perdidos)",
-                            i + 1, len(lotes), len(lote))
+                if barrado:
+                    bloqueados_seguidos += 1
+                    log.warning("Lote %d de %d barrado pelo Yahoo (%d seguidos).",
+                                i + 1, len(lotes), bloqueados_seguidos)
+                    if bloqueados_seguidos >= LOTES_BLOQUEADOS_SEGUIDOS:
+                        _gravar_inexistentes(novos_mortos)
+                        raise BloqueioYahoo(
+                            f"O Yahoo barrou {bloqueados_seguidos} lotes seguidos. "
+                            f"Parei no lote {i+1} de {len(lotes)} em vez de gastar "
+                            "horas coletando nada. O que já baixou ficou em cache: "
+                            "rode de novo mais tarde e ele continua daqui.")
+                else:
+                    novos_mortos.update(lote)
+                    bloqueados_seguidos = 0
                 continue
+
+            bloqueados_seguidos = 0
             if not isinstance(bloco.columns, pd.MultiIndex):
                 bloco.columns = pd.MultiIndex.from_product([bloco.columns, [lote[0]]])
             partes.append(bloco)
+            if usar_cache:
+                plano = bloco.copy()
+                plano.columns = ["|".join(map(str, c)) for c in plano.columns]
+                plano.to_parquet(arq_lote)
 
+        _gravar_inexistentes(novos_mortos)
         if perdidos:
-            log.warning("%d de %d tickers ficaram sem cotação (%.0f%%). "
-                        "Se a proporção for alta, o Yahoo esta limitando as "
-                        "requisicoes — rode de novo mais tarde.",
-                        perdidos, len(tickers), 100 * perdidos / len(tickers))
+            log.warning("%d de %d tickers ficaram sem cotação (%.0f%%).",
+                        perdidos, len(vivos), 100 * perdidos / max(len(vivos), 1))
         if not partes:
             vazio = pd.DataFrame()
             return {"preco": vazio, "fechamento": vazio, "volume": vazio}
