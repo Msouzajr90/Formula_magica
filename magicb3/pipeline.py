@@ -58,6 +58,8 @@ def montar_universo(params: C.Params, *, anos: list[int] | None = None,
     if arquivo_fundamentos:
         progresso("Lendo fundamentos do arquivo (sem acessar a CVM)...", 0.10)
         ebit, bp, setores_arquivo = arqf.importar(arquivo_fundamentos)
+        acoes_cvm = (ebit[["CD_CVM", "ACOES_CVM"]].dropna()
+                     if "ACOES_CVM" in ebit.columns else pd.DataFrame())
         idade = arqf.idade_em_dias(arquivo_fundamentos)
         if idade is not None and idade > 120:
             log.warning("fundamentos.json tem %d dias — rode baixar_fundamentos.py "
@@ -89,6 +91,16 @@ def montar_universo(params: C.Params, *, anos: list[int] | None = None,
         progresso("Calculando EBIT dos últimos 12 meses...", 0.50)
         ebit = cvm.ebit_ltm(dfp["DRE"], itr.get("DRE", pd.DataFrame()), C.CD_EBIT)
 
+        progresso("Lendo composição do capital (nº de ações)...", 0.52)
+        try:
+            cap = cvm.composicao_capital(anos, usar_cache=usar_cache)
+            acoes_cvm = (cap.merge(ebit[["CNPJ_CIA", "CD_CVM"]].drop_duplicates(),
+                                   on="CNPJ_CIA", how="inner")[["CD_CVM", "ACOES"]]
+                         .rename(columns={"ACOES": "ACOES_CVM"}).dropna())
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("composição do capital indisponível: %s", exc)
+            acoes_cvm = pd.DataFrame()
+
         progresso("Consolidando balanços...", 0.55)
         bpa = pd.concat([dfp["BPA"], itr.get("BPA", pd.DataFrame())], ignore_index=True)
         bpp = pd.concat([dfp["BPP"], itr.get("BPP", pd.DataFrame())], ignore_index=True)
@@ -116,20 +128,45 @@ def montar_universo(params: C.Params, *, anos: list[int] | None = None,
     if not liquidos:                       # filtro zerou tudo: segue sem cortar
         log.warning("Nenhum ticker passou no filtro de liquidez; usando todos.")
         liquidos = validos
-    progresso(f"Valor de mercado de {len(liquidos)} empresas líquidas...", 0.80)
-
-    n_acoes = prices.acoes_em_circulacao(liquidos, usar_cache=usar_cache)
     ultimo_preco = px.ffill().iloc[-1]
-
     mercado = pd.DataFrame({
         "TICKER": liquidos,
         "PRECO": ultimo_preco.reindex(liquidos).values,
-        "ACOES": n_acoes.reindex(liquidos).values,
         "LIQUIDEZ_MEDIA": liq.reindex(liquidos).values,
     })
-    mercado["VALOR_MERCADO"] = mercado["PRECO"] * mercado["ACOES"]
     mercado = mercado.merge(cand[["TICKER", "CD_CVM"]].drop_duplicates(),
                             on="TICKER", how="left")
+
+    # Nº de ações: a CVM é a fonte preferida porque vem junto com os dados já
+    # baixados. O Yahoo cobra uma requisição por empresa e foi ele que estourou
+    # o limite em produção, zerando o valor de mercado de todo mundo.
+    if len(acoes_cvm):
+        mercado = mercado.merge(acoes_cvm.drop_duplicates("CD_CVM"),
+                                on="CD_CVM", how="left")
+    else:
+        mercado["ACOES_CVM"] = np.nan
+
+    faltando = mercado.loc[mercado["ACOES_CVM"].isna(), "TICKER"].tolist()
+    n_yahoo = pd.Series(dtype=float)
+    if faltando:
+        progresso(f"Nº de ações: {len(mercado)-len(faltando)} da CVM, "
+                  f"{len(faltando)} a buscar no Yahoo...", 0.82)
+        n_yahoo = prices.acoes_em_circulacao(faltando, usar_cache=usar_cache)
+
+    mercado["ACOES"] = mercado["ACOES_CVM"].fillna(
+        mercado["TICKER"].map(n_yahoo) if len(n_yahoo) else np.nan)
+    mercado["VALOR_MERCADO"] = mercado["PRECO"] * mercado["ACOES"]
+
+    n_cvm = int(mercado["ACOES_CVM"].notna().sum())
+    n_tot = int(mercado["ACOES"].notna().sum())
+    log.info("nº de ações: %d da CVM + %d do Yahoo = %d de %d empresas",
+             n_cvm, n_tot - n_cvm, n_tot, len(mercado))
+    if n_tot == 0:
+        raise ValueError(
+            f"Nenhuma das {len(mercado)} empresas líquidas ficou com número de "
+            "ações, então o valor de mercado não pôde ser calculado. A CVM não "
+            "trouxe a composição do capital e o Yahoo não respondeu — este "
+            "último costuma ser limite de requisições. Tente de novo mais tarde.")
     mercado = mercado.merge(empresas[["CD_CVM", "SETOR", "SEGMENTO"]].drop_duplicates("CD_CVM"),
                             on="CD_CVM", how="left")
     mercado = mercado.dropna(subset=["CD_CVM", "VALOR_MERCADO"])

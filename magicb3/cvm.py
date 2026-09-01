@@ -12,6 +12,7 @@ import logging
 import zipfile
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from . import rede
@@ -330,3 +331,109 @@ def balanco_mais_recente(bpa: pd.DataFrame, bpp: pd.DataFrame,
             piv[c] = 0.0
     piv.columns.name = None
     return piv
+
+
+# ---------------------------------------------------------------------------
+# Composição do capital — número de ações
+# ---------------------------------------------------------------------------
+CD_LUCRO_LIQUIDO = "3.11"      # Lucro/Prejuízo Consolidado do Período
+CD_LPA_ON = "3.99.01.01"       # Lucro por Ação Básico ON, em R$/ação
+
+def composicao_capital(anos: list[int], *, consolidado: bool = True,
+                       pasta_zips: str | Path | None = None,
+                       usar_cache: bool = True) -> pd.DataFrame:
+    """Número de ações em circulação por empresa, com a escala corrigida.
+
+    A CVM publica `composicao_capital`, mas — diferente das demonstrações — esse
+    arquivo NÃO tem coluna de escala, e as empresas divergem: uma parte informa
+    em unidades e outra em milhares. Verificado no DFP de 2025: Petrobras, WEG,
+    Suzano e Gerdau vêm em unidades; Ambev, Vale, Itaú e Embraer vêm em milhares.
+    Usar o número cru daria um valor de mercado 1.000 vezes menor para essas, o
+    que embaralharia por completo o ranking de Earnings Yield.
+
+    A escala é inferida comparando com o número de ações implícito no lucro por
+    ação: `ações ≈ lucro líquido / LPA`. A razão entre o implícito e o informado
+    cai claramente perto de 1 ou perto de 1.000.
+
+    Devolve CNPJ_CIA, ACOES, ACOES_BRUTO e ESCALA_CONFIRMADA. Quando a escala não
+    pôde ser confirmada, ACOES vem nulo — melhor não ter o dado do que ter um
+    dado mil vezes errado.
+    """
+    base_dfp = BASE_DFP
+    linhas: list[pd.DataFrame] = []
+    suf = "con" if consolidado else "ind"
+
+    for ano in anos:
+        zf = None
+        if pasta_zips:
+            local = _zip_local(Path(pasta_zips), "dfp", ano)
+            if local is not None:
+                zf = zipfile.ZipFile(local)
+        else:
+            try:
+                zf = _baixar_zip(f"{base_dfp}/dfp_cia_aberta_{ano}.zip")
+            except Exception as exc:                           # noqa: BLE001
+                log.warning("composicao_capital: %s", exc)
+        if zf is None:
+            continue
+
+        nome = next((n for n in zf.namelist() if "composicao_capital" in n.lower()), None)
+        if nome is None:
+            continue
+        with zf.open(nome) as fh:
+            cap = pd.read_csv(fh, sep=";", encoding="ISO-8859-1", low_memory=False)
+        if "QT_ACAO_TOTAL_CAP_INTEGR" not in cap.columns:
+            log.warning("composicao_capital de %s sem as colunas esperadas", ano)
+            continue
+
+        cap["DT_REFER"] = pd.to_datetime(cap["DT_REFER"], errors="coerce")
+        cap["ACOES_BRUTO"] = (pd.to_numeric(cap["QT_ACAO_TOTAL_CAP_INTEGR"], errors="coerce")
+                              - pd.to_numeric(cap.get("QT_ACAO_TOTAL_TESOURO"),
+                                              errors="coerce").fillna(0))
+
+        # referência para a escala: ações implícitas no lucro por ação
+        alvo = _achar_membro(zf, "dfp", "DRE", suf, ano)
+        if alvo:
+            dre = _normalizar(_ler_membro(zf, alvo, {CD_LUCRO_LIQUIDO, CD_LPA_ON}))
+            piv = dre.pivot_table(index="CNPJ_CIA", columns="CD_CONTA",
+                                  values="VL_CONTA", aggfunc="last")
+            piv.columns.name = None
+            piv = piv.reset_index()
+            cap = cap.merge(piv, on="CNPJ_CIA", how="left")
+            # A coluna pode nem existir se nenhuma empresa do arquivo reportou
+            # a conta — daí a série de NaN em vez de None.
+            def _serie(coluna: str) -> pd.Series:
+                if coluna not in cap.columns:
+                    return pd.Series(np.nan, index=cap.index, dtype="float64")
+                return pd.to_numeric(cap[coluna], errors="coerce")
+
+            # o LPA já vem em R$/ação; a normalização de escala não se aplica a ele
+            lpa = _serie(CD_LPA_ON) / 1000.0
+            lucro = _serie(CD_LUCRO_LIQUIDO)
+            cap["ACOES_IMPLICITO"] = lucro / lpa.replace(0, np.nan)
+        else:
+            cap["ACOES_IMPLICITO"] = np.nan
+
+        linhas.append(cap[["CNPJ_CIA", "DT_REFER", "ACOES_BRUTO", "ACOES_IMPLICITO"]])
+
+    if not linhas:
+        return pd.DataFrame(columns=["CNPJ_CIA", "ACOES", "ACOES_BRUTO",
+                                     "ESCALA_CONFIRMADA"])
+
+    df = pd.concat(linhas, ignore_index=True).sort_values("DT_REFER")
+    df = df.groupby("CNPJ_CIA", as_index=False).last()
+
+    razao = (df["ACOES_IMPLICITO"] / df["ACOES_BRUTO"].replace(0, np.nan)).abs()
+    unidades = razao.between(0.3, 3.0)
+    milhares = razao.between(300.0, 3000.0)
+
+    df["ACOES"] = np.where(unidades, df["ACOES_BRUTO"],
+                    np.where(milhares, df["ACOES_BRUTO"] * 1000.0, np.nan))
+    df["ESCALA_CONFIRMADA"] = unidades | milhares
+    df.loc[df["ACOES"] <= 0, "ACOES"] = np.nan
+
+    log.info("composição do capital: %d empresas, %d com escala confirmada "
+             "(%d em unidades, %d em milhares)",
+             len(df), int(df["ESCALA_CONFIRMADA"].sum()),
+             int(unidades.sum()), int(milhares.sum()))
+    return df[["CNPJ_CIA", "ACOES", "ACOES_BRUTO", "ESCALA_CONFIRMADA"]]

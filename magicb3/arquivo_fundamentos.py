@@ -59,11 +59,19 @@ def _t(x):
 
 
 def exportar(ebit: pd.DataFrame, bp: pd.DataFrame, setores: pd.DataFrame,
-             caminho: Path | str, *, anos: list[int]) -> dict:
-    """Grava o arquivo a partir do que `cvm.py` produziu."""
+             caminho: Path | str, *, anos: list[int],
+             acoes: pd.DataFrame | None = None) -> dict:
+    """Grava o arquivo a partir do que `cvm.py` produziu.
+
+    `acoes` vem de `cvm.composicao_capital()` e é o que evita depender do Yahoo
+    para o valor de mercado — a consulta ao Yahoo é uma chamada por empresa e
+    foi justamente ela que estourou o limite de requisições em produção.
+    """
     df = ebit.merge(bp, on="CD_CVM", how="left")
     if not setores.empty:
         df = df.merge(setores, on="CD_CVM", how="left")
+    if acoes is not None and not acoes.empty and "CNPJ_CIA" in df.columns:
+        df = df.merge(acoes[["CNPJ_CIA", "ACOES"]], on="CNPJ_CIA", how="left")
 
     # Acesso por nome de coluna: os códigos de conta ("1.01", "2.03") não são
     # identificadores Python válidos, então itertuples os renomearia.
@@ -75,6 +83,7 @@ def exportar(ebit: pd.DataFrame, bp: pd.DataFrame, setores: pd.DataFrame,
         "cvm": col("CD_CVM"), "cnpj": col("CNPJ_CIA"), "nome": col("DENOM_CIA"),
         "setor": col("SETOR"), "ebitLtm": col("EBIT_LTM"),
         "dtBase": col("DT_BASE"), "dtBalanco": col("DT_BP"), "fonte": col("FONTE"),
+        "acoes": col("ACOES"),
     }
     contas = {nome: col(conta) for nome, conta in CONTAS.items()}
 
@@ -91,6 +100,7 @@ def exportar(ebit: pd.DataFrame, bp: pd.DataFrame, setores: pd.DataFrame,
             "dtBase": (_t(campos["dtBase"][i]) or "")[:10] or None,
             "dtBalanco": (_t(campos["dtBalanco"][i]) or "")[:10] or None,
             "fonte": _t(campos["fonte"][i]),
+            "acoes": _n(campos["acoes"][i]),
         }
         for nome, serie in contas.items():
             item[nome] = _n(serie[i])
@@ -135,6 +145,7 @@ def importar(caminho: Path | str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFr
         "EBIT_LTM": pd.to_numeric(emp.get("ebitLtm"), errors="coerce"),
         "DT_BASE": pd.to_datetime(emp.get("dtBase"), errors="coerce"),
         "FONTE": emp.get("fonte"),
+        "ACOES_CVM": pd.to_numeric(emp.get("acoes"), errors="coerce"),
         "DT_RECEB": pd.NaT,
     })
 

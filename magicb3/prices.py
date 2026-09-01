@@ -185,8 +185,10 @@ def acoes_em_circulacao(tickers: list[str], *, usar_cache: bool = True) -> pd.Se
         faltando = tickers
 
     yf = _yf()
-    novos = {}
-    for t in faltando:
+    novos, falhas_seguidas = {}, 0
+    for i, t in enumerate(faltando):
+        if i:
+            time.sleep(0.35)                 # uma requisição por empresa: vá devagar
         try:
             fi = yf.Ticker(t).fast_info
             n = fi.get("shares") or fi.get("sharesOutstanding")
@@ -195,9 +197,23 @@ def acoes_em_circulacao(tickers: list[str], *, usar_cache: bool = True) -> pd.Se
             if not n and mc and px:
                 n = mc / px
             novos[t] = float(n) if n else np.nan
+            falhas_seguidas = 0
         except Exception as exc:                            # noqa: BLE001
             log.debug("sem ações em circulação para %s: %s", t, exc)
             novos[t] = np.nan
+            falhas_seguidas += 1
+            if _bloqueado(exc):
+                log.warning("Yahoo limitou as requisições; pausando %.0fs",
+                            PAUSA_APOS_BLOQUEIO)
+                time.sleep(PAUSA_APOS_BLOQUEIO)
+                falhas_seguidas = 0
+            elif falhas_seguidas >= 25:
+                log.warning("25 falhas seguidas no nº de ações; desistindo das "
+                            "%d restantes.", len(faltando) - i - 1)
+                break
+
+    obtidos = sum(1 for v in novos.values() if v == v and v)
+    log.info("nº de ações pelo Yahoo: %d de %d consultados", obtidos, len(faltando))
 
     s = pd.concat([s, pd.Series(novos)]) if len(s) else pd.Series(novos)
     s = s[~s.index.duplicated(keep="last")]
