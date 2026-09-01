@@ -31,6 +31,12 @@ _NOMES = [
     ("CURY3", "Cury Construtora"), ("PLPL3", "Plano & Plano"),
     ("BRAP4", "Bradespar S.A."), ("AGRO3", "BrasilAgro"), ("JHSF3", "JHSF Part."),
 ]
+# Financeiras entram à parte: ROE e Lucro/Preço, nunca ROIC e EBIT/EV.
+_FINANCEIRAS = [
+    ("BBAS3", "Banco do Brasil S.A."), ("ITUB4", "Itaú Unibanco Holding"),
+    ("BBDC4", "Banco Bradesco S.A."), ("SANB11", "Banco Santander Brasil"),
+    ("BRSR6", "Banrisul S.A."), ("PSSA3", "Porto Seguro S.A."),
+]
 _SETORES = ["Petróleo e Gás", "Mineração", "Siderurgia", "Máquinas e Equip.",
             "Papel e Celulose", "Comércio", "Construção Civil", "Agropecuária",
             "Material de Transporte", "Alimentos"]
@@ -60,7 +66,34 @@ def _universo_sintetico(seed: int = 11) -> pd.DataFrame:
     df["ACOES"] = df["VALOR_MERCADO"] / df["PRECO"]
     df["ROIC"] = df["EBIT_LTM"] / df["CAPITAL_TANGIVEL"]
     df["EY"] = df["EBIT_LTM"] / df["EV"]
-    return df
+    df["TIPO"] = "operacional"
+
+    # bloco das financeiras, com as métricas próprias
+    nf = len(_FINANCEIRAS)
+    pl = rng.lognormal(24.0, 1.0, nf)
+    roe = rng.uniform(0.06, 0.20, nf)
+    lucro = pl * roe
+    fin = pd.DataFrame({
+        "CD_CVM": np.arange(n + 1, n + 1 + nf),
+        "TICKER": [f"{t}.SA" for t, _ in _FINANCEIRAS],
+        "DENOM_CIA": [d for _, d in _FINANCEIRAS],
+        "SETOR": ["Bancos"] * (nf - 1) + ["Seguradoras e Corretoras"],
+        "EBIT_LTM": lucro, "LUCRO_LTM": lucro, "PATRIMONIO": pl,
+        "VALOR_MERCADO": lucro / rng.uniform(0.06, 0.25, nf),
+        "PRECO": rng.uniform(9, 45, nf).round(2),
+        "LIQUIDEZ_MEDIA": rng.lognormal(18.5, 0.6, nf),
+        "DT_BASE": pd.Timestamp(date.today()) - pd.Timedelta(days=75),
+        "FONTE": "DEMONSTRAÇÃO (dados sintéticos)",
+        "TIPO": "financeira",
+    })
+    fin["ACOES"] = fin["VALOR_MERCADO"] / fin["PRECO"]
+    fin["EV"] = fin["VALOR_MERCADO"]
+    fin["CAPITAL_TANGIVEL"] = fin["PATRIMONIO"]
+    fin["DIVIDA_LIQUIDA"] = 0.0
+    fin["ROIC"] = fin["LUCRO_LTM"] / fin["PATRIMONIO"]      # ROE
+    fin["EY"] = fin["LUCRO_LTM"] / fin["VALOR_MERCADO"]     # Lucro/Preço
+
+    return pd.concat([df, fin], ignore_index=True)
 
 
 def _retornos_sinteticos(tickers: list[str], dias: int, seed: int = 5) -> pd.DataFrame:
@@ -79,7 +112,8 @@ def _retornos_sinteticos(tickers: list[str], dias: int, seed: int = 5) -> pd.Dat
 def resultado_demo(params: C.Params) -> Resultado:
     uni = _universo_sintetico()
     aprov, rejeit = fundamentals.aplicar_filtros(uni, params)
-    rk = ranking.ranquear(aprov, n=params.n_acoes_ranking)
+    rk = ranking.ranquear(aprov, n=params.n_acoes_ranking,
+                          vagas_financeiras=params.vagas_financeiras)
     sel = rk[rk["SELECIONADA"]].copy()
 
     rets = _retornos_sinteticos(sel["TICKER"].tolist(), params.janela_retornos_dias)

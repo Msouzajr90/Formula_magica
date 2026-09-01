@@ -17,12 +17,13 @@ log = logging.getLogger(__name__)
 CONTAS_BP = [
     C.CD_ATIVO_TOTAL, C.CD_ATIVO_CIRCULANTE, C.CD_CAIXA, C.CD_APLIC_FINANCEIRAS,
     C.CD_PASSIVO_CIRCULANTE, C.CD_EMPRESTIMOS_CP, C.CD_EMPRESTIMOS_LP,
-    C.CD_IMOBILIZADO, C.CD_INTANGIVEL, C.CD_PATRIMONIO_LIQUIDO,
+    C.CD_INVESTIMENTOS, C.CD_IMOBILIZADO, C.CD_INTANGIVEL, C.CD_PATRIMONIO_LIQUIDO,
 ]
 
 # Únicos códigos que precisam sair dos CSVs da CVM — tudo o mais é descartado
 # durante a leitura, para o processo caber na memória do Streamlit Cloud.
-CONTAS_USADAS = set(CONTAS_BP) | {C.CD_EBIT, C.CD_LUCRO_LIQUIDO, C.CD_LPA_BASICO_ON}
+CONTAS_USADAS = (set(CONTAS_BP) | set(C.CD_PL_CANDIDATOS)
+                 | {C.CD_EBIT, C.CD_LUCRO_LIQUIDO, C.CD_LPA_BASICO_ON})
 
 
 @dataclass
@@ -106,6 +107,14 @@ def montar_universo(params: C.Params, *, anos: list[int] | None = None,
         bpp = pd.concat([dfp["BPP"], itr.get("BPP", pd.DataFrame())], ignore_index=True)
         bp = cvm.balanco_mais_recente(bpa, bpp, CONTAS_BP)
 
+        # Métricas das financeiras: lucro líquido de 12 meses e patrimônio
+        # líquido localizado pela descrição (o código muda entre planos).
+        lucro = cvm.ebit_ltm(dfp["DRE"], itr.get("DRE", pd.DataFrame()),
+                             C.CD_LUCRO_LIQUIDO)[["CD_CVM", "EBIT_LTM"]]
+        lucro = lucro.rename(columns={"EBIT_LTM": "LUCRO_LTM"})
+        ebit = ebit.merge(lucro, on="CD_CVM", how="left")
+        bp = bp.merge(cvm.patrimonio_liquido(bpp), on="CD_CVM", how="left")
+
     progresso("Baixando cotações da B3...", 0.65)
     cand = tickers.candidatos_de_ticker(empresas[empresas["CD_CVM"].isin(ebit["CD_CVM"])])
     hist = prices.baixar_historico(
@@ -181,7 +190,8 @@ def montar_carteira(params: C.Params, *, progresso=_nada, usar_cache: bool = Tru
                                arquivo_fundamentos=arquivo_fundamentos)
     aprovados, rejeitados = fundamentals.aplicar_filtros(universo, params)
 
-    rk = ranking.ranquear(aprovados, n=params.n_acoes_ranking)
+    rk = ranking.ranquear(aprovados, n=params.n_acoes_ranking,
+                          vagas_financeiras=params.vagas_financeiras)
     selec = rk[rk["SELECIONADA"]].copy()
 
     progresso("Otimizando a carteira (Markowitz)...", 0.93)
@@ -212,6 +222,8 @@ def montar_carteira(params: C.Params, *, progresso=_nada, usar_cache: bool = Tru
             "com_serie_de_precos": int(px.shape[1]),
             "data_base_mediana": (str(pd.to_datetime(selec["DT_BASE"]).median().date())
                                   if "DT_BASE" in selec and len(selec) else None),
+            "financeiras_na_carteira": int((selec.get("TIPO") == "financeira").sum())
+                                      if "TIPO" in selec.columns else 0,
             "gerado_em": str(pd.Timestamp.now()),
         },
     )

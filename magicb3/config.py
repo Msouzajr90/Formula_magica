@@ -19,6 +19,7 @@ CD_ATIVO_TOTAL = "1"
 CD_ATIVO_CIRCULANTE = "1.01"
 CD_CAIXA = "1.01.01"                 # Caixa e Equivalentes de Caixa
 CD_APLIC_FINANCEIRAS = "1.01.02"     # Aplicações Financeiras (circulante)
+CD_INVESTIMENTOS = "1.02.02"   # inclui propriedades para investimento (shoppings, imóveis)
 CD_IMOBILIZADO = "1.02.03"
 CD_INTANGIVEL = "1.02.04"
 
@@ -27,7 +28,15 @@ CD_PASSIVO_CIRCULANTE = "2.01"
 CD_EMPRESTIMOS_CP = "2.01.04"
 CD_PASSIVO_NAO_CIRC = "2.02"
 CD_EMPRESTIMOS_LP = "2.02.01"
-CD_PATRIMONIO_LIQUIDO = "2.03"
+CD_PATRIMONIO_LIQUIDO = "2.03"   # nas financeiras é "Provisões"; o PL fica em 2.07
+# Bancos e seguradoras usam outro plano de contas com os MESMOS códigos. A
+# descrição, porém, é idêntica nos dois — por isso o PL é localizado por ela.
+DS_PATRIMONIO_LIQUIDO = "patrimônio líquido consolidado"
+# Códigos onde o PL pode aparecer conforme o plano de contas. Precisam ser
+# LIDOS do CSV para que a busca por descrição tenha o que encontrar — o filtro
+# de contas na leitura é aplicado antes. Medido no ITR de 06/2026: 410 empresas
+# em 2.03, 7 em 2.07 (Banco do Brasil, Bradesco) e 5 em 2.08 (Itaú).
+CD_PL_CANDIDATOS = ("2.03", "2.04", "2.05", "2.06", "2.07", "2.08", "2.09")
 
 # Setores que Greenblatt manda excluir: bancos, seguradoras e utilities.
 # Em instituições financeiras, "dívida" é matéria-prima e não financiamento,
@@ -35,7 +44,7 @@ CD_PATRIMONIO_LIQUIDO = "2.03"
 # regulado e o ROIC é administrativamente fixado.
 # Padrões em regex (case-insensitive) casados contra SETOR_ATIV da CVM
 # e contra o segmento da B3.
-SETORES_EXCLUIDOS_PADRAO = (
+SETORES_FINANCEIROS = (
     r"banco",
     r"seguro|seguradora|resseguro",
     r"previd[êe]ncia|capitaliza[çc][ãa]o",
@@ -44,6 +53,9 @@ SETORES_EXCLUIDOS_PADRAO = (
     r"securitiza",
     r"cr[ée]dito imobili[áa]rio",
     r"bolsa de valores|valores mobili[áa]rios",
+)
+
+SETORES_EXCLUIDOS_PADRAO = SETORES_FINANCEIROS + (
     r"energia el[ée]trica",
     r"[áa]gua e saneamento|saneamento",
     r"^g[áa]s\b|distribui[çc][ãa]o de g[áa]s",
@@ -68,8 +80,15 @@ class Params:
     # ---- fórmula mágica -------------------------------------------------
     n_acoes_ranking: int = 30                     # Greenblatt sugere 20-30
     base_roic: Literal["capital_tangivel", "ativo_total", "patrimonio_liquido"] = "capital_tangivel"
+    incluir_investimentos: bool = True   # soma 1.02.02 ao capital tangível
     base_ey: Literal["ebit_ev", "lucro_preco", "lpa_original_tcc"] = "ebit_ev"
     usar_ltm: bool = True                         # 12 meses móveis (DFP + ITR)
+
+    # ---- financeiras ----------------------------------------------------
+    # Bancos e seguradoras não têm ROIC nem EV com sentido econômico, então são
+    # ranqueados à parte por ROE e Lucro/Preço. A cota abaixo é quantas vagas da
+    # carteira ficam com eles — escolha do investidor, sem base teórica.
+    vagas_financeiras: int = 0
 
     # ---- Markowitz ------------------------------------------------------
     janela_retornos_dias: int = 252               # 1 ano de pregão

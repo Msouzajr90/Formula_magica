@@ -239,7 +239,13 @@ function dispersao(svg, pontos, opts) {
 // ===========================================================================
 let D = null;                      // dados.json
 let idx = new Map();               // ticker -> empresa
-let estado = { n: 30, cap: 0.15, perfil: 0, capital: 100000, unico: true };
+let estado = { n: 30, cap: 0.15, perfil: 0, capital: 100000, unico: true, vagasFin: 0 };
+
+/** Rótulo das métricas: numa financeira as colunas medem outra coisa. */
+const rotulos = (tipo) => tipo === 'financeira'
+  ? { q: 'ROE', p: 'Lucro / Preço' }
+  : { q: 'ROIC', p: 'EBIT / EV' };
+const ehFin = (e) => (e.tipo || 'operacional') === 'financeira';
 let frontAtual = [];
 
 function elegiveis() {
@@ -256,8 +262,20 @@ function elegiveis() {
   return lista;
 }
 
+/** Seleciona respeitando a cota: operacionais e financeiras são ordenadas
+ *  entre si, porque ROIC e ROE não estão na mesma escala. ROE é inflado por
+ *  alavancagem — exatamente o que Greenblatt evitou ao escolher EBIT sobre
+ *  capital —, então um ranking único favoreceria sistematicamente um lado. */
+function selecionar(lista, n, vagasFin) {
+  const fin = lista.filter(ehFin), op = lista.filter(e => !ehFin(e));
+  const vf = Math.max(0, Math.min(vagasFin, n));
+  return { escolhidas: [...op.slice(0, n - vf), ...fin.slice(0, vf)],
+           op, fin, vagasOp: n - vf, vagasFin: vf };
+}
+
 function calcular() {
-  const sel = elegiveis().slice(0, estado.n);
+  const { escolhidas } = selecionar(elegiveis(), estado.n, estado.vagasFin);
+  const sel = escolhidas;
   const pos = new Map(D.estatisticas.tickers.map((t, i) => [t, i]));
   const ids = sel.map(e => pos.get(e.ticker)).filter(i => i !== undefined);
 
@@ -285,7 +303,8 @@ function render() {
 
   // --- tiles ---
   const tiles = [
-    ['Ações na carteira', String(r.pesos.length), `de ${estado.n} no ranking`],
+    ['Ações na carteira', String(r.pesos.length),
+      estado.vagasFin ? `${estado.vagasFin} vaga(s) p/ financeiras` : `de ${estado.n} no ranking`],
     ['Retorno esperado', pct(r.ret), 'ao ano, estimado'],
     ['Volatilidade', pct(r.vol), 'ao ano'],
     ['Índice de Sharpe', num(sharpe), `sobre ${pct(rf, 1)} livre de risco`],
@@ -321,13 +340,22 @@ function render() {
       <div class="r"><span>ROIC</span><span>${pct(e.roic)}</span></div>
       <div class="r"><span>Earnings Yield</span><span>${pct(e.ey)}</span></div>
       <div class="r"><span>Soma no ranking</span><span>${e.rank}</span></div>`
-  })), { fx: v => pct(v, 0), fy: v => pct(v, 0), rotuloX: 'Earnings Yield (preço)',
-         rotuloY: 'ROIC (qualidade)', altura: 400 });
+  })).filter(p => !ehFin(idx.get(p.tk || '') || {})),
+     { fx: v => pct(v, 0), fy: v => pct(v, 0), rotuloX: 'Earnings Yield (preço)',
+       rotuloY: 'ROIC (qualidade)', altura: 400 });
 
-  el('tbRank').querySelector('tbody').innerHTML = lista.slice(0, 120).map((e, i) => {
+  const grupos = selecionar(lista, lista.length, estado.vagasFin);
+  const posDe = new Map();
+  grupos.op.forEach((e, i) => posDe.set(e.ticker, i + 1));
+  grupos.fin.forEach((e, i) => posDe.set(e.ticker, i + 1));
+  const ordenada = [...grupos.op, ...grupos.fin];
+
+  el('tbRank').querySelector('tbody').innerHTML = ordenada.slice(0, 120).map((e) => {
     const dentro = r.carteira.has(e.ticker);
+    const rot = rotulos(e.tipo);
     return `<tr${dentro ? ' style="background:color-mix(in srgb, var(--s1) 7%, transparent)"' : ''}>
-      <td class="l num muted">${i + 1}</td><td class="l tk">${e.ticker}</td>
+      <td class="l num muted">${posDe.get(e.ticker)}${ehFin(e) ? ' <span class="tag">fin</span>' : ''}</td>
+      <td class="l tk" title="${rot.q} / ${rot.p}">${e.ticker}</td>
       <td class="l cap" title="${e.nome || ''}">${e.nome || '—'}</td>
       <td class="l cap muted" title="${e.setor || ''}">${e.setor || '—'}</td>
       <td class="num">${pct(e.roic)}</td><td class="num">${pct(e.ey)}</td>
@@ -374,6 +402,8 @@ function ligarControles() {
   bind('ctlR', 'perfil', c => +c.value);
   bind('ctlCap', 'capital', c => Math.max(+c.value || 0, 0));
   bind('ctlUnico', 'unico', c => c.checked);
+  bind('ctlFin', 'vagasFin', c => Math.max(0, +c.value || 0),
+       () => el('lblFin').textContent = el('ctlFin').value);
   document.querySelectorAll('.tabs button').forEach(b =>
     b.addEventListener('click', () => trocarAba(b.dataset.p)));
   let t;
@@ -411,6 +441,9 @@ async function iniciar() {
       <td class="l muted">${e.motivo || '—'}</td></tr>`).join('')
     || '<tr><td colspan="4" class="l muted">Nenhuma empresa excluída.</td></tr>';
 
+  const nFin = D.empresas.filter(ehFin).length;
+  el('avisoFin').classList.toggle('hidden', nFin === 0);
+  if (nFin) el('nFin').textContent = String(nFin);
   const maxN = Math.min(D.empresas.length, 60);
   el('ctlN').max = String(maxN);
   if (estado.n > maxN) { estado.n = maxN; el('ctlN').value = String(maxN); el('lblN').textContent = String(maxN); }

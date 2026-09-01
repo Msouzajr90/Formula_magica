@@ -35,6 +35,7 @@ CONTAS = {
     "passivoCirc": C.CD_PASSIVO_CIRCULANTE,
     "dividaCp": C.CD_EMPRESTIMOS_CP,
     "dividaLp": C.CD_EMPRESTIMOS_LP,
+    "investimentos": C.CD_INVESTIMENTOS,
     "imobilizado": C.CD_IMOBILIZADO,
     "intangivel": C.CD_INTANGIVEL,
     "patrimonio": C.CD_PATRIMONIO_LIQUIDO,
@@ -83,7 +84,8 @@ def exportar(ebit: pd.DataFrame, bp: pd.DataFrame, setores: pd.DataFrame,
         "cvm": col("CD_CVM"), "cnpj": col("CNPJ_CIA"), "nome": col("DENOM_CIA"),
         "setor": col("SETOR"), "ebitLtm": col("EBIT_LTM"),
         "dtBase": col("DT_BASE"), "dtBalanco": col("DT_BP"), "fonte": col("FONTE"),
-        "acoes": col("ACOES"),
+        "acoes": col("ACOES"), "lucro": col("LUCRO_LTM"),
+        "pl": col("PATRIMONIO"),
     }
     contas = {nome: col(conta) for nome, conta in CONTAS.items()}
 
@@ -101,6 +103,8 @@ def exportar(ebit: pd.DataFrame, bp: pd.DataFrame, setores: pd.DataFrame,
             "dtBalanco": (_t(campos["dtBalanco"][i]) or "")[:10] or None,
             "fonte": _t(campos["fonte"][i]),
             "acoes": _n(campos["acoes"][i]),
+            "lucro": _n(campos["lucro"][i]),
+            "pl": _n(campos["pl"][i]),
         }
         for nome, serie in contas.items():
             item[nome] = _n(serie[i])
@@ -146,11 +150,13 @@ def importar(caminho: Path | str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFr
         "DT_BASE": pd.to_datetime(emp.get("dtBase"), errors="coerce"),
         "FONTE": emp.get("fonte"),
         "ACOES_CVM": pd.to_numeric(emp.get("acoes"), errors="coerce"),
+        "LUCRO_LTM": pd.to_numeric(emp.get("lucro"), errors="coerce"),
         "DT_RECEB": pd.NaT,
     })
 
     bp = pd.DataFrame({"CD_CVM": emp["cvm"].astype(int),
-                       "DT_BP": pd.to_datetime(emp.get("dtBalanco"), errors="coerce")})
+                       "DT_BP": pd.to_datetime(emp.get("dtBalanco"), errors="coerce"),
+                       "PATRIMONIO": pd.to_numeric(emp.get("pl"), errors="coerce")})
     for nome, conta in CONTAS.items():
         bp[conta] = pd.to_numeric(emp.get(nome), errors="coerce").fillna(0.0)
 

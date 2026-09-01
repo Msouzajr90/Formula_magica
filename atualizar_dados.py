@@ -60,6 +60,7 @@ def montar_json(res, params: C.Params, pool: int) -> dict:
             "yf": str(r.TICKER),
             "nome": _texto(getattr(r, "DENOM_CIA", None)),
             "setor": _texto(getattr(r, "SETOR", None)),
+            "tipo": _texto(getattr(r, "TIPO", None)) or "operacional",
             "roic": _num(r.ROIC),
             "ey": _num(r.EY),
             "posRoic": int(r.POS_ROIC),
@@ -98,6 +99,7 @@ def montar_json(res, params: C.Params, pool: int) -> dict:
             "janelaRetornos": params.janela_retornos_dias,
             "taxaLivreRisco": params.taxa_livre_risco_aa,
             "custoBps": params.custo_transacao_bps,
+            "vagasFinanceiras": params.vagas_financeiras,
             "diagnostico": {k: (str(v) if not isinstance(v, (int, float, type(None))) else v)
                             for k, v in res.diagnostico.items()},
         },
@@ -118,6 +120,9 @@ def main() -> int:
     ap.add_argument("--pool", type=int, default=80,
                     help="quantas empresas do ranking exportar")
     ap.add_argument("--liquidez", type=float, default=1_000_000)
+    ap.add_argument("--vagas-financeiras", type=int, default=0,
+                    help="quantas vagas da carteira ficam com bancos e seguradoras "
+                         "(ranqueados por ROE e Lucro/Preco, nunca junto das demais)")
     ap.add_argument("--saida", default=str(SAIDA))
     ap.add_argument("--fundamentos", default=None,
                     help="caminho do fundamentos.json; com ele a CVM nao e acessada "
@@ -126,6 +131,7 @@ def main() -> int:
 
     params = C.Params(n_acoes_ranking=args.pool,
                       liquidez_minima_diaria=args.liquidez,
+                      vagas_financeiras=args.vagas_financeiras,
                       n_carteiras_fronteira=5)
 
     if args.demo:

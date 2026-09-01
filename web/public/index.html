@@ -87,6 +87,8 @@
   .num{font-variant-numeric:tabular-nums}
   .tk{font-weight:600}
   .muted{color:var(--ink-3)}
+  .tag{font-size:10px;letter-spacing:.04em;text-transform:uppercase;background:var(--surface-2);
+       border:1px solid var(--line-strong);border-radius:4px;padding:1px 4px;color:var(--ink-2)}
   .cap{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tall{max-height:460px;overflow-y:auto}
 
@@ -161,6 +163,10 @@
       <label for="ctlCap">Capital a investir (R$)</label>
       <input type="number" id="ctlCap" value="100000" min="1000" step="1000">
     </div>
+    <div class="ctl">
+      <label>Vagas p/ bancos e seguradoras: <b id="lblFin">0</b></label>
+      <input type="range" id="ctlFin" min="0" max="10" value="0" step="1">
+    </div>
     <label class="chk"><input type="checkbox" id="ctlUnico" checked>
       Uma classe por empresa</label>
   </div>
@@ -210,6 +216,14 @@
       <h2>Ranking combinado</h2>
       <p class="note">Posição no ranking de ROIC somada à posição no ranking de
          Earnings Yield. Menor soma, melhor.</p>
+      <div class="warn hidden" id="avisoFin">
+        <b>Duas escalas diferentes na mesma tabela.</b> As <span id="nFin">0</span>
+        empresas marcadas com <span class="tag">fin</span> são bancos e seguradoras.
+        Nelas "dívida" é depósito de cliente e o capital tangível não é o que produz
+        o resultado, então ROIC e EBIT/EV não existem — as colunas trazem
+        <b>ROE</b> e <b>Lucro/Preço</b>. Cada grupo é numerado a partir de 1, e as
+        posições de um não se comparam com as do outro.
+      </div>
       <div class="scroll tall">
         <table id="tbRank"><thead><tr>
           <th class="l">#</th><th class="l">Ativo</th><th class="l">Empresa</th>

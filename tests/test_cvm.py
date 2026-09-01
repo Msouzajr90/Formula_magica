@@ -217,3 +217,76 @@ def test_leitura_em_blocos_seguida_de_normalizacao():
     assert out.loc[1, "VL_CONTA"] == 100_000        # MIL -> reais
     assert out.loc[3, "VL_CONTA"] == 300_000        # UNIDADE -> inalterado
     assert out["VL_CONTA"].dtype.kind == "f"
+
+
+# ---------------------------------------------------------------------------
+# Composição do capital — detecção da escala do nº de ações
+# ---------------------------------------------------------------------------
+def _zip_com_capital(tmp_path, linhas_cap, linhas_dre):
+    """Monta um zip DFP com composicao_capital e DRE, como o da CVM."""
+    import zipfile
+    cab_cap = ("CNPJ_CIA;DT_REFER;VERSAO;DENOM_CIA;QT_ACAO_ORDIN_CAP_INTEGR;"
+               "QT_ACAO_PREF_CAP_INTEGR;QT_ACAO_TOTAL_CAP_INTEGR;"
+               "QT_ACAO_ORDIN_TESOURO;QT_ACAO_PREF_TESOURO;QT_ACAO_TOTAL_TESOURO")
+    cab_dre = ("CNPJ_CIA;DT_REFER;VERSAO;DENOM_CIA;CD_CVM;GRUPO_DFP;MOEDA;ESCALA_MOEDA;"
+               "ORDEM_EXERC;DT_INI_EXERC;DT_FIM_EXERC;CD_CONTA;DS_CONTA;VL_CONTA;ST_CONTA_FIXA")
+    destino = tmp_path / "dfp_cia_aberta_2025.zip"
+    with zipfile.ZipFile(destino, "w") as z:
+        z.writestr("dfp_cia_aberta_composicao_capital_2025.csv",
+                   ("\n".join([cab_cap] + linhas_cap)).encode("ISO-8859-1"))
+        z.writestr("dfp_cia_aberta_DRE_con_2025.csv",
+                   ("\n".join([cab_dre] + linhas_dre)).encode("ISO-8859-1"))
+    return tmp_path
+
+
+def test_composicao_capital_corrige_escala_em_milhares(tmp_path):
+    """A CVM publica o nº de ações sem coluna de escala: umas empresas informam
+    em unidades e outras em milhares. Confirmado no DFP 2025 — Petrobras em
+    unidades, Ambev em milhares. Sem corrigir, o valor de mercado sai 1.000
+    vezes menor e o ranking de Earnings Yield vira outra coisa."""
+    from magicb3 import cvm
+
+    def cap(cnpj, nome, on, pn):
+        return f"{cnpj};2025-12-31;1;{nome};{on};{pn};{on + pn};0;0;0"
+
+    def dre(cnpj, cd_cvm, conta, valor):
+        return (f"{cnpj};2025-12-31;1;CIA;{cd_cvm};DF Consolidado;REAL;MIL;"
+                f"ÚLTIMO;2025-01-01;2025-12-31;{conta};d;{valor};S")
+
+    # UNIDADES: 2 bi de ações, lucro 4 bi (em mil), LPA R$ 2,00 -> 2 bi implícito
+    # MILHARES: 16 mil (= 16 mi), lucro 32.000 mil, LPA R$ 2,00 -> 16 mi implícito
+    pasta = _zip_com_capital(
+        tmp_path,
+        [cap("11.111.111/0001-11", "EM UNIDADES", 2_000_000_000, 0),
+         cap("22.222.222/0001-22", "EM MILHARES", 16_000, 0)],
+        [dre("11.111.111/0001-11", 1, "3.11", 4_000_000),      # R$ 4 bi
+         dre("11.111.111/0001-11", 1, "3.99.01.01", 2.0),      # LPA R$ 2,00
+         dre("22.222.222/0001-22", 2, "3.11", 32_000),         # R$ 32 mi
+         dre("22.222.222/0001-22", 2, "3.99.01.01", 2.0)],     # LPA R$ 2,00
+    )
+
+    out = cvm.composicao_capital([2025], pasta_zips=pasta).set_index("CNPJ_CIA")
+    unid = out.loc["11.111.111/0001-11"]
+    milh = out.loc["22.222.222/0001-22"]
+
+    assert bool(unid["ESCALA_CONFIRMADA"]) and bool(milh["ESCALA_CONFIRMADA"])
+    assert unid["ACOES"] == pytest.approx(2e9)          # mantida
+    assert milh["ACOES"] == pytest.approx(16e6)         # 16.000 x 1.000
+    assert milh["ACOES_BRUTO"] == pytest.approx(16e3)   # o cru continua registrado
+
+
+def test_composicao_capital_sem_lpa_nao_chuta(tmp_path):
+    """Sem como confirmar a escala, é melhor devolver nulo do que um número
+    que pode estar mil vezes errado."""
+    from magicb3 import cvm
+    pasta = _zip_com_capital(
+        tmp_path,
+        ["33.333.333/0001-33;2025-12-31;1;SEM LPA;5000;0;5000;0;0;0"],
+        ["33.333.333/0001-33;2025-12-31;1;CIA;3;DF Consolidado;REAL;MIL;"
+         "ÚLTIMO;2025-01-01;2025-12-31;3.11;d;1000;S"],
+    )
+    out = cvm.composicao_capital([2025], pasta_zips=pasta).set_index("CNPJ_CIA")
+    linha = out.loc["33.333.333/0001-33"]
+    assert not bool(linha["ESCALA_CONFIRMADA"])
+    assert pd.isna(linha["ACOES"])
+    assert linha["ACOES_BRUTO"] == pytest.approx(5000)

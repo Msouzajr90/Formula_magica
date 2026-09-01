@@ -98,8 +98,10 @@ def test_ey_do_tcc_e_insensivel_ao_preco(universo):
     ey_ok_a = fundamentals.montar_indicadores(ebit, bp, mercado, p_ok)["EY"]
     ey_ok_b = fundamentals.montar_indicadores(ebit, bp, caro, p_ok)["EY"]
 
-    assert np.allclose(ey_tcc_a, ey_tcc_b)          # bug: não reage ao preço
-    assert not np.allclose(ey_ok_a, ey_ok_b)        # corrigido: reage
+    # a "Beta" é banco e agora sai como NaN (métricas próprias), então o
+    # equal_nan isola o que este teste realmente mede: a reação ao preço
+    assert np.allclose(ey_tcc_a, ey_tcc_b, equal_nan=True)   # bug: não reage
+    assert not np.allclose(ey_ok_a, ey_ok_b, equal_nan=True)  # corrigido: reage
 
 
 def test_filtros_excluem_setor_liquidez_e_ebit_negativo(universo):
@@ -322,3 +324,92 @@ def test_cd_cvm_como_texto_ou_float_ainda_cruza():
     assert len(out) == 2
     assert set(out["TICKER"]) == {"AAA3.SA", "BBB3.SA"}
     assert (out["EY"] > 0).all()
+
+
+# ---------------------------------------------------------------------------
+# Financeiras: métricas próprias e ranking separado
+# ---------------------------------------------------------------------------
+def _universo_misto():
+    """Três operacionais e duas financeiras, com os campos de cada grupo."""
+    return pd.DataFrame({
+        "CD_CVM": [1, 2, 3, 4, 5],
+        "TICKER": ["OPA3.SA", "OPB3.SA", "OPC3.SA", "BBAS3.SA", "ITUB4.SA"],
+        "DENOM_CIA": ["Op A", "Op B", "Op C", "Banco A", "Banco B"],
+        "SETOR": ["Comércio", "Comércio", "Comércio", "Bancos", "Bancos"],
+        "EBIT_LTM": [1e9, 2e9, 0.5e9, 5e9, 8e9],
+        "LUCRO_LTM": [0.6e9, 1.2e9, 0.3e9, 17e9, 40e9],
+        "PATRIMONIO": [3e9, 8e9, 2e9, 190e9, 220e9],
+        "VALOR_MERCADO": [5e9, 20e9, 3e9, 120e9, 380e9],
+        "ACOES": [1e9] * 5,
+        "LIQUIDEZ_MEDIA": [50e6] * 5,
+        C.CD_ATIVO_CIRCULANTE: [2e9, 6e9, 1e9, 65e9, 90e9],
+        C.CD_CAIXA: [0.3e9, 1e9, 0.1e9, 27e9, 30e9],
+        C.CD_APLIC_FINANCEIRAS: [0.0] * 5,
+        C.CD_PASSIVO_CIRCULANTE: [0.9e9, 3e9, 0.5e9, 5e9, 8e9],
+        C.CD_EMPRESTIMOS_CP: [0.2e9, 0.5e9, 0.1e9, 0.0, 0.0],
+        C.CD_EMPRESTIMOS_LP: [0.8e9, 2e9, 0.4e9, 954e9, 1200e9],
+        C.CD_INVESTIMENTOS: [0.0, 0.0, 0.0, 0.0, 0.0],
+        C.CD_IMOBILIZADO: [1.2e9, 4e9, 0.8e9, 710e9, 900e9],
+        C.CD_ATIVO_TOTAL: [5e9, 15e9, 3e9, 2588e9, 3000e9],
+    })
+
+
+def _indicadores(uni, params):
+    mercado = uni[["CD_CVM", "TICKER", "SETOR", "VALOR_MERCADO", "ACOES", "LIQUIDEZ_MEDIA"]]
+    ebit = uni[["CD_CVM", "DENOM_CIA", "EBIT_LTM", "LUCRO_LTM"]]
+    bp = uni.drop(columns=["DENOM_CIA", "EBIT_LTM", "LUCRO_LTM", "TICKER", "SETOR",
+                           "VALOR_MERCADO", "ACOES", "LIQUIDEZ_MEDIA"])
+    return fundamentals.montar_indicadores(ebit, bp, mercado, params)
+
+
+def test_financeiras_usam_roe_e_lucro_preco():
+    """Num banco, ROIC e EBIT/EV não têm sentido: 'dívida' é depósito de cliente
+    e o capital tangível não é o que produz o resultado."""
+    p = C.Params(vagas_financeiras=2, liquidez_minima_diaria=1e6)
+    ind = _indicadores(_universo_misto(), p).set_index("TICKER")
+
+    assert ind.loc["BBAS3.SA", "TIPO"] == "financeira"
+    assert ind.loc["OPA3.SA", "TIPO"] == "operacional"
+    # banco: ROIC vira ROE = 17/190 ; EY vira Lucro/Preço = 17/120
+    assert ind.loc["BBAS3.SA", "ROIC"] == pytest.approx(17 / 190, rel=1e-6)
+    assert ind.loc["BBAS3.SA", "EY"] == pytest.approx(17 / 120, rel=1e-6)
+    # operacional: segue EBIT/capital tangível e EBIT/EV
+    ct = (2 - 0.3) - (0.9 - 0.2) + 1.2          # = 2,2 bi
+    assert ind.loc["OPA3.SA", "ROIC"] == pytest.approx(1 / ct, rel=1e-6)
+
+
+def test_cota_reserva_vagas_e_nao_mistura_os_rankings():
+    p = C.Params(vagas_financeiras=1, n_acoes_ranking=3, liquidez_minima_diaria=1e6)
+    ok, _ = fundamentals.aplicar_filtros(_indicadores(_universo_misto(), p), p)
+    rk = ranking.ranquear(ok, n=3, vagas_financeiras=1)
+    sel = rk[rk["SELECIONADA"]]
+    assert (sel["TIPO"] == "financeira").sum() == 1
+    assert (sel["TIPO"] == "operacional").sum() == 2
+    # cada grupo é numerado a partir de 1 — as posições não são comparáveis
+    for tipo in ("operacional", "financeira"):
+        g = rk[rk["TIPO"] == tipo]
+        assert g["POSICAO"].min() == 1
+
+
+def test_sem_cota_as_financeiras_sao_excluidas():
+    p = C.Params(vagas_financeiras=0, liquidez_minima_diaria=1e6)
+    ok, fora = fundamentals.aplicar_filtros(_indicadores(_universo_misto(), p), p)
+    assert set(ok["TICKER"]) == {"OPA3.SA", "OPB3.SA", "OPC3.SA"}
+    assert {"BBAS3.SA", "ITUB4.SA"} <= set(fora["TICKER"])
+
+
+def test_investimentos_entram_no_capital_tangivel():
+    """Regressão dos shoppings: Allos tinha R$ 0,11 bi de imobilizado e
+    R$ 20 bi em Investimentos, o que dava ROIC de 1.358%."""
+    bp = pd.DataFrame({
+        C.CD_ATIVO_CIRCULANTE: [3.96e9], C.CD_CAIXA: [1.0e9],
+        C.CD_APLIC_FINANCEIRAS: [0.0], C.CD_PASSIVO_CIRCULANTE: [3.0e9],
+        C.CD_EMPRESTIMOS_CP: [0.0], C.CD_INVESTIMENTOS: [20.0e9],
+        C.CD_IMOBILIZADO: [0.11e9],
+    })
+    ebit = 1.51e9
+    sem = float(fundamentals.capital_tangivel(bp, incluir_investimentos=False).iloc[0])
+    com = float(fundamentals.capital_tangivel(bp, incluir_investimentos=True).iloc[0])
+    assert com - sem == pytest.approx(20.0e9)
+    assert ebit / sem > 10          # ROIC > 1.000%, o artefato
+    assert 0.02 < ebit / com < 0.15  # ROIC plausível depois da correção

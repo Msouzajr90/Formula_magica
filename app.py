@@ -65,11 +65,17 @@ with st.sidebar.expander("Universo de ações", expanded=True):
     liq = st.number_input("Liquidez mínima (R$/dia)", 0, 500_000_000, 1_000_000, 250_000,
                           help="Volume financeiro médio dos últimos 3 meses.")
     excluir_setores = st.checkbox(
-        "Excluir bancos, seguradoras e utilities", True,
+        "Excluir utilities (e financeiras, se sem vagas)", True,
         help="Greenblatt exclui esses setores: em instituições financeiras a dívida "
              "é matéria-prima, não financiamento, e ROIC/EV perdem sentido.")
     uma_classe = st.checkbox("Só a classe mais líquida por empresa", True,
                              help="Evita PETR3 e PETR4 competindo na mesma carteira.")
+    vagas_fin = st.number_input(
+        "Vagas para bancos e seguradoras", 0, 20, 0,
+        help="Financeiras não têm ROIC nem EV com sentido econômico — nelas "
+             "'dívida' é depósito de cliente. Se você reservar vagas, elas são "
+             "ranqueadas à parte por ROE e Lucro/Preço, nunca misturadas com as "
+             "demais. Com 0, ficam de fora, como manda Greenblatt.")
 
 with st.sidebar.expander("Fórmula mágica", expanded=True):
     n_acoes = st.slider("Nº de ações no ranking", 10, 60, 30,
@@ -111,7 +117,7 @@ with st.sidebar.expander("Custos e backtest", expanded=False):
 params = C.Params(
     liquidez_minima_diaria=float(liq),
     excluir_setores=C.SETORES_EXCLUIDOS_PADRAO if excluir_setores else (),
-    apenas_um_ticker_por_empresa=uma_classe,
+    apenas_um_ticker_por_empresa=uma_classe, vagas_financeiras=int(vagas_fin),
     n_acoes_ranking=int(n_acoes), base_ey=base_ey, base_roic=base_roic,
     usar_ltm=usar_ltm, peso_maximo_ativo=float(peso_max),
     n_carteiras_fronteira=int(n_cart), metodo_covariancia=met_cov,
@@ -231,8 +237,14 @@ with aba2:
     st.subheader("Ranking combinado de Greenblatt")
     st.caption("Posição no ranking de ROIC + posição no ranking de Earnings Yield. "
                "Menor soma = melhor combinação de qualidade e preço.")
+    if "TIPO" in res.ranking.columns and (res.ranking["TIPO"] == "financeira").any():
+        st.info("As linhas marcadas como **financeira** são ranqueadas entre si, "
+                "com **ROE** no lugar do ROIC e **Lucro/Preço** no lugar do "
+                "EBIT/EV. As duas escalas não são comparáveis — por isso os "
+                "grupos têm numeração própria.", icon="ℹ️")
     tab = ranking.resumo(res.ranking, n=min(120, len(res.ranking)))
-    ren = {"POSICAO": "#", "TICKER": "Ticker", "DENOM_CIA": "Empresa", "SETOR": "Setor",
+    ren = {"POSICAO": "#", "TIPO": "Tipo", "TICKER": "Ticker",
+           "DENOM_CIA": "Empresa", "SETOR": "Setor",
            "POS_ROIC": "Rk ROIC", "POS_EY": "Rk EY", "RANK_FINAL": "Soma",
            "PRECO": "Preço", "VALOR_MERCADO": "Valor de mercado", "EV": "EV",
            "EBIT_LTM": "EBIT 12m", "LIQUIDEZ_MEDIA": "Liquidez/dia",

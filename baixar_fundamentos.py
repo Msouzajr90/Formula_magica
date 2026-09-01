@@ -113,12 +113,25 @@ def main() -> int:
     bp = cvm.balanco_mais_recente(bpa, bpp, CONTAS_BP)
     print(f"  {len(bp):,} empresas com balanço")
 
+    lucro = cvm.ebit_ltm(dfp["DRE"], itr.get("DRE", pd.DataFrame()),
+                         C.CD_LUCRO_LIQUIDO)[["CD_CVM", "EBIT_LTM"]]
+    ebit = ebit.merge(lucro.rename(columns={"EBIT_LTM": "LUCRO_LTM"}),
+                      on="CD_CVM", how="left")
+    bp = bp.merge(cvm.patrimonio_liquido(bpp), on="CD_CVM", how="left")
+    n_pl = int(bp["PATRIMONIO"].notna().sum())
+    print(f"  {n_pl:,} com patrimônio líquido localizado")
+
+    print("Lendo composição do capital (número de ações)...")
+    acoes = cvm.composicao_capital(anos, pasta_zips=args.zips, usar_cache=cache)
+    n_ok = int(acoes["ACOES"].notna().sum()) if len(acoes) else 0
+    print(f"  {len(acoes):,} empresas, {n_ok:,} com escala confirmada")
+
     if len(ebit) < 100:
         print(f"\nSó {len(ebit)} empresas com EBIT — esperado 300 ou mais.")
         print("Algo saiu errado. Rode com --sem-cache e veja se muda.")
         return 1
 
-    dados = arqf.exportar(ebit, bp, setores, args.saida, anos=anos)
+    dados = arqf.exportar(ebit, bp, setores, args.saida, anos=anos, acoes=acoes)
     kb = Path(args.saida).stat().st_size / 1024
     com_ltm = sum(1 for e in dados["empresas"] if (e.get("fonte") or "").startswith("DFP+ITR"))
 

@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from . import config as C
 from . import rede
 from .config import CACHE_DIR
 
@@ -437,3 +438,33 @@ def composicao_capital(anos: list[int], *, consolidado: bool = True,
              len(df), int(df["ESCALA_CONFIRMADA"].sum()),
              int(unidades.sum()), int(milhares.sum()))
     return df[["CNPJ_CIA", "ACOES", "ACOES_BRUTO", "ESCALA_CONFIRMADA"]]
+
+
+def patrimonio_liquido(bpp: pd.DataFrame) -> pd.DataFrame:
+    """Patrimônio líquido localizado pela DESCRIÇÃO da conta, não pelo código.
+
+    Necessário porque bancos e seguradoras usam outro plano de contas com os
+    mesmos códigos. Verificado no ITR de 30/06/2026:
+
+        conta   WEG S.A.                   Banco do Brasil
+        2.01    Passivo Circulante         Passivos Financeiros ao Valor Justo
+        2.03    Patrimônio Líquido         Provisões
+        2.07    (não existe)               Patrimônio Líquido Consolidado
+
+    Ler `2.03` num banco devolve as provisões — R$ 40,4 bi no BB, contra os
+    R$ 190,8 bi de patrimônio real. A descrição, porém, é idêntica nos dois
+    planos, então é por ela que se procura.
+    """
+    if bpp.empty:
+        return pd.DataFrame(columns=["CD_CVM", "PATRIMONIO", "CD_CONTA_PL"])
+    ds = bpp["DS_CONTA"].astype("string").str.strip().str.lower()
+    pl = bpp[ds.str.startswith(C.DS_PATRIMONIO_LIQUIDO, na=False)].copy()
+    if pl.empty:
+        return pd.DataFrame(columns=["CD_CVM", "PATRIMONIO", "CD_CONTA_PL"])
+    # entre "Consolidado" e "Atribuído ao Controlador", fica o de código mais curto
+    pl["_prof"] = pl["CD_CONTA"].astype(str).str.count(r"\.")
+    pl = pl.sort_values(["DT_REFER", "_prof"])
+    pl = pl.groupby("CD_CVM", as_index=False).first()
+    return pl.rename(columns={"VL_CONTA": "PATRIMONIO",
+                              "CD_CONTA": "CD_CONTA_PL"})[
+        ["CD_CVM", "PATRIMONIO", "CD_CONTA_PL"]]
