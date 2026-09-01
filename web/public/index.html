@@ -124,6 +124,12 @@
   footer{border-top:1px solid var(--line);padding-top:20px;color:var(--ink-3);font-size:12px}
   .load{padding:60px 20px;text-align:center;color:var(--ink-3)}
   .hidden{display:none!important}
+  details{border-bottom:1px solid var(--line);padding:6px 0}
+  details summary{cursor:pointer;font-size:13px;color:var(--ink-2);padding:4px 0}
+  details[open] summary{color:var(--ink);font-weight:600}
+  details table{margin:6px 0 10px}
+  details td{padding:4px 10px;border:none}
+  code{background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:12px}
 </style>
 </head>
 <body>
@@ -175,6 +181,7 @@
     <button role="tab" aria-selected="true"  data-p="carteira">Carteira</button>
     <button role="tab" aria-selected="false" data-p="ranking">Ranking</button>
     <button role="tab" aria-selected="false" data-p="fronteira">Fronteira eficiente</button>
+    <button role="tab" aria-selected="false" data-p="backtest">Backtest</button>
     <button role="tab" aria-selected="false" data-p="excluidas">Excluídas</button>
   </div>
 
@@ -252,6 +259,78 @@
         que é uma estimativa muito imprecisa. As carteiras da direita são as que mais
         subiram no último ano — não necessariamente as que mais vão subir. Foi
         exatamente isso que produziu o resultado ruim de 2022 no trabalho original.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BACKTEST ============ -->
+  <section id="p-backtest" class="hidden">
+    <div id="btSemDados" class="card hidden">
+      <h2>Backtest indisponível</h2>
+      <p class="note">O arquivo <code>historico.json</code> não foi encontrado.
+        Ele é gerado por <code>gerar_historico.py</code> — rode a ação
+        <b>Atualizar histórico</b> no GitHub.</p>
+    </div>
+
+    <div id="btConteudo">
+      <div class="warn hidden" id="btDemo"
+           style="border-left-color:var(--bad);background:color-mix(in srgb, var(--bad) 8%, transparent)">
+        <b>⚠ Estes retornos são inventados.</b> O arquivo de histórico está em modo
+        demonstração — as séries foram geradas por sorteio, não são cotações reais
+        de nenhuma empresa. Servem só para você ver a tela funcionando. Rode a ação
+        <code>Atualizar histórico</code> no GitHub para substituir por dados de verdade.
+      </div>
+
+      <div class="card" style="margin-bottom:18px">
+        <h2>Desempenho histórico</h2>
+        <p class="note">Compra no primeiro pregão após cada data de rebalanceamento
+          e mantém até o seguinte, com custo de transação nas duas pontas.
+          <b id="btInfo"></b></p>
+
+        <div class="warn">
+          <b>Este backtest reconstrói o ranking em cada data.</b> Em 02/01/2022 ele
+          usa apenas as demonstrações que já haviam sido entregues à CVM até
+          aquele dia — o balanço de 31/12/2021 ainda não existia e não entra.
+          É o que separa uma validação de uma ilusão: usar o balanço antes da
+          publicação inflaria o retorno, porque a fórmula seleciona por preço baixo
+          e capturaria de graça a alta pós-divulgação.
+          <br><br>
+          Ele responde aos controles acima: mude o nº de ações, o peso máximo, as
+          vagas para financeiras ou o perfil de risco e o cálculo é refeito aqui
+          no seu navegador.
+        </div>
+
+        <div class="legend">
+          <span><i style="background:var(--s1)"></i>Carteira</span>
+          <span><i style="background:var(--s2)"></i>Ibovespa</span>
+          <span class="muted" id="btStatus"></span>
+        </div>
+        <svg id="chBt" class="chart"></svg>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>Métricas</h2>
+          <p class="note">Retorno sozinho não diz nada sem o risco que o produziu.</p>
+          <div class="scroll">
+            <table id="tbBt"><thead><tr>
+              <th class="l">Indicador</th><th>Carteira</th><th>Ibovespa</th>
+            </tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Carteira em cada data</h2>
+          <p class="note">O que o modelo teria comprado, com a informação da época.</p>
+          <div class="tall" id="btComp"></div>
+        </div>
+      </div>
+
+      <div class="warn" style="margin-top:18px">
+        <b>Limitações que continuam de pé.</b> O universo de empresas vem da lista
+        atual da B3, então companhias que fecharam capital no período não aparecem
+        — viés de sobrevivência, que empurra o resultado para cima. Não há imposto
+        de renda sobre o ganho de capital. E cinco anos são poucos rebalanceamentos
+        para concluir qualquer coisa com segurança estatística.
       </div>
     </div>
   </section>

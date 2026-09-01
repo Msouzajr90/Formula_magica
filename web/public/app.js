@@ -19,7 +19,7 @@ function projetar(v, cap) {
     return s;
   };
   let lo = Math.min(...v) - 1, hi = Math.max(...v);
-  for (let k = 0; k < 80; k++) {
+  for (let k = 0; k < 50; k++) {   // 50 passos ~ 1e-13; 80 era desperdício
     const mid = (lo + hi) / 2;
     if (soma(mid) > 1) lo = mid; else hi = mid;
   }
@@ -73,14 +73,15 @@ function otimizar(S, mu, cap, lambda, iteracoes = 900) {
 const risco = (S, w) => Math.sqrt(Math.max(dot(w, mulMatVec(S, w)), 0));
 
 /** Traça a fronteira variando lambda; devolve pontos únicos ordenados por risco. */
-function fronteira(S, mu, cap, pontos = 20) {
+function fronteira(S, mu, cap, pontos = 20, nLambdas = 60, iteracoes = 900) {
   const escala = Math.max(...mu.map(Math.abs)) || 1;
   const lambdas = [0];
-  for (let k = 0; k < 60; k++) lambdas.push(Math.pow(1.28, k) * 1e-3 / escala);
+  const passoL = Math.pow(1.28, 60 / nLambdas);
+  for (let k = 0; k < nLambdas; k++) lambdas.push(Math.pow(passoL, k) * 1e-3 / escala);
 
   const bruto = [];
   for (const lam of lambdas) {
-    const w = otimizar(S, mu, cap, lam);
+    const w = otimizar(S, mu, cap, lam, iteracoes);
     bruto.push({ w, ret: dot(w, mu), vol: risco(S, w) });
   }
   bruto.sort((a, b) => a.vol - b.vol);
@@ -96,6 +97,71 @@ function fronteira(S, mu, cap, pontos = 20) {
   if (limpo.length <= pontos) return limpo;
   const passo = (limpo.length - 1) / (pontos - 1);
   return Array.from({ length: pontos }, (_, i) => limpo[Math.round(i * passo)]);
+}
+
+// ===========================================================================
+// Estimadores — portados de magicb3/optimizer.py e conferidos contra ele
+// ===========================================================================
+const DIAS_ANO = 252;
+
+/** Covariância com encolhimento de Ledoit-Wolf, alvo de correlação constante.
+ *  A covariância amostral de 252 dias para 30 ativos é ruidosa demais e produz
+ *  pesos instáveis; o encolhimento puxa as correlações para a média. */
+function covLedoitWolf(X) {
+  const n = X.length, p = X[0].length;
+  const media = new Float64Array(p);
+  for (const linha of X) for (let j = 0; j < p; j++) media[j] += linha[j] / n;
+  const Xc = X.map(l => l.map((v, j) => v - media[j]));
+
+  const S = Array.from({ length: p }, () => new Float64Array(p));
+  for (const l of Xc)
+    for (let i = 0; i < p; i++)
+      for (let j = i; j < p; j++) { const v = l[i] * l[j] / n; S[i][j] += v; if (i !== j) S[j][i] += v; }
+
+  const varr = new Float64Array(p), std = new Float64Array(p);
+  for (let i = 0; i < p; i++) { varr[i] = S[i][i]; std[i] = Math.sqrt(Math.max(varr[i], 0)); }
+
+  let somaR = 0;
+  for (let i = 0; i < p; i++)
+    for (let j = 0; j < p; j++) {
+      const d = std[i] * std[j];
+      somaR += d > 0 ? S[i][j] / d : 0;
+    }
+  const rBarra = p > 1 ? (somaR - p) / (p * (p - 1)) : 0;
+
+  const F = Array.from({ length: p }, () => new Float64Array(p));
+  for (let i = 0; i < p; i++)
+    for (let j = 0; j < p; j++) F[i][j] = i === j ? varr[i] : rBarra * std[i] * std[j];
+
+  // intensidade do encolhimento
+  let phi = 0;
+  const y = Xc.map(l => l.map(v => v * v));
+  for (let i = 0; i < p; i++)
+    for (let j = 0; j < p; j++) {
+      let acc = 0;
+      for (let k = 0; k < n; k++) acc += y[k][i] * y[k][j];
+      phi += acc / n - S[i][j] * S[i][j];
+    }
+  let gamma = 0;
+  for (let i = 0; i < p; i++)
+    for (let j = 0; j < p; j++) { const d = F[i][j] - S[i][j]; gamma += d * d; }
+  const delta = gamma <= 0 ? 0 : Math.min(Math.max(phi / (n * gamma), 0), 1);
+
+  return S.map((linha, i) =>
+    Array.from(linha, (v, j) => (delta * F[i][j] + (1 - delta) * v) * DIAS_ANO));
+}
+
+/** Retorno esperado por média exponencial — dá mais peso ao passado recente. */
+function muEwma(X, lam = 0.97) {
+  const n = X.length, p = X[0].length;
+  const w = new Float64Array(n);
+  let soma = 0;
+  for (let i = 0; i < n; i++) { w[i] = Math.pow(lam, n - 1 - i); soma += w[i]; }
+  const mu = new Float64Array(p);
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < p; j++) mu[j] += X[i][j] * (w[i] / soma);
+  for (let j = 0; j < p; j++) mu[j] *= DIAS_ANO;
+  return mu;
 }
 
 // ===========================================================================
@@ -180,6 +246,67 @@ function barras(svg, dados) {
   });
 }
 
+/** Duas séries no tempo, com legenda e cursor. Nunca dois eixos y — as duas
+ *  séries estão na mesma unidade (retorno acumulado em %). */
+function linhas(svg, datas, series, opts = {}) {
+  svg.textContent = '';
+  const m = { t: 14, r: 16, b: 44, l: 62 };
+  const w = svg.clientWidth || svg.parentNode.clientWidth || 620;
+  const h = opts.altura || 400;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.setAttribute('height', h);
+  const iw = w - m.l - m.r, ih = h - m.t - m.b;
+  const todos = series.flatMap(s2 => s2.v).filter(v => isFinite(v));
+  if (!todos.length) return;
+
+  let y0 = Math.min(...todos), y1 = Math.max(...todos);
+  const folga = (y1 - y0) * 0.08 || 1;
+  y0 -= folga; y1 += folga;
+  const X = (i) => m.l + (i / Math.max(datas.length - 1, 1)) * iw;
+  const Y = (v) => m.t + ih - ((v - y0) / (y1 - y0)) * ih;
+
+  for (let k = 0; k <= 4; k++) {
+    const gy = m.t + (ih * k) / 4, val = y1 - ((y1 - y0) * k) / 4;
+    svg.appendChild(mk('line', { x1: m.l, x2: m.l + iw, y1: gy, y2: gy,
+                                 class: 'gridline', 'stroke-width': 1 }));
+    const t = mk('text', { x: m.l - 9, y: gy + 4, 'text-anchor': 'end', 'font-size': 11 });
+    t.textContent = nf(0).format(val) + '%'; svg.appendChild(t);
+  }
+  if (Math.abs(y0) < Math.abs(y1) && y0 < 0) {
+    svg.appendChild(mk('line', { x1: m.l, x2: m.l + iw, y1: Y(0), y2: Y(0),
+                                 stroke: css('--line-strong'), 'stroke-width': 1 }));
+  }
+  const passos = Math.min(6, datas.length);
+  for (let k = 0; k < passos; k++) {
+    const i = Math.round((k / (passos - 1)) * (datas.length - 1));
+    const t = mk('text', { x: X(i), y: h - m.b + 18, 'text-anchor': 'middle', 'font-size': 11 });
+    t.textContent = (datas[i] || '').slice(0, 7); svg.appendChild(t);
+  }
+
+  series.forEach(s2 => {
+    const pts = s2.v.map((v, i) => `${X(i)},${Y(v)}`).join('L');
+    svg.appendChild(mk('path', { d: 'M' + pts, fill: 'none', stroke: s2.cor,
+                                 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+  });
+
+  // cursor com os valores de todas as séries na data
+  const cursor = mk('line', { y1: m.t, y2: m.t + ih, class: 'gridline',
+                              'stroke-width': 1, opacity: 0 });
+  svg.appendChild(cursor);
+  const alvo = mk('rect', { x: m.l, y: m.t, width: iw, height: ih, fill: 'transparent' });
+  alvo.addEventListener('mousemove', (ev) => {
+    const cx = ev.offsetX * (w / (svg.clientWidth || w));
+    const i = Math.max(0, Math.min(datas.length - 1,
+      Math.round(((cx - m.l) / iw) * (datas.length - 1))));
+    cursor.setAttribute('x1', X(i)); cursor.setAttribute('x2', X(i));
+    cursor.setAttribute('opacity', 1);
+    mostrarTip(ev, `<b>${datas[i]}</b>` + series.map(s2 =>
+      `<div class="r"><span>${s2.nome}</span><span>${nf(1).format(s2.v[i])}%</span></div>`).join(''));
+  });
+  alvo.addEventListener('mouseleave', () => { cursor.setAttribute('opacity', 0); esconderTip(); });
+  svg.appendChild(alvo);
+}
+
 /** Dispersão genérica com dois grupos de cor (identidade, não posto). */
 function dispersao(svg, pontos, opts) {
   svg.textContent = '';
@@ -232,6 +359,142 @@ function dispersao(svg, pontos, opts) {
     ligarTip(c, p.tip);
     svg.appendChild(c);
   });
+}
+
+// ===========================================================================
+// Backtest point-in-time
+// ===========================================================================
+
+/** Refaz o backtest inteiro no navegador com os parâmetros atuais.
+ *
+ *  O que torna isto honesto: `H.rebalances` já traz o ranking reconstruído com
+ *  as demonstrações que estavam publicadas naquela data — em 02/01/2022 o
+ *  balanço de 31/12/2021 ainda não existia, e não entra. O navegador só aplica
+ *  os SEUS cortes (nº de ações, cota de financeiras) sobre essa lista e roda
+ *  o Markowitz com a janela de retornos anterior à compra.
+ */
+function rodarBacktest(H, cfg) {
+  const esc = H.meta.escalaRetornos || 100000;
+  const nD = H.pregoes.length;
+  const iDe = new Map(H.pregoes.map((d, i) => [d, i]));
+  const idxData = (s) => {                       // primeiro pregão >= s
+    if (iDe.has(s)) return iDe.get(s);
+    let lo = 0, hi = nD;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (H.pregoes[m] < s) lo = m + 1; else hi = m; }
+    return lo;
+  };
+  const serie = (t) => H.retornos[t];
+  const janela = cfg.janela || H.meta.janelaRetornos || 252;
+  const custo = (cfg.custoBps ?? H.meta.custoBps ?? 15) / 10000;
+
+  const rp = new Array(nD).fill(null);
+  const composicoes = [];
+  const registro = [];
+
+  for (let r = 0; r < H.rebalances.length; r++) {
+    const reb = H.rebalances[r];
+    const ini = idxData(reb.data);
+    const fim = r + 1 < H.rebalances.length
+      ? idxData(H.rebalances[r + 1].data) : nD;
+    if (fim - ini < 5 || ini < 30) continue;
+
+    const j0 = Math.max(0, ini - janela);
+    const op = reb.acoes.filter(a => !a.f), fin = reb.acoes.filter(a => a.f);
+    const vf = Math.max(0, Math.min(cfg.vagasFin, cfg.n));
+    const escolhidas = [...op.slice(0, cfg.n - vf), ...fin.slice(0, vf)];
+
+    // só entram papéis com série suficiente na janela anterior à compra
+    const nomes = [], colunas = [];
+    for (const a of escolhidas) {
+      const s = serie(a.t);
+      if (!s) continue;
+      let vistos = 0;
+      for (let i = j0; i < ini; i++) if (s[i] !== null && s[i] !== undefined) vistos++;
+      if (vistos < Math.min(120, (ini - j0) * 0.8)) continue;
+      nomes.push(a.t); colunas.push(s);
+    }
+    if (nomes.length < 3) { registro.push(`${reb.data}: menos de 3 papéis com histórico`); continue; }
+
+    const X = [];
+    for (let i = j0; i < ini; i++)
+      X.push(colunas.map(s => (s[i] ?? 0) / esc));
+
+    const S = covLedoitWolf(X), mu = muEwma(X);
+    // fronteira reduzida: o backtest roda a cada mudança de controle
+    const fr = fronteira(S, mu, cfg.cap, 20, 16, 300);
+    const k = Math.min(cfg.perfil, fr.length - 1);
+    let w = Array.from(fr[k].w);
+    const somaW = w.reduce((a, b) => a + b, 0) || 1;
+    w = w.map(v => (v / somaW >= 0.005 ? v / somaW : 0));
+    const s2 = w.reduce((a, b) => a + b, 0) || 1;
+    w = w.map(v => v / s2);
+
+    // buy-and-hold: os pesos derivam com o preço, como na vida real
+    const valor = w.slice();
+    let total = 1;
+    for (let i = ini; i < fim; i++) {
+      let novo = 0;
+      for (let c = 0; c < nomes.length; c++) {
+        const x = (colunas[c][i] ?? 0) / esc;
+        valor[c] *= (1 + x);
+        novo += valor[c];
+      }
+      let ret = novo / total - 1;
+      if (i === ini) ret = (1 + ret) * (1 - custo) - 1;          // compra
+      if (i === fim - 1) ret = (1 + ret) * (1 - custo) - 1;      // venda
+      rp[i] = ret;
+      total = novo;
+    }
+    composicoes.push({
+      data: reb.data,
+      pesos: nomes.map((t, c) => ({ t, w: w[c], f: escolhidas.find(a => a.t === t)?.f === 1 }))
+                  .filter(x => x.w > 0).sort((a, b) => b.w - a.w),
+    });
+    registro.push(`${reb.data}: ${w.filter(v => v > 0).length} ativos`);
+  }
+
+  // recorta o período efetivamente investido
+  const vivos = rp.map((v, i) => (v === null ? -1 : i)).filter(i => i >= 0);
+  if (!vivos.length) return null;
+  const a = vivos[0], b = vivos[vivos.length - 1];
+  const datas = H.pregoes.slice(a, b + 1);
+  const carteira = rp.slice(a, b + 1).map(v => v ?? 0);
+  const bench = (H.benchmark || []).slice(a, b + 1).map(v => (v ?? 0) / esc);
+
+  return { datas, carteira, bench, composicoes, registro,
+           metricas: metricas(carteira, bench, H.meta.taxaLivreRisco ?? 0) };
+}
+
+const acumular = (r) => { let v = 1; return r.map(x => (v *= 1 + x) - 1); };
+
+function metricas(rp, rb, rf) {
+  const n = rp.length;
+  if (!n) return {};
+  const total = rp.reduce((a, x) => a * (1 + x), 1) - 1;
+  const anos = n / DIAS_ANO;
+  const anual = Math.pow(1 + total, 1 / anos) - 1;
+  const media = rp.reduce((a, b) => a + b, 0) / n;
+  const vari = rp.reduce((a, x) => a + (x - media) ** 2, 0) / (n - 1);
+  const vol = Math.sqrt(vari * DIAS_ANO);
+
+  let pico = 1, curva = 1, mdd = 0;
+  for (const x of rp) { curva *= 1 + x; pico = Math.max(pico, curva); mdd = Math.min(mdd, curva / pico - 1); }
+
+  const mb = rb.reduce((a, b) => a + b, 0) / n;
+  let cov = 0, varb = 0;
+  for (let i = 0; i < n; i++) { cov += (rp[i] - media) * (rb[i] - mb); varb += (rb[i] - mb) ** 2; }
+  const beta = varb > 0 ? cov / varb : NaN;
+  const totalB = rb.reduce((a, x) => a * (1 + x), 1) - 1;
+  const anualB = Math.pow(1 + totalB, 1 / anos) - 1;
+  const alfa = anual - (rf + beta * (anualB - rf));
+
+  const ativo = rp.map((x, i) => x - rb[i]);
+  const ma = ativo.reduce((a, b) => a + b, 0) / n;
+  const te = Math.sqrt(ativo.reduce((a, x) => a + (x - ma) ** 2, 0) / (n - 1) * DIAS_ANO);
+
+  return { total, anual, vol, sharpe: vol > 0 ? (anual - rf) / vol : NaN,
+           mdd, beta, alfa, te, ir: te > 0 ? (ma * DIAS_ANO) / te : NaN,
+           totalB, anualB, dias: n };
 }
 
 // ===========================================================================
@@ -374,18 +637,84 @@ function render() {
   })), { fx: v => pct(v, 0), fy: v => pct(v, 0), rotuloX: 'Volatilidade anual',
          rotuloY: 'Retorno esperado anual', altura: 400, linha: true });
 
+  if (!el('p-backtest').classList.contains('hidden')) setTimeout(renderBacktest, 10);
+
   const ctlR = el('ctlR');
   ctlR.max = String(Math.max(frontAtual.length - 1, 0));
   el('lblR').textContent = estado.perfil === 0 ? 'mínimo'
     : `${estado.perfil + 1} de ${frontAtual.length}`;
 }
 
+let H = null, btCache = null, btChave = '';
+
+function renderBacktest() {
+  const box = el('p-backtest');
+  if (!H) {
+    el('btSemDados').classList.remove('hidden');
+    el('btConteudo').classList.add('hidden');
+    return;
+  }
+  el('btSemDados').classList.add('hidden');
+  el('btConteudo').classList.remove('hidden');
+
+  const cfg = { n: estado.n, cap: estado.cap, vagasFin: estado.vagasFin,
+                perfil: estado.perfil, janela: H.meta.janelaRetornos,
+                custoBps: H.meta.custoBps };
+  const chave = JSON.stringify(cfg);
+  if (chave !== btChave) {
+    // pinta o aviso e só então bloqueia: sem isso a tela congela sem explicação
+    el('btStatus').textContent = 'Recalculando…';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      btCache = rodarBacktest(H, cfg);
+      btChave = chave;
+      desenharBacktest(btCache);
+    }));
+    return;
+  }
+  desenharBacktest(btCache);
+}
+
+function desenharBacktest(r) {
+  if (!r) { el('btStatus').textContent = 'Não foi possível montar carteira em nenhuma data.'; return; }
+  el('btStatus').textContent = '';
+
+  linhas(el('chBt'), r.datas, [
+    { nome: 'Carteira', cor: css('--s1'), v: acumular(r.carteira).map(v => v * 100) },
+    { nome: 'Ibovespa', cor: css('--s2'), v: acumular(r.bench).map(v => v * 100) },
+  ], { altura: 420 });
+
+  const m = r.metricas;
+  const linhasTab = [
+    ['Retorno total', pct(m.total), pct(m.totalB)],
+    ['Retorno anualizado', pct(m.anual), pct(m.anualB)],
+    ['Volatilidade anual', pct(m.vol), '—'],
+    ['Índice de Sharpe', num(m.sharpe), '—'],
+    ['Drawdown máximo', pct(m.mdd), '—'],
+    ['Beta', num(m.beta), '1,00'],
+    ['Alfa anual', pct(m.alfa), '—'],
+    ['Tracking error', pct(m.te), '—'],
+    ['Information ratio', num(m.ir), '—'],
+    ['Pregões', nf(0).format(m.dias), ''],
+  ];
+  el('tbBt').querySelector('tbody').innerHTML = linhasTab.map(
+    ([k, a, b]) => `<tr><td class="l">${k}</td><td class="num">${a}</td>
+                    <td class="num muted">${b}</td></tr>`).join('');
+
+  el('btComp').innerHTML = r.composicoes.map(c => `
+    <details><summary>${c.data} — ${c.pesos.length} ativos</summary>
+      <div class="scroll"><table><tbody>${c.pesos.map(x =>
+        `<tr><td class="l tk">${x.t}${x.f ? ' <span class="tag">fin</span>' : ''}</td>
+         <td class="num">${pct(x.w, 1)}</td></tr>`).join('')}</tbody></table></div>
+    </details>`).join('');
+}
+
 function trocarAba(nome) {
   document.querySelectorAll('.tabs button').forEach(b =>
     b.setAttribute('aria-selected', String(b.dataset.p === nome)));
-  ['carteira', 'ranking', 'fronteira', 'excluidas'].forEach(p =>
+  ['carteira', 'ranking', 'fronteira', 'backtest', 'excluidas'].forEach(p =>
     el('p-' + p).classList.toggle('hidden', p !== nome));
   render();
+  if (nome === 'backtest') setTimeout(renderBacktest, 10);
 }
 
 function ligarControles() {
@@ -447,6 +776,19 @@ async function iniciar() {
   const maxN = Math.min(D.empresas.length, 60);
   el('ctlN').max = String(maxN);
   if (estado.n > maxN) { estado.n = maxN; el('ctlN').value = String(maxN); el('lblN').textContent = String(maxN); }
+
+  try {
+    const rh = await fetch('historico.json?v=' + Date.now());
+    if (rh.ok) {
+      H = await rh.json();
+      el('btInfo').textContent =
+        `${H.meta.nRebalances} rebalanceamentos entre ${H.meta.inicio} e ${H.meta.fim}`;
+      // Um backtest com números inventados é pior que backtest nenhum: se
+      // passar por real, vira argumento para decisão de investimento.
+      const sintetico = String(H.meta.modo || '').toUpperCase().startsWith('DEMONSTRA');
+      el('btDemo').classList.toggle('hidden', !sintetico);
+    }
+  } catch (e) { /* histórico é opcional */ }
 
   el('loading').classList.add('hidden');
   el('app').classList.remove('hidden');
