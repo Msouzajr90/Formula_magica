@@ -62,11 +62,19 @@ def _achatar(df: pd.DataFrame, campo: str, tickers: list[str]) -> pd.DataFrame:
 # perdidos num lote só, o que esvaziou o cruzamento adiante.
 TAMANHO_LOTE = 50
 PAUSA_ENTRE_LOTES = 1.5          # segundos
+PAUSA_MAXIMA = 15.0              # teto do recuo entre lotes
 ESPERA_BLOQUEIO = (60.0, 180.0, 300.0)   # recuo real quando o Yahoo barra
 LOTES_BLOQUEADOS_SEGUIDOS = 3            # depois disso, desistir da rodada
 
 
 ARQ_INEXISTENTES = "tickers_inexistentes.json"
+
+# Prefixo dos arquivos de cotação em cache. A versão anterior gravava também o
+# lote mutilado por bloqueio — 1 papel de 50 — e esse arquivo seria relido para
+# sempre, congelando a perda. Trocar o prefixo aposenta os arquivos ruins sem
+# jogar fora o resto do cache: os downloads da CVM e a lista de símbolos
+# inexistentes, que custaram caro e continuam válidos.
+VERSAO_CACHE = "v2"
 
 
 class BloqueioYahoo(RuntimeError):
@@ -112,6 +120,27 @@ def _bloqueado(texto) -> bool:
     return bool(_SINAL_BLOQUEIO.search(str(texto)))
 
 
+_SIMBOLO = re.compile(r"[A-Z0-9]{2,10}\.SA")
+
+
+def _classificar(linhas: list[str], lote: list[str]) -> tuple[set[str], set[str]]:
+    """Separa, dentro do que o yfinance reclamou, quem foi barrado de quem não existe.
+
+    O yfinance agrupa os símbolos por mensagem de erro, uma linha por motivo.
+    Ler linha a linha é o que permite repescar só os bloqueados: mandar de
+    volta os inexistentes junto seria repetir o desperdício que atrai o
+    bloqueio.
+    """
+    pedidos = set(lote)
+    bloqueados, mortos = set(), set()
+    for linha in linhas:
+        achados = set(_SIMBOLO.findall(linha)) & pedidos
+        if not achados:
+            continue
+        (bloqueados if _bloqueado(linha) else mortos).update(achados)
+    return bloqueados, mortos - bloqueados
+
+
 class _EscutaYF(logging.Handler):
     """Guarda o que o yfinance reclama durante um lote.
 
@@ -148,13 +177,26 @@ def _escutando_yfinance():
         lg.removeHandler(h)
 
 
-def _baixar_lote(tickers: list[str], inicio, fim, tentativas: int = 4):
-    """Um lote. Devolve (dados, bloqueado).
+def _simbolos(bloco: pd.DataFrame | None) -> set[str]:
+    """Quais tickers realmente vieram no bloco."""
+    if bloco is None or bloco.empty or not isinstance(bloco.columns, pd.MultiIndex):
+        return set()
+    n0 = set(map(str, bloco.columns.get_level_values(0)))
+    n1 = set(map(str, bloco.columns.get_level_values(1)))
+    return n1 if any(s.endswith(SUFIXO_B3) for s in n1) else n0
 
-    `bloqueado=True` significa que o Yahoo barrou a requisição — os papéis
-    podem existir e vale tentar de novo. `bloqueado=False` com dados vazios
-    significa que nenhum dos símbolos existe (combinações de sufixo que a B3
-    nunca negociou); repetir não inventa cotação, então seguimos em frente.
+
+def _baixar_lote(tickers: list[str], inicio, fim, tentativas: int = 4):
+    """Um lote. Devolve (dados, bloqueados, inexistentes).
+
+    `bloqueados` são os símbolos que o Yahoo barrou: podem existir e vale
+    tentar de novo. `inexistentes` são as combinações de sufixo que a B3 nunca
+    negociou; repetir não inventa cotação, então saem da fila de vez.
+
+    Atenção ao caso misto: o lote pode voltar com dados E com bloqueio. Foi o
+    que apareceu em produção — 49 dos 50 falharam, 25 por não existirem e 16
+    por bloqueio, e o único que respondeu fazia o lote parecer bem-sucedido.
+    Os 16 sumiriam calados. Por isso devolvemos `bloqueado` mesmo com dados.
     """
     yf = _yf()
     for n in range(tentativas):
@@ -163,17 +205,20 @@ def _baixar_lote(tickers: list[str], inicio, fim, tentativas: int = 4):
                 raw = yf.download(tickers, start=str(inicio), end=str(fim),
                                   auto_adjust=False, progress=False,
                                   group_by="column", threads=False)
+            bloqueados, mortos = _classificar(escuta.linhas, tickers)
             if raw is not None and not raw.empty:
-                return raw, False
-            barrado = _bloqueado(escuta.texto)
+                return raw, bloqueados, mortos
+            barrado = bool(bloqueados) or _bloqueado(escuta.texto)
         except Exception as exc:                            # noqa: BLE001
             barrado = _bloqueado(exc)
+            bloqueados = set(tickers) if barrado else set()
+            mortos = set()
             log.warning("Lote falhou: %s", str(exc)[:160])
 
         if not barrado:
             log.info("Lote sem cotação e sem bloqueio: %d símbolos inexistentes.",
                      len(tickers))
-            return None, False
+            return None, set(), mortos or set(tickers)
 
         espera = ESPERA_BLOQUEIO[min(n, len(ESPERA_BLOQUEIO) - 1)]
         if n == tentativas - 1:
@@ -181,7 +226,7 @@ def _baixar_lote(tickers: list[str], inicio, fim, tentativas: int = 4):
         log.warning("Yahoo bloqueou (tentativa %d/%d). Esperando %.0fs.",
                     n + 1, tentativas, espera)
         time.sleep(espera)
-    return None, True
+    return None, set(tickers), set()
 
 
 def baixar_historico(tickers: list[str], inicio: str | date, fim: str | date,
@@ -197,7 +242,7 @@ def baixar_historico(tickers: list[str], inicio: str | date, fim: str | date,
         vazio = pd.DataFrame()
         return {"preco": vazio, "fechamento": vazio, "volume": vazio}
 
-    arq = _cache(f"px_{_chave(tuple(tickers), inicio, fim)}.parquet")
+    arq = _cache(f"px{VERSAO_CACHE}_{_chave(tuple(tickers), inicio, fim)}.parquet")
     if usar_cache and arq.exists():
         raw = pd.read_parquet(arq)
         raw.columns = pd.MultiIndex.from_tuples(
@@ -209,58 +254,98 @@ def baixar_historico(tickers: list[str], inicio: str | date, fim: str | date,
             log.info("Pulando %d símbolos já conhecidos como inexistentes.",
                      len(tickers) - len(vivos))
 
-        lotes = [vivos[i:i + TAMANHO_LOTE]
-                 for i in range(0, len(vivos), TAMANHO_LOTE)]
-        partes, perdidos, bloqueados_seguidos, novos_mortos = [], 0, 0, set()
-        for i, lote in enumerate(lotes):
-            if progresso:
-                progresso(f"Cotações: lote {i+1} de {len(lotes)}...", None)
+        estado = {"partes": [], "perdidos": 0, "seguidos": 0,
+                  "mortos": set(), "repescar": set(),
+                  "pausa": PAUSA_ENTRE_LOTES}
 
+        def processar(lote: list[str], rotulo: str, primeiro: bool) -> None:
             # Cache por lote: uma rodada interrompida (ou barrada no meio)
             # não joga fora o que já baixou. A seguinte continua de onde parou.
-            arq_lote = _cache(f"lt_{_chave(tuple(lote), inicio, fim)}.parquet")
+            arq_lote = _cache(f"lt{VERSAO_CACHE}_{_chave(tuple(lote), inicio, fim)}.parquet")
             if usar_cache and arq_lote.exists():
                 bloco = pd.read_parquet(arq_lote)
                 bloco.columns = pd.MultiIndex.from_tuples(
                     [tuple(c.split("|", 1)) for c in bloco.columns])
-                partes.append(bloco)
-                continue
+                estado["partes"].append(bloco)
+                return
 
-            if i:
-                time.sleep(PAUSA_ENTRE_LOTES)
-            bloco, barrado = _baixar_lote(lote, inicio, fim)
+            if not primeiro:
+                time.sleep(estado["pausa"])
+            bloco, bloqueados, mortos = _baixar_lote(lote, inicio, fim)
+            barrado = bool(bloqueados)
+            estado["mortos"].update(mortos)
+
+            if barrado:
+                # Vai com mais calma: insistir no mesmo ritmo dentro de um
+                # bloqueio é o que mantém o bloqueio.
+                estado["pausa"] = min(estado["pausa"] * 2, PAUSA_MAXIMA)
 
             if bloco is None:
-                perdidos += len(lote)
+                estado["perdidos"] += len(lote)
                 if barrado:
-                    bloqueados_seguidos += 1
-                    log.warning("Lote %d de %d barrado pelo Yahoo (%d seguidos).",
-                                i + 1, len(lotes), bloqueados_seguidos)
-                    if bloqueados_seguidos >= LOTES_BLOQUEADOS_SEGUIDOS:
-                        _gravar_inexistentes(novos_mortos)
+                    estado["seguidos"] += 1
+                    log.warning("%s barrado pelo Yahoo (%d seguidos).",
+                                rotulo, estado["seguidos"])
+                    if estado["seguidos"] >= LOTES_BLOQUEADOS_SEGUIDOS:
+                        _gravar_inexistentes(estado["mortos"])
                         raise BloqueioYahoo(
-                            f"O Yahoo barrou {bloqueados_seguidos} lotes seguidos. "
-                            f"Parei no lote {i+1} de {len(lotes)} em vez de gastar "
-                            "horas coletando nada. O que já baixou ficou em cache: "
-                            "rode de novo mais tarde e ele continua daqui.")
+                            f"O Yahoo barrou {estado['seguidos']} lotes seguidos. "
+                            f"Parei em {rotulo} em vez de gastar horas coletando "
+                            "nada. O que já baixou ficou em cache: rode de novo "
+                            "mais tarde e ele continua daqui.")
                 else:
-                    novos_mortos.update(lote)
-                    bloqueados_seguidos = 0
-                continue
+                    estado["seguidos"] = 0
+                return
 
-            bloqueados_seguidos = 0
+            estado["seguidos"] = 0
             if not isinstance(bloco.columns, pd.MultiIndex):
                 bloco.columns = pd.MultiIndex.from_product([bloco.columns, [lote[0]]])
-            partes.append(bloco)
-            if usar_cache:
+            estado["partes"].append(bloco)
+
+            if barrado:
+                faltando = bloqueados - _simbolos(bloco)
+                if faltando:
+                    log.warning("%s: %d símbolos perdidos por bloqueio, "
+                                "vão para a repescagem.", rotulo, len(faltando))
+                    estado["repescar"].update(faltando)
+            elif usar_cache:
+                # Só vale cachear o lote que veio inteiro; um lote mutilado por
+                # bloqueio congelaria a perda para todas as rodadas seguintes.
                 plano = bloco.copy()
                 plano.columns = ["|".join(map(str, c)) for c in plano.columns]
                 plano.to_parquet(arq_lote)
+                estado["pausa"] = max(PAUSA_ENTRE_LOTES, estado["pausa"] * 0.8)
 
-        _gravar_inexistentes(novos_mortos)
-        if perdidos:
+        lotes = [vivos[i:i + TAMANHO_LOTE]
+                 for i in range(0, len(vivos), TAMANHO_LOTE)]
+        for i, lote in enumerate(lotes):
+            if progresso:
+                progresso(f"Cotações: lote {i+1} de {len(lotes)}...", None)
+            processar(lote, f"Lote {i+1} de {len(lotes)}", primeiro=(i == 0))
+
+        # Segunda passada só com quem caiu por bloqueio (não com quem não
+        # existe). Uma única repescagem: o que faltar depois disso é reportado.
+        if estado["repescar"]:
+            pendentes = sorted(estado["repescar"])
+            estado["repescar"] = set()
+            log.info("Repescagem: %d símbolos que o bloqueio derrubou.",
+                     len(pendentes))
+            time.sleep(estado["pausa"])
+            grupos = [pendentes[i:i + TAMANHO_LOTE]
+                      for i in range(0, len(pendentes), TAMANHO_LOTE)]
+            for j, lote in enumerate(grupos):
+                processar(lote, f"Repescagem {j+1} de {len(grupos)}",
+                          primeiro=(j == 0))
+            if estado["repescar"]:
+                log.warning("%d símbolos seguiram sem cotação depois da "
+                            "repescagem.", len(estado["repescar"]))
+
+        partes = estado["partes"]
+        _gravar_inexistentes(estado["mortos"])
+        if estado["perdidos"]:
             log.warning("%d de %d tickers ficaram sem cotação (%.0f%%).",
-                        perdidos, len(vivos), 100 * perdidos / max(len(vivos), 1))
+                        estado["perdidos"], len(vivos),
+                        100 * estado["perdidos"] / max(len(vivos), 1))
         if not partes:
             vazio = pd.DataFrame()
             return {"preco": vazio, "fechamento": vazio, "volume": vazio}
