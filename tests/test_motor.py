@@ -519,22 +519,22 @@ def _instalar(monkeypatch, fake, tmp_path):
 def test_bloqueio_do_yahoo_e_distinguido_de_ticker_inexistente(monkeypatch, sem_espera, tmp_path):
     fake = _YFFalso("bloqueio")
     prices = _instalar(monkeypatch, fake, tmp_path)
-    dados, barrado = prices._baixar_lote(["AAAA3.SA"], "2026-01-01", "2026-02-01")
-    assert dados is None and barrado is True
+    dados, bloqueados, mortos = prices._baixar_lote(["AAAA3.SA"], "2026-01-01", "2026-02-01")
+    assert dados is None and bloqueados == {"AAAA3.SA"} and not mortos
     assert fake.chamadas == 4, "bloqueio merece nova tentativa"
 
     fake2 = _YFFalso("inexistente")
     _instalar(monkeypatch, fake2, tmp_path)
-    dados, barrado = prices._baixar_lote(["ZZZZ9.SA"], "2026-01-01", "2026-02-01")
-    assert dados is None and barrado is False
+    dados, bloqueados, mortos = prices._baixar_lote(["ZZZZ9.SA"], "2026-01-01", "2026-02-01")
+    assert dados is None and not bloqueados and mortos == {"ZZZZ9.SA"}
     assert fake2.chamadas == 1, "ticker inexistente nao pode gastar 4 tentativas"
 
 
 def test_lote_barrado_uma_vez_ainda_e_recuperado(monkeypatch, sem_espera, tmp_path):
     fake = _YFFalso("bloqueio_temporario", falhas=2)
     prices = _instalar(monkeypatch, fake, tmp_path)
-    dados, barrado = prices._baixar_lote(["AAAA3.SA"], "2026-01-01", "2026-02-01")
-    assert barrado is False and dados is not None and not dados.empty
+    dados, bloqueados, _ = prices._baixar_lote(["AAAA3.SA"], "2026-01-01", "2026-02-01")
+    assert not bloqueados and dados is not None and not dados.empty
 
 
 def test_bloqueio_seguido_interrompe_em_vez_de_gastar_horas(monkeypatch, sem_espera, tmp_path):
@@ -585,3 +585,92 @@ def test_chave_de_cache_e_estavel_entre_processos():
     a = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True)
     b = subprocess.run([sys.executable, "-c", codigo], capture_output=True, text=True)
     assert a.stdout.strip() and a.stdout == b.stdout
+
+
+class _YFMisto:
+    """Reproduz o lote misto que apareceu na producao.
+
+    49 dos 50 falharam: 25 por nao existirem e 16 por bloqueio. O unico que
+    respondeu fazia o lote parecer bem-sucedido, e os 16 bloqueados sumiam
+    calados — que e exatamente o tipo de perda silenciosa que o projeto inteiro
+    tenta evitar.
+    """
+
+    def __init__(self, entregues, bloqueados, mortos):
+        self.entregues, self.bloqueados, self.mortos = entregues, bloqueados, mortos
+        self.chamadas, self.vistos = 0, []
+
+    def download(self, tickers, **kw):
+        import logging
+        self.chamadas += 1
+        self.vistos.append(list(tickers))
+        lg = logging.getLogger("yfinance")
+        pedidos = list(tickers)
+        # na repescagem os bloqueados passam a responder
+        vivos = [t for t in pedidos if t in self.entregues or
+                 (self.chamadas > 1 and t in self.bloqueados)]
+        barrados = [t for t in pedidos if t in self.bloqueados and self.chamadas == 1]
+        mortos = [t for t in pedidos if t in self.mortos]
+        if barrados:
+            lg.error("%s: YFRateLimitError('Too Many Requests. Rate limited.')", barrados)
+        if mortos:
+            lg.error("%s: possibly delisted; no timezone found", mortos)
+        if not vivos:
+            return pd.DataFrame()
+        idx = pd.date_range("2026-01-02", periods=8, freq="B")
+        cols = pd.MultiIndex.from_product([["Adj Close", "Close", "Volume"], vivos])
+        return pd.DataFrame(1.0, index=idx, columns=cols)
+
+
+def test_lote_parcialmente_bloqueado_nao_perde_os_papeis_calado(monkeypatch, sem_espera, tmp_path):
+    entregues = ["AAAA3.SA"]
+    bloqueados = [f"B{i:03d}3.SA" for i in range(16)]
+    mortos = [f"M{i:03d}9.SA" for i in range(25)]
+    fake = _YFMisto(set(entregues), set(bloqueados), set(mortos))
+    prices = _instalar(monkeypatch, fake, tmp_path)
+
+    out = prices.baixar_historico(entregues + bloqueados + mortos,
+                                  "2026-01-01", "2026-02-01")
+    colunas = set(out["preco"].columns)
+    faltando = set(bloqueados) - colunas
+    assert not faltando, f"a repescagem deixou {len(faltando)} papeis para tras"
+    assert fake.chamadas == 2, "deveria haver exatamente uma repescagem"
+    assert set(fake.vistos[1]) == set(bloqueados), \
+        "a repescagem so pode reconsultar quem caiu por bloqueio"
+
+
+def test_lote_mutilado_por_bloqueio_nao_vira_cache(monkeypatch, sem_espera, tmp_path):
+    """Cachear um lote incompleto congelaria a perda para sempre."""
+    entregues, bloqueados = ["AAAA3.SA"], ["BBBB3.SA"]
+    fake = _YFMisto(set(entregues), set(bloqueados), set())
+    prices = _instalar(monkeypatch, fake, tmp_path)
+    prices.baixar_historico(entregues + bloqueados, "2026-01-01", "2026-02-01")
+    lotes_em_cache = list(tmp_path.glob("lt*_*.parquet"))
+    nomes = [p.name for p in lotes_em_cache]
+    assert len(lotes_em_cache) == 1, f"so a repescagem completa podia virar cache: {nomes}"
+
+
+def test_pausa_entre_lotes_cresce_quando_o_yahoo_barra(monkeypatch, sem_espera, tmp_path):
+    from magicb3 import prices as _p
+    fake = _YFFalso("bloqueio")
+    prices = _instalar(monkeypatch, fake, tmp_path)
+    esperas = []
+    monkeypatch.setattr(prices.time, "sleep", lambda s: esperas.append(s))
+    universo = [f"A{i:03d}3.SA" for i in range(150)]
+    with pytest.raises(_p.BloqueioYahoo):
+        prices.baixar_historico(universo, "2026-01-01", "2026-02-01")
+    entre_lotes = [e for e in esperas if e not in _p.ESPERA_BLOQUEIO]
+    assert entre_lotes and entre_lotes[-1] > entre_lotes[0], \
+        "a pausa entre lotes tinha que subir depois de um bloqueio"
+    assert max(entre_lotes) <= _p.PAUSA_MAXIMA
+
+
+def test_cache_antigo_de_lote_e_aposentado(tmp_path, monkeypatch):
+    """O prefixo tem que mudar: a versao anterior cacheava lote mutilado."""
+    from magicb3 import prices
+    monkeypatch.setattr(prices, "_cache", lambda nome: tmp_path / nome)
+    fake = _YFFalso("ok")
+    monkeypatch.setattr(prices, "_yf", lambda: fake)
+    (tmp_path / "lt_deadbeefdeadbeef.parquet").write_bytes(b"lixo antigo")
+    prices.baixar_historico(["AAAA3.SA"], "2026-01-01", "2026-02-01")
+    assert fake.chamadas == 1, "nao pode reaproveitar o cache da versao anterior"
