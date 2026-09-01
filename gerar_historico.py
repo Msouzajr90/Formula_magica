@@ -60,6 +60,30 @@ def _compactar(serie: pd.Series) -> list[int | None]:
     return out
 
 
+def montar_mercado(preco_d: pd.Series, liquidez: pd.Series, mapa_v: pd.DataFrame,
+                   empresas: pd.DataFrame, acoes: pd.Series) -> pd.DataFrame:
+    """Cruza preço, liquidez e cadastro num quadro de mercado para uma data.
+
+    O setor NÃO vem do mapa de tickers: `candidatos_de_ticker` carrega só
+    CD_CVM, TICKER, DENOM_CIA e SEGMENTO. O setor mora no cadastro de empresas
+    e entra por CD_CVM — é assim que o pipeline em produção faz. Por não ter
+    copiado esse detalhe, uma rodada morreu com KeyError ['SETOR'] depois de
+    duas horas de coleta, no último passo antes de montar o ranking.
+    """
+    mercado = pd.DataFrame({"TICKER": preco_d.index, "PRECO": preco_d.values,
+                            "LIQUIDEZ_MEDIA": liquidez.reindex(preco_d.index).values})
+    mercado = mercado.merge(mapa_v[["TICKER", "CD_CVM"]], on="TICKER", how="inner")
+    cols = ["CD_CVM"] + [c for c in ("SETOR", "SEGMENTO") if c in empresas.columns]
+    mercado = mercado.merge(empresas[cols].drop_duplicates("CD_CVM"),
+                            on="CD_CVM", how="left")
+    for c in ("SETOR", "SEGMENTO"):
+        if c not in mercado.columns:
+            mercado[c] = pd.NA
+    mercado["ACOES"] = mercado["TICKER"].map(acoes)
+    mercado["VALOR_MERCADO"] = mercado["PRECO"] * mercado["ACOES"]
+    return mercado.dropna(subset=["VALOR_MERCADO"])
+
+
 def gerar(anos: int, freq: str, pool: int, liquidez: float,
           saida: Path, usar_cache: bool = True) -> dict:
     hoje = date.today()
@@ -131,13 +155,7 @@ def gerar(anos: int, freq: str, pool: int, liquidez: float,
         if janela_liq.empty:
             continue
         preco_d = px.loc[:d].ffill().iloc[-1]
-        mercado = pd.DataFrame({"TICKER": preco_d.index, "PRECO": preco_d.values,
-                                "LIQUIDEZ_MEDIA": janela_liq.mean().reindex(preco_d.index).values})
-        mercado = mercado.merge(mapa_v[["TICKER", "CD_CVM", "SETOR", "SEGMENTO"]],
-                                on="TICKER", how="inner")
-        mercado["ACOES"] = mercado["TICKER"].map(acoes)
-        mercado["VALOR_MERCADO"] = mercado["PRECO"] * mercado["ACOES"]
-        mercado = mercado.dropna(subset=["VALOR_MERCADO"])
+        mercado = montar_mercado(preco_d, janela_liq.mean(), mapa_v, empresas, acoes)
         if mercado.empty:
             continue
 
