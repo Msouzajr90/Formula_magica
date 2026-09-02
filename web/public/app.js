@@ -399,9 +399,13 @@ function rodarBacktest(H, cfg) {
     if (fim - ini < 5 || ini < 30) continue;
 
     const j0 = Math.max(0, ini - janela);
-    const op = reb.acoes.filter(a => !a.f), fin = reb.acoes.filter(a => a.f);
+    const fin = reb.acoes.filter(a => a.f);
+    const uti = reb.acoes.filter(a => a.u);
+    const op = reb.acoes.filter(a => !a.f && !a.u);
     const vf = Math.max(0, Math.min(cfg.vagasFin, cfg.n));
-    const escolhidas = [...op.slice(0, cfg.n - vf), ...fin.slice(0, vf)];
+    const vu = Math.max(0, Math.min(cfg.vagasUti || 0, cfg.n - vf));
+    const escolhidas = [...op.slice(0, cfg.n - vf - vu), ...fin.slice(0, vf),
+                        ...uti.slice(0, vu)];
 
     // só entram papéis com série suficiente na janela anterior à compra
     const nomes = [], colunas = [];
@@ -502,13 +506,15 @@ function metricas(rp, rb, rf) {
 // ===========================================================================
 let D = null;                      // dados.json
 let idx = new Map();               // ticker -> empresa
-let estado = { n: 30, cap: 0.15, perfil: 0, capital: 100000, unico: true, vagasFin: 0 };
+let estado = { n: 30, cap: 0.15, perfil: 0, capital: 100000, unico: true,
+               vagasFin: 0, vagasUti: 0 };
 
 /** Rótulo das métricas: numa financeira as colunas medem outra coisa. */
 const rotulos = (tipo) => tipo === 'financeira'
   ? { q: 'ROE', p: 'Lucro / Preço' }
   : { q: 'ROIC', p: 'EBIT / EV' };
 const ehFin = (e) => (e.tipo || 'operacional') === 'financeira';
+const ehUti = (e) => (e.tipo || 'operacional') === 'utilidade';
 let frontAtual = [];
 
 function elegiveis() {
@@ -529,15 +535,20 @@ function elegiveis() {
  *  entre si, porque ROIC e ROE não estão na mesma escala. ROE é inflado por
  *  alavancagem — exatamente o que Greenblatt evitou ao escolher EBIT sobre
  *  capital —, então um ranking único favoreceria sistematicamente um lado. */
-function selecionar(lista, n, vagasFin) {
-  const fin = lista.filter(ehFin), op = lista.filter(e => !ehFin(e));
+function selecionar(lista, n, vagasFin, vagasUti) {
+  const fin = lista.filter(ehFin);
+  const uti = lista.filter(ehUti);
+  const op = lista.filter(e => !ehFin(e) && !ehUti(e));
   const vf = Math.max(0, Math.min(vagasFin, n));
-  return { escolhidas: [...op.slice(0, n - vf), ...fin.slice(0, vf)],
-           op, fin, vagasOp: n - vf, vagasFin: vf };
+  const vu = Math.max(0, Math.min(vagasUti, n - vf));
+  const vo = Math.max(0, n - vf - vu);
+  return { escolhidas: [...op.slice(0, vo), ...fin.slice(0, vf), ...uti.slice(0, vu)],
+           op, fin, uti, vagasOp: vo, vagasFin: vf, vagasUti: vu };
 }
 
 function calcular() {
-  const { escolhidas } = selecionar(elegiveis(), estado.n, estado.vagasFin);
+  const { escolhidas } = selecionar(elegiveis(), estado.n, estado.vagasFin,
+                                  estado.vagasUti);
   const sel = escolhidas;
   const pos = new Map(D.estatisticas.tickers.map((t, i) => [t, i]));
   const ids = sel.map(e => pos.get(e.ticker)).filter(i => i !== undefined);
@@ -566,8 +577,12 @@ function render() {
 
   // --- tiles ---
   const tiles = [
-    ['Ações na carteira', String(r.pesos.length),
-      estado.vagasFin ? `${estado.vagasFin} vaga(s) p/ financeiras` : `de ${estado.n} no ranking`],
+    ['Ações na carteira', String(r.pesos.length), (() => {
+      const p = [];
+      if (estado.vagasFin) p.push(`${estado.vagasFin} p/ financeiras`);
+      if (estado.vagasUti) p.push(`${estado.vagasUti} p/ concessionárias`);
+      return p.length ? p.join(' · ') : `de ${estado.n} no ranking`;
+    })()],
     ['Retorno esperado', pct(r.ret), 'ao ano, estimado'],
     ['Volatilidade', pct(r.vol), 'ao ano'],
     ['Índice de Sharpe', num(sharpe), `sobre ${pct(rf, 1)} livre de risco`],
@@ -603,15 +618,17 @@ function render() {
       <div class="r"><span>ROIC</span><span>${pct(e.roic)}</span></div>
       <div class="r"><span>Earnings Yield</span><span>${pct(e.ey)}</span></div>
       <div class="r"><span>Soma no ranking</span><span>${e.rank}</span></div>`
-  })).filter(p => !ehFin(idx.get(p.tk || '') || {})),
+  })).filter(p => { const e = idx.get(p.tk || '') || {};
+                    return !ehFin(e) && !ehUti(e); }),
      { fx: v => pct(v, 0), fy: v => pct(v, 0), rotuloX: 'Earnings Yield (preço)',
        rotuloY: 'ROIC (qualidade)', altura: 400 });
 
-  const grupos = selecionar(lista, lista.length, estado.vagasFin);
+  const grupos = selecionar(lista, lista.length, estado.vagasFin, estado.vagasUti);
   const posDe = new Map();
   grupos.op.forEach((e, i) => posDe.set(e.ticker, i + 1));
   grupos.fin.forEach((e, i) => posDe.set(e.ticker, i + 1));
-  const ordenada = [...grupos.op, ...grupos.fin];
+  grupos.uti.forEach((e, i) => posDe.set(e.ticker, i + 1));
+  const ordenada = [...grupos.op, ...grupos.fin, ...grupos.uti];
 
   el('tbRank').querySelector('tbody').innerHTML = ordenada.slice(0, 120).map((e) => {
     const dentro = r.carteira.has(e.ticker);
@@ -658,6 +675,7 @@ function renderBacktest() {
   el('btConteudo').classList.remove('hidden');
 
   const cfg = { n: estado.n, cap: estado.cap, vagasFin: estado.vagasFin,
+                vagasUti: estado.vagasUti,
                 perfil: estado.perfil, janela: H.meta.janelaRetornos,
                 custoBps: H.meta.custoBps };
   const chave = JSON.stringify(cfg);
@@ -733,6 +751,8 @@ function ligarControles() {
   bind('ctlUnico', 'unico', c => c.checked);
   bind('ctlFin', 'vagasFin', c => Math.max(0, +c.value || 0),
        () => el('lblFin').textContent = el('ctlFin').value);
+  bind('ctlUti', 'vagasUti', c => Math.max(0, +c.value || 0),
+       () => el('lblUti').textContent = el('ctlUti').value);
   document.querySelectorAll('.tabs button').forEach(b =>
     b.addEventListener('click', () => trocarAba(b.dataset.p)));
   let t;
