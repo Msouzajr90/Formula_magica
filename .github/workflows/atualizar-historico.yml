@@ -9,7 +9,7 @@ on:
       freq:
         description: "Rebalanceamento: anual, semestral ou trimestral"
         required: false
-        default: "anual"
+        default: "trimestral"
 jobs:
   historico:
     runs-on: ubuntu-latest
@@ -37,7 +37,7 @@ jobs:
         run: |
           python gerar_historico.py \
             --anos "${{ inputs.anos || '5' }}" \
-            --freq "${{ inputs.freq || 'anual' }}"
+            --freq "${{ inputs.freq || 'trimestral' }}"
       - name: Conferir o resultado
         run: python validar_historico.py
       - name: Publicar
