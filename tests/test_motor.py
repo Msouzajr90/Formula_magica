@@ -756,3 +756,72 @@ def test_fracao_perdida_e_medida_sobre_os_papeis_que_existem(monkeypatch, sem_es
     with pytest.raises(_p.BloqueioYahoo) as erro:
         prices.baixar_historico(reais + chutes, "2026-01-01", "2026-02-01")
     assert "de 100 papéis" in str(erro.value), str(erro.value)
+
+
+# ---------------------------------------------------------------------------
+# Concessionarias: terceiro grupo, com cota propria
+# ---------------------------------------------------------------------------
+def _universo_tres_grupos():
+    linhas = []
+    for i in range(6):
+        linhas.append({"TICKER": f"OPE{i}3.SA", "SETOR": "Comércio",
+                       "TIPO": "operacional", "ROIC": 0.30 + i / 100,
+                       "EY": 0.20 + i / 100})
+    for i in range(4):
+        linhas.append({"TICKER": f"BAN{i}4.SA", "SETOR": "Bancos",
+                       "TIPO": "financeira", "ROIC": 0.18 + i / 100,
+                       "EY": 0.15 + i / 100})
+    for i in range(4):
+        linhas.append({"TICKER": f"UTI{i}3.SA", "SETOR": "Energia Elétrica",
+                       "TIPO": "utilidade", "ROIC": 0.12 + i / 100,
+                       "EY": 0.13 + i / 100})
+    return pd.DataFrame(linhas)
+
+
+def test_utilidades_so_entram_com_vaga_reservada():
+    df = _universo_tres_grupos()
+    sem = ranking.ranquear(df, n=6)
+    assert not (sem[sem["SELECIONADA"]]["TIPO"] == "utilidade").any()
+
+    com = ranking.ranquear(df, n=6, vagas_utilidades=2)
+    sel = com[com["SELECIONADA"]]
+    assert (sel["TIPO"] == "utilidade").sum() == 2
+    assert len(sel) == 6, "a cota sai das vagas das operacionais, nao soma"
+
+
+def test_as_tres_cotas_convivem_sem_estourar_a_carteira():
+    df = _universo_tres_grupos()
+    rk = ranking.ranquear(df, n=8, vagas_financeiras=2, vagas_utilidades=3)
+    sel = rk[rk["SELECIONADA"]]
+    contagem = sel["TIPO"].value_counts().to_dict()
+    assert contagem.get("financeira") == 2
+    assert contagem.get("utilidade") == 3
+    assert contagem.get("operacional") == 3
+    assert len(sel) == 8
+
+
+def test_utilidade_e_ranqueada_entre_as_suas_nao_contra_a_industria():
+    """O ROIC regulado e menor por construcao; num ranking unico elas sumiriam."""
+    df = _universo_tres_grupos()
+    rk = ranking.ranquear(df, n=6, vagas_utilidades=2)
+    uti = rk[rk["TIPO"] == "utilidade"].sort_values("POSICAO")
+    assert list(uti["POSICAO"]) == [1, 2, 3, 4], "posicoes tem que ser do grupo"
+    assert uti.iloc[0]["ROIC"] == pytest.approx(0.15), "a melhor do grupo e a 1a"
+
+
+def test_cota_de_bancos_nao_liberta_as_concessionarias():
+    """As duas exclusoes eram um `if` so; pedir banco trazia utility junto."""
+    base = _universo_tres_grupos()
+    universo = base.assign(
+        CD_CVM=range(1, len(base) + 1), DENOM_CIA=base["TICKER"],
+        EBIT_LTM=1e8, EV=5e8, VALOR_MERCADO=4e8, LIQUIDEZ_MEDIA=1e7,
+        SEGMENTO="Novo Mercado")
+    p = C.Params(vagas_financeiras=2, vagas_utilidades=0)
+    aprov, _ = fundamentals.aplicar_filtros(universo, p)
+    assert (aprov["TIPO"] == "financeira").any(), "bancos deviam ficar"
+    assert not (aprov["TIPO"] == "utilidade").any(), "concessionarias nao foram pedidas"
+
+    p2 = C.Params(vagas_financeiras=0, vagas_utilidades=2)
+    aprov2, _ = fundamentals.aplicar_filtros(universo, p2)
+    assert (aprov2["TIPO"] == "utilidade").any()
+    assert not (aprov2["TIPO"] == "financeira").any(), "bancos nao foram pedidos"

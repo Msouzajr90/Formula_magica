@@ -46,3 +46,11 @@ def test_cota_zero_continua_sendo_o_padrao_sugerido(tmp_path):
 def test_cota_escolhida_pelo_usuario_e_respeitada_no_meta(tmp_path):
     d = _gerar(tmp_path, 5)
     assert d["meta"]["vagasFinanceiras"] == 5
+
+
+def test_exporta_concessionarias_mesmo_com_cota_zero(tmp_path):
+    d = _gerar(tmp_path, 0)
+    uti = [e for e in d["empresas"] if e.get("tipo") == "utilidade"]
+    assert uti, "sem concessionarias no arquivo o controle do site nao funciona"
+    assert d["meta"]["vagasUtilidades"] == 0
+    assert d["meta"]["utilidadesNoArquivo"] > 0
