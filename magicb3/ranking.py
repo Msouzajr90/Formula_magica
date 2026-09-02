@@ -31,11 +31,13 @@ def _ranquear_grupo(df: pd.DataFrame) -> pd.DataFrame:
     return out.reset_index(drop=True)
 
 
-def ranquear(df: pd.DataFrame, n: int = 30, vagas_financeiras: int = 0) -> pd.DataFrame:
+def ranquear(df: pd.DataFrame, n: int = 30, vagas_financeiras: int = 0,
+             vagas_utilidades: int = 0) -> pd.DataFrame:
     """Ranqueia e marca as selecionadas.
 
-    `vagas_financeiras` é quantas das `n` vagas ficam com bancos e seguradoras.
-    Com 0 (padrão), só entram empresas operacionais.
+    `vagas_financeiras` e `vagas_utilidades` são quantas das `n` vagas ficam com
+    bancos/seguradoras e com concessionárias. Com 0 nas duas (padrão), só entram
+    operacionais — a regra de Greenblatt. O resto das vagas é das operacionais.
     """
     if df.empty:
         vazio = df.copy()
@@ -47,10 +49,12 @@ def ranquear(df: pd.DataFrame, n: int = 30, vagas_financeiras: int = 0) -> pd.Da
         df = df.assign(TIPO="operacional")
 
     vagas_fin = max(0, min(int(vagas_financeiras), n))
-    vagas_op = max(0, n - vagas_fin)
+    vagas_uti = max(0, min(int(vagas_utilidades), n - vagas_fin))
+    vagas_op = max(0, n - vagas_fin - vagas_uti)
 
     partes = []
-    for tipo, vagas in (("operacional", vagas_op), ("financeira", vagas_fin)):
+    for tipo, vagas in (("operacional", vagas_op), ("financeira", vagas_fin),
+                        ("utilidade", vagas_uti)):
         grupo = df[df["TIPO"] == tipo]
         if grupo.empty:
             continue
@@ -63,7 +67,7 @@ def ranquear(df: pd.DataFrame, n: int = 30, vagas_financeiras: int = 0) -> pd.Da
         return _ranquear_grupo(df).assign(POSICAO=0, SELECIONADA=False)
 
     # Operacionais primeiro; dentro de cada grupo, a ordem do próprio ranking.
-    ordem = {"operacional": 0, "financeira": 1}
+    ordem = {"operacional": 0, "financeira": 1, "utilidade": 2}
     out = pd.concat(partes, ignore_index=True)
     out = out.sort_values(["TIPO", "POSICAO"],
                           key=lambda c: c.map(ordem) if c.name == "TIPO" else c)
@@ -84,4 +88,6 @@ def rotulo_metricas(tipo: str) -> tuple[str, str]:
     deixar explícito que as colunas não significam a mesma coisa nos dois grupos."""
     if tipo == "financeira":
         return "ROE", "Lucro / Preço"
+    # A concessionária usa as mesmas duas métricas da operacional; o que muda é
+    # com quem ela é comparada, não como é medida.
     return "ROIC", "EBIT / EV"

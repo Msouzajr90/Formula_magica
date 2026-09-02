@@ -37,6 +37,13 @@ _FINANCEIRAS = [
     ("BBDC4", "Banco Bradesco S.A."), ("SANB11", "Banco Santander Brasil"),
     ("BRSR6", "Banrisul S.A."), ("PSSA3", "Porto Seguro S.A."),
 ]
+# Concessionárias: ROIC comprimido e estável, como o de um retorno regulado.
+_UTILIDADES = [
+    ("TAEE11", "Taesa"), ("EGIE3", "Engie Brasil Energia"),
+    ("CPLE6", "Copel"), ("CMIG4", "Cemig"),
+    ("SBSP3", "Sabesp"), ("SAPR11", "Sanepar"),
+    ("EQTL3", "Equatorial Energia"),
+]
 _SETORES = ["Petróleo e Gás", "Mineração", "Siderurgia", "Máquinas e Equip.",
             "Papel e Celulose", "Comércio", "Construção Civil", "Agropecuária",
             "Material de Transporte", "Alimentos"]
@@ -93,7 +100,33 @@ def _universo_sintetico(seed: int = 11) -> pd.DataFrame:
     fin["ROIC"] = fin["LUCRO_LTM"] / fin["PATRIMONIO"]      # ROE
     fin["EY"] = fin["LUCRO_LTM"] / fin["VALOR_MERCADO"]     # Lucro/Preço
 
-    return pd.concat([df, fin], ignore_index=True)
+    # bloco das concessionárias: mesmas métricas das operacionais (ROIC e
+    # EBIT/EV fazem sentido nelas), mas com dispersão estreita — é isso que a
+    # regulação produz, e é o que justifica ranqueá-las entre si.
+    nu = len(_UTILIDADES)
+    ebit_u = rng.lognormal(21.0, 0.5, nu)
+    cap_u = ebit_u / rng.uniform(0.09, 0.16, nu)
+    ev_u = ebit_u / rng.uniform(0.10, 0.20, nu)
+    div_u = ev_u * rng.uniform(0.25, 0.55, nu)
+    uti = pd.DataFrame({
+        "CD_CVM": np.arange(n + 1 + nf, n + 1 + nf + nu),
+        "TICKER": [f"{t}.SA" for t, _ in _UTILIDADES],
+        "DENOM_CIA": [d for _, d in _UTILIDADES],
+        "SETOR": (["Energia Elétrica"] * (nu - 2) + ["Água e Saneamento"] * 2),
+        "EBIT_LTM": ebit_u, "LUCRO_LTM": ebit_u * 0.6,
+        "EV": ev_u, "VALOR_MERCADO": ev_u - div_u, "DIVIDA_LIQUIDA": div_u,
+        "CAPITAL_TANGIVEL": cap_u, "PATRIMONIO": cap_u * 0.6,
+        "PRECO": rng.uniform(8, 55, nu).round(2),
+        "LIQUIDEZ_MEDIA": rng.lognormal(17.5, 0.7, nu),
+        "DT_BASE": pd.Timestamp(date.today()) - pd.Timedelta(days=75),
+        "FONTE": "DEMONSTRAÇÃO (dados sintéticos)",
+        "TIPO": "utilidade",
+    })
+    uti["ACOES"] = uti["VALOR_MERCADO"] / uti["PRECO"]
+    uti["ROIC"] = uti["EBIT_LTM"] / uti["CAPITAL_TANGIVEL"]
+    uti["EY"] = uti["EBIT_LTM"] / uti["EV"]
+
+    return pd.concat([df, fin, uti], ignore_index=True)
 
 
 def _retornos_sinteticos(tickers: list[str], dias: int, seed: int = 5) -> pd.DataFrame:
@@ -113,6 +146,7 @@ def resultado_demo(params: C.Params) -> Resultado:
     uni = _universo_sintetico()
     aprov, rejeit = fundamentals.aplicar_filtros(uni, params)
     rk = ranking.ranquear(aprov, n=params.n_acoes_ranking,
+                          vagas_utilidades=params.vagas_utilidades,
                           vagas_financeiras=params.vagas_financeiras)
     sel = rk[rk["SELECIONADA"]].copy()
 

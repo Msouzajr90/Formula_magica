@@ -55,12 +55,20 @@ SETORES_FINANCEIROS = (
     r"bolsa de valores|valores mobili[áa]rios",
 )
 
-SETORES_EXCLUIDOS_PADRAO = SETORES_FINANCEIROS + (
+# Concessionárias. Greenblatt as exclui junto das financeiras, mas por outro
+# motivo: aqui ROIC e EV até fazem sentido contábil: o que não faz sentido é a
+# leitura. O retorno sobre capital de uma concessionária é fixado pelo regulador
+# sobre a base de ativos regulatória, então um ROIC alto costuma indicar uma
+# revisão tarifária favorável, não vantagem competitiva durável. No Brasil o
+# grupo é grande e líquido, então vale poder incluí-lo por escolha explícita.
+SETORES_UTILIDADE_PUBLICA = (
     r"energia el[ée]trica",
     r"[áa]gua e saneamento|saneamento",
     r"^g[áa]s\b|distribui[çc][ãa]o de g[áa]s",
     r"utilidade p[úu]blica",
 )
+
+SETORES_EXCLUIDOS_PADRAO = SETORES_FINANCEIROS + SETORES_UTILIDADE_PUBLICA
 
 CACHE_DIR = Path.home() / ".magicb3_cache"
 
@@ -89,6 +97,8 @@ class Params:
     # ranqueados à parte por ROE e Lucro/Preço. A cota abaixo é quantas vagas da
     # carteira ficam com eles — escolha do investidor, sem base teórica.
     vagas_financeiras: int = 0
+    # Idem para concessionárias: ranqueadas entre si, cota explícita.
+    vagas_utilidades: int = 0
 
     # ---- Markowitz ------------------------------------------------------
     janela_retornos_dias: int = 252               # 1 ano de pregão

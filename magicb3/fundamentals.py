@@ -137,7 +137,14 @@ def montar_indicadores(
         df["EY"] = df["EBIT_LTM"] / df["ACOES"].replace(0, np.nan)
 
     # ---- financeiras: ROE e Lucro/Preço no lugar de ROIC e EBIT/EV -------
-    df["TIPO"] = np.where(eh_financeira(df), "financeira", "operacional")
+    # Três grupos, não dois. A concessionária continua sendo medida por ROIC e
+    # EBIT/EV — as contas fazem sentido nela —, mas ranqueada entre as suas: o
+    # ROIC dela é fixado pelo regulador, então compará-lo com o de uma indústria
+    # é comparar régua com termômetro.
+    df["TIPO"] = np.where(
+        eh_financeira(df), "financeira",
+        np.where(eh_financeira(df, C.SETORES_UTILIDADE_PUBLICA),
+                 "utilidade", "operacional"))
     fin = df["TIPO"] == "financeira"
     if fin.any():
         pl = pd.to_numeric(df.get("PATRIMONIO"), errors="coerce")
@@ -167,32 +174,33 @@ def aplicar_filtros(df: pd.DataFrame, params: C.Params) -> tuple[pd.DataFrame, p
             motivos.append(fora)
         return df[~mask]
 
-    if params.excluir_setores and not df.empty and params.vagas_financeiras <= 0:
+    # Cada grupo tem a sua própria chave. Antes as duas exclusões estavam
+    # amarradas no mesmo `if`, o que tornava impossível pedir bancos sem pedir
+    # concessionárias junto — e difícil de enxergar qual das duas estava agindo.
+    if params.excluir_setores and not df.empty:
+        dispensados = set()
+        if params.vagas_financeiras > 0:
+            dispensados |= set(C.SETORES_FINANCEIROS)
+        if params.vagas_utilidades > 0:
+            dispensados |= set(C.SETORES_UTILIDADE_PUBLICA)
+        padroes = [p for p in params.excluir_setores if p not in dispensados]
+
         campos = [c for c in ("SETOR", "SEGMENTO") if c in df.columns]
-        if campos:
+        if padroes and campos:
             # Concatenação explícita: `df[campos].agg(" | ".join, axis=1)` devolve
             # um DataFrame (não uma Series) quando o DataFrame está vazio, e aí
             # o .str seguinte quebra. Aconteceu em produção.
             texto = df[campos[0]].fillna("").astype(str)
             for c in campos[1:]:
                 texto = texto + " | " + df[c].fillna("").astype(str)
-            padrao = "|".join(f"(?:{p})" for p in params.excluir_setores)
+            padrao = "|".join(f"(?:{p})" for p in padroes)
             mask = texto.str.contains(padrao, case=False, na=False, regex=True)
-            df = corta(mask, "setor excluído (financeiro/seguros/utilidade pública)")
-    elif params.excluir_setores and not df.empty:
-        # Com cota reservada, financeiras continuam no jogo (com métricas
-        # próprias); só as utilities saem, porque nelas o retorno sobre capital
-        # é fixado pelo regulador e não mede gestão.
-        nao_fin = [p for p in params.excluir_setores
-                   if p not in C.SETORES_FINANCEIROS]
-        if nao_fin:
-            campos = [c for c in ("SETOR", "SEGMENTO") if c in df.columns]
-            texto = df[campos[0]].fillna("").astype(str)
-            for c in campos[1:]:
-                texto = texto + " | " + df[c].fillna("").astype(str)
-            padrao = "|".join(f"(?:{p})" for p in nao_fin)
-            df = corta(texto.str.contains(padrao, case=False, na=False, regex=True),
-                       "setor excluído (utilidade pública)")
+            fica_fin = set(C.SETORES_FINANCEIROS) - dispensados
+            fica_uti = set(C.SETORES_UTILIDADE_PUBLICA) - dispensados
+            quais = " e ".join(
+                x for x in ("financeiro/seguros" if fica_fin else "",
+                            "utilidade pública" if fica_uti else "") if x)
+            df = corta(mask, f"setor excluído ({quais})" if quais else "setor excluído")
 
     df = corta(df["LIQUIDEZ_MEDIA"].fillna(0) < params.liquidez_minima_diaria,
                f"liquidez < R$ {params.liquidez_minima_diaria:,.0f}/dia")

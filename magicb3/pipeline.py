@@ -191,7 +191,8 @@ def montar_carteira(params: C.Params, *, progresso=_nada, usar_cache: bool = Tru
     aprovados, rejeitados = fundamentals.aplicar_filtros(universo, params)
 
     rk = ranking.ranquear(aprovados, n=params.n_acoes_ranking,
-                          vagas_financeiras=params.vagas_financeiras)
+                          vagas_financeiras=params.vagas_financeiras,
+                          vagas_utilidades=params.vagas_utilidades)
     selec = rk[rk["SELECIONADA"]].copy()
 
     progresso("Otimizando a carteira (Markowitz)...", 0.93)
