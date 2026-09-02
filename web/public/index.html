@@ -305,6 +305,26 @@
           e mantém até o seguinte, com custo de transação nas duas pontas.
           <b id="btInfo"></b></p>
 
+        <div class="ctls" style="display:flex;gap:18px;flex-wrap:wrap;margin:12px 0 4px">
+          <label>Período:
+            <select id="ctlBtAnos">
+              <option value="1">1 ano</option>
+              <option value="3">3 anos</option>
+              <option value="5" selected>5 anos</option>
+            </select>
+          </label>
+          <label>Rebalanceamento:
+            <select id="ctlBtFreq">
+              <option value="trimestral">Trimestral</option>
+              <option value="semestral">Semestral</option>
+              <option value="anual" selected>Anual</option>
+              <option value="sem">Sem rebalanceamento</option>
+            </select>
+          </label>
+        </div>
+        <div class="warn hidden" id="btAviso"
+             style="border-left-color:var(--warn,#b8860b)"></div>
+
         <div class="warn">
           <b>Este backtest reconstrói o ranking em cada data.</b> Em 02/01/2022 ele
           usa apenas as demonstrações que já haviam sido entregues à CVM até

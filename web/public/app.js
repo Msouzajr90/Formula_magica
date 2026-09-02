@@ -373,6 +373,55 @@ function dispersao(svg, pontos, opts) {
  *  os SEUS cortes (nº de ações, cota de financeiras) sobre essa lista e roda
  *  o Markowitz com a janela de retornos anterior à compra.
  */
+// --- período e frequência do backtest -------------------------------------
+// O navegador só pode usar as datas que existem no historico.json. Ele
+// consegue AGRUPAR (de trimestral tirar semestral e anual, pegando 1 em 2 ou
+// 1 em 4), mas nunca INVENTAR datas mais finas do que o arquivo tem — e é por
+// isso que o gerador passou a rodar trimestral por padrão.
+const MESES_POR_FREQ = { trimestral: [1, 4, 7, 10], semestral: [1, 7], anual: [1] };
+const ORDEM_FREQ = { trimestral: 0, semestral: 1, anual: 2 };
+
+function freqDoArquivo(H) {
+  const meses = new Set((H.rebalances || []).map(r => +r.data.slice(5, 7)));
+  if (meses.has(4) || meses.has(10)) return 'trimestral';
+  if (meses.has(7)) return 'semestral';
+  return 'anual';
+}
+
+function recuarAnos(dataISO, anos) {
+  const d = new Date(dataISO + 'T00:00:00Z');
+  d.setUTCFullYear(d.getUTCFullYear() - anos);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Datas de compra que atendem ao período e à frequência pedidos. */
+function selecionarRebalances(H, cfg) {
+  const todas = H.rebalances || [];
+  if (!todas.length) return { lista: [], aviso: '' };
+
+  const ultimo = H.pregoes[H.pregoes.length - 1];
+  const corte = cfg.anos ? recuarAnos(ultimo, cfg.anos) : '0000-00-00';
+  const doArquivo = freqDoArquivo(H);
+
+  let freq = cfg.freq === 'sem' ? doArquivo : cfg.freq;
+  let aviso = '';
+  if (cfg.freq !== 'sem' && ORDEM_FREQ[freq] < ORDEM_FREQ[doArquivo]) {
+    // Pediram mais fino do que existe. Dizer isso é obrigatório: entregar o
+    // resultado anual rotulado de trimestral seria mentir sobre o que rodou.
+    aviso = `O histórico só tem rebalanceamento ${doArquivo}. Rode a ação `
+          + `"Atualizar histórico" com frequência ${cfg.freq} para poder usá-la. `
+          + `O gráfico abaixo está ${doArquivo}.`;
+    freq = doArquivo;
+  }
+
+  const meses = MESES_POR_FREQ[freq];
+  let lista = todas.filter(r => r.data >= corte && meses.includes(+r.data.slice(5, 7)));
+  if (!lista.length) lista = todas.filter(r => r.data >= corte).slice(0, 1);
+  if (!lista.length) lista = todas.slice(-1);
+  if (cfg.freq === 'sem') lista = lista.slice(0, 1);
+  return { lista, aviso };
+}
+
 function rodarBacktest(H, cfg) {
   const esc = H.meta.escalaRetornos || 100000;
   const nD = H.pregoes.length;
@@ -390,12 +439,12 @@ function rodarBacktest(H, cfg) {
   const rp = new Array(nD).fill(null);
   const composicoes = [];
   const registro = [];
+  const { lista, aviso } = selecionarRebalances(H, cfg);
 
-  for (let r = 0; r < H.rebalances.length; r++) {
-    const reb = H.rebalances[r];
+  for (let r = 0; r < lista.length; r++) {
+    const reb = lista[r];
     const ini = idxData(reb.data);
-    const fim = r + 1 < H.rebalances.length
-      ? idxData(H.rebalances[r + 1].data) : nD;
+    const fim = r + 1 < lista.length ? idxData(lista[r + 1].data) : nD;
     if (fim - ini < 5 || ini < 30) continue;
 
     const j0 = Math.max(0, ini - janela);
@@ -465,7 +514,8 @@ function rodarBacktest(H, cfg) {
   const carteira = rp.slice(a, b + 1).map(v => v ?? 0);
   const bench = (H.benchmark || []).slice(a, b + 1).map(v => (v ?? 0) / esc);
 
-  return { datas, carteira, bench, composicoes, registro,
+  return { datas, carteira, bench, composicoes, registro, aviso,
+           nRebalances: composicoes.length,
            metricas: metricas(carteira, bench, H.meta.taxaLivreRisco ?? 0) };
 }
 
@@ -507,7 +557,7 @@ function metricas(rp, rb, rf) {
 let D = null;                      // dados.json
 let idx = new Map();               // ticker -> empresa
 let estado = { n: 30, cap: 0.15, perfil: 0, capital: 100000, unico: true,
-               vagasFin: 0, vagasUti: 0 };
+               vagasFin: 0, vagasUti: 0, btAnos: 5, btFreq: 'anual' };
 
 /** Rótulo das métricas: numa financeira as colunas medem outra coisa. */
 const rotulos = (tipo) => tipo === 'financeira'
@@ -675,7 +725,7 @@ function renderBacktest() {
   el('btConteudo').classList.remove('hidden');
 
   const cfg = { n: estado.n, cap: estado.cap, vagasFin: estado.vagasFin,
-                vagasUti: estado.vagasUti,
+                vagasUti: estado.vagasUti, anos: estado.btAnos, freq: estado.btFreq,
                 perfil: estado.perfil, janela: H.meta.janelaRetornos,
                 custoBps: H.meta.custoBps };
   const chave = JSON.stringify(cfg);
@@ -693,8 +743,15 @@ function renderBacktest() {
 }
 
 function desenharBacktest(r) {
-  if (!r) { el('btStatus').textContent = 'Não foi possível montar carteira em nenhuma data.'; return; }
+  if (!r) {
+    el('btStatus').textContent = 'Não foi possível montar carteira em nenhuma data.';
+    el('btAviso').classList.add('hidden');
+    return;
+  }
   el('btStatus').textContent = '';
+  const av = el('btAviso');
+  av.textContent = r.aviso || '';
+  av.classList.toggle('hidden', !r.aviso);
 
   linhas(el('chBt'), r.datas, [
     { nome: 'Carteira', cor: css('--s1'), v: acumular(r.carteira).map(v => v * 100) },
@@ -753,6 +810,8 @@ function ligarControles() {
        () => el('lblFin').textContent = el('ctlFin').value);
   bind('ctlUti', 'vagasUti', c => Math.max(0, +c.value || 0),
        () => el('lblUti').textContent = el('ctlUti').value);
+  bind('ctlBtAnos', 'btAnos', c => +c.value);
+  bind('ctlBtFreq', 'btFreq', c => c.value);
   document.querySelectorAll('.tabs button').forEach(b =>
     b.addEventListener('click', () => trocarAba(b.dataset.p)));
   let t;
