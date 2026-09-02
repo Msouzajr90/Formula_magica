@@ -52,7 +52,15 @@ def _texto(x):
 def montar_json(res, params: C.Params, pool: int,
                 vagas_padrao: int = 0, utilidades_padrao: int = 0) -> dict:
     """Empacota ranking, retornos esperados e covariância."""
-    rk = res.ranking.head(pool).copy()
+    # NÃO usar head(pool): o ranking vem ordenado por grupo — operacionais,
+    # depois financeiras, depois concessionárias. Como as operacionais sozinhas
+    # passam de 80, o corte por posição decapitava os outros dois grupos, e o
+    # arquivo saía só com operacionais mesmo tendo vagas reservadas. Foi assim
+    # que os bancos continuaram sumidos do site depois de "corrigidos".
+    # `SELECIONADA` já respeita a cota de cada grupo, que é o que queremos.
+    rk = res.ranking
+    sel = rk[rk["SELECIONADA"]] if "SELECIONADA" in rk.columns else rk.head(pool)
+    rk = (sel if not sel.empty else rk.head(pool)).copy()
 
     empresas = []
     for r in rk.itertuples():
@@ -118,6 +126,23 @@ def montar_json(res, params: C.Params, pool: int,
     }
 
 
+def _sem_carimbo(d: dict) -> dict:
+    """Cópia sem os campos que mudam a cada execução mesmo sem dado novo."""
+    fora = {"geradoEm", "diagnostico"}
+    meta = {k: v for k, v in (d.get("meta") or {}).items() if k not in fora}
+    return {**d, "meta": meta}
+
+
+def _igual_ao_existente(dados: dict, saida: Path) -> bool:
+    if not saida.exists():
+        return False
+    try:
+        antigo = json.loads(saida.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return False
+    return _sem_carimbo(antigo) == _sem_carimbo(dados)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--demo", action="store_true",
@@ -168,6 +193,13 @@ def main() -> int:
 
     saida = Path(args.saida)
     saida.parent.mkdir(parents=True, exist_ok=True)
+    if _igual_ao_existente(dados, saida):
+        # Num pregão sem alteração de preço fechado — feriado, ou rodada
+        # repetida no mesmo dia — só o carimbo de hora mudaria. Reescrever o
+        # arquivo geraria um commit e um deploy por dia sem nenhum conteúdo
+        # novo. Melhor não tocar nele.
+        print(f"\nNada mudou desde a última coleta; {saida} ficou como estava.")
+        return 0
     saida.write_text(json.dumps(dados, ensure_ascii=False, separators=(",", ":")),
                      encoding="utf-8")
 
