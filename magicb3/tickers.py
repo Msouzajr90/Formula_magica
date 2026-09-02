@@ -17,6 +17,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -38,21 +39,38 @@ def _cache(nome: str) -> Path:
     return CACHE_DIR / nome
 
 
+# A API da B3 responde em segundos na maior parte do tempo e simplesmente para
+# de responder de vez em quando — em produção deu "Read timed out" com 90s de
+# espera. Como é a única fonte do mapa prefixo -> CD_CVM, uma pane dela derruba
+# a coleta inteira. Daí a insistência, a página menor na segunda tentativa e,
+# adiante, o recuo para o cache antigo.
+ESPERAS_B3 = (5.0, 20.0, 60.0)
+
+
 def _pagina_b3(pagina: int, tamanho: int = 120) -> dict:
-    payload = base64.b64encode(json.dumps(
-        {"language": "pt-br", "pageNumber": pagina, "pageSize": tamanho}
-    ).encode()).decode()
-    r = rede.sessao().get(B3_URL.format(payload=payload), headers=HEADERS, timeout=90)
-    r.raise_for_status()
-    return r.json()
+    ultimo = None
+    for n, espera in enumerate((0.0,) + ESPERAS_B3):
+        if espera:
+            time.sleep(espera)
+        # se a página cheia não veio, tenta uma menor: costuma ser o volume
+        # da resposta que estoura o tempo, não a indisponibilidade do serviço
+        tam = tamanho if n < 2 else max(30, tamanho // 2)
+        payload = base64.b64encode(json.dumps(
+            {"language": "pt-br", "pageNumber": pagina, "pageSize": tam}
+        ).encode()).decode()
+        try:
+            r = rede.sessao().get(B3_URL.format(payload=payload),
+                                  headers=HEADERS, timeout=120)
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:                            # noqa: BLE001
+            ultimo = exc
+            log.warning("B3 não respondeu (página %d, tentativa %d/%d): %s",
+                        pagina, n + 1, len(ESPERAS_B3) + 1, str(exc)[:140])
+    raise RuntimeError(f"B3 não respondeu na página {pagina}: {ultimo}")
 
 
-def baixar_empresas_b3(usar_cache: bool = True) -> pd.DataFrame:
-    """Companhias listadas: codeCVM, prefixo do ticker, razão social, segmento."""
-    arq = _cache("b3_empresas.parquet")
-    if usar_cache and arq.exists():
-        return pd.read_parquet(arq)
-
+def _todas_as_paginas() -> list[dict]:
     linhas, pagina = [], 1
     while True:
         js = _pagina_b3(pagina)
@@ -61,7 +79,29 @@ def baixar_empresas_b3(usar_cache: bool = True) -> pd.DataFrame:
         if pagina >= total:
             break
         pagina += 1
+    return linhas
 
+
+def baixar_empresas_b3(usar_cache: bool = True) -> pd.DataFrame:
+    """Companhias listadas: codeCVM, prefixo do ticker, razão social, segmento."""
+    arq = _cache("b3_empresas.parquet")
+    if usar_cache and arq.exists():
+        return pd.read_parquet(arq)
+
+    try:
+        linhas = _todas_as_paginas()
+    except Exception as exc:                                # noqa: BLE001
+        # Recuo para o cache antigo. Um mapa de ontem é infinitamente melhor
+        # que nenhum: os prefixos da B3 mudam devagar, e sem ele a coleta do
+        # dia inteira é perdida por causa de uma indisponibilidade de terceiro.
+        if arq.exists():
+            log.warning("%s — usando o mapa em cache de %s.", exc,
+                        pd.Timestamp(arq.stat().st_mtime, unit="s").date())
+            return pd.read_parquet(arq)
+        raise RuntimeError(
+            f"{exc}\nNão há cache anterior para usar no lugar. A B3 é a única "
+            "fonte do mapa prefixo->CD_CVM; espere alguns minutos e rode de novo."
+        ) from exc
     df = pd.DataFrame(linhas)
     if df.empty:
         return df

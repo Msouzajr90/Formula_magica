@@ -23,7 +23,7 @@ _NOMES = [
     ("FESA4", "Ferbasa S.A."), ("TASA4", "Taurus Armas S.A."),
     ("VULC3", "Vulcabras S.A."), ("CMIN3", "CSN Mineração"),
     ("RANI3", "Irani Papel e Embalagem"), ("LEVE3", "Mahle Metal Leve"),
-    ("SMTO3", "São Martinho S.A."), ("PSSA3", "Porto Seguro S.A."),
+    ("SMTO3", "São Martinho S.A."), ("VIVT3", "Telefônica Brasil"),
     ("ODPV3", "Odontoprev S.A."), ("GRND3", "Grendene S.A."),
     ("MYPK3", "Iochpe-Maxion S.A."), ("POMO4", "Marcopolo S.A."),
     ("TUPY3", "Tupy S.A."), ("SHUL4", "Schulz S.A."),
