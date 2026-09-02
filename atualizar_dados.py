@@ -50,7 +50,7 @@ def _texto(x):
 
 
 def montar_json(res, params: C.Params, pool: int,
-                vagas_padrao: int = 0) -> dict:
+                vagas_padrao: int = 0, utilidades_padrao: int = 0) -> dict:
     """Empacota ranking, retornos esperados e covariância."""
     rk = res.ranking.head(pool).copy()
 
@@ -103,6 +103,8 @@ def montar_json(res, params: C.Params, pool: int,
             # quantas vagas o site sugere; o arquivo carrega mais que isso
             "vagasFinanceiras": vagas_padrao,
             "financeirasNoArquivo": params.vagas_financeiras,
+            "vagasUtilidades": utilidades_padrao,
+            "utilidadesNoArquivo": params.vagas_utilidades,
             "diagnostico": {k: (str(v) if not isinstance(v, (int, float, type(None))) else v)
                             for k, v in res.diagnostico.items()},
         },
@@ -126,6 +128,9 @@ def main() -> int:
     ap.add_argument("--vagas-financeiras", type=int, default=0,
                     help="quantas vagas da carteira ficam com bancos e seguradoras "
                          "(ranqueados por ROE e Lucro/Preco, nunca junto das demais)")
+    ap.add_argument("--vagas-utilidades", type=int, default=0,
+                    help="quantas vagas da carteira ficam com concessionarias "
+                         "(energia, saneamento, gas) - ranqueadas entre si")
     ap.add_argument("--saida", default=str(SAIDA))
     ap.add_argument("--fundamentos", default=None,
                     help="caminho do fundamentos.json; com ele a CVM nao e acessada "
@@ -139,10 +144,12 @@ def main() -> int:
     # Por isso a exportação sempre reserva parte do pool para financeiras;
     # quantas entram de fato na carteira continua sendo escolha de quem usa.
     vagas_no_arquivo = max(args.vagas_financeiras, args.pool // 4)
+    utilidades_no_arquivo = max(args.vagas_utilidades, args.pool // 4)
 
     params = C.Params(n_acoes_ranking=args.pool,
                       liquidez_minima_diaria=args.liquidez,
                       vagas_financeiras=vagas_no_arquivo,
+                      vagas_utilidades=utilidades_no_arquivo,
                       n_carteiras_fronteira=5)
 
     if args.demo:
@@ -156,7 +163,8 @@ def main() -> int:
             arquivo_fundamentos=args.fundamentos)
 
     dados = montar_json(res, params, args.pool,
-                        vagas_padrao=args.vagas_financeiras)
+                        vagas_padrao=args.vagas_financeiras,
+                        utilidades_padrao=args.vagas_utilidades)
 
     saida = Path(args.saida)
     saida.parent.mkdir(parents=True, exist_ok=True)

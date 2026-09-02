@@ -167,17 +167,20 @@ def gerar(anos: int, freq: str, pool: int, liquidez: float,
         # sem cota aqui: o navegador aplica a dele sobre a lista completa
         p_aberto = C.Params(**{**params.to_dict(),
                               "excluir_setores": tuple(params.excluir_setores),
-                              "vagas_financeiras": 1})
+                              "vagas_financeiras": 1,
+                              "vagas_utilidades": 1})
         aprov, _ = fundamentals.aplicar_filtros(uni, p_aberto)
         if aprov.empty:
             continue
-        rk = ranking.ranquear(aprov, n=pool, vagas_financeiras=pool // 4)
+        rk = ranking.ranquear(aprov, n=pool, vagas_financeiras=pool // 4,
+                              vagas_utilidades=pool // 4)
 
         itens = []
         for r in rk.head(pool * 2).itertuples():
             t = str(r.TICKER)
             itens.append({"t": t.replace(".SA", ""), "yf": t,
                           "f": 1 if r.TIPO == "financeira" else 0,
+                          "u": 1 if r.TIPO == "utilidade" else 0,
                           "q": round(float(r.ROIC), 5) if pd.notna(r.ROIC) else None,
                           "p": round(float(r.EY), 5) if pd.notna(r.EY) else None})
             usados.add(t)
