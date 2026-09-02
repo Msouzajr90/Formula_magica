@@ -221,7 +221,10 @@ def gerar(anos: int, freq: str, pool: int, liquidez: float,
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--anos", type=int, default=5)
-    ap.add_argument("--freq", default="anual",
+    # Trimestral por padrão: o navegador consegue agrupar trimestral em
+    # semestral e anual, mas não consegue inventar datas mais finas. Gerar no
+    # passo mais curto é o que permite os quatro botões da tela.
+    ap.add_argument("--freq", default="trimestral",
                     choices=["anual", "semestral", "trimestral"])
     ap.add_argument("--pool", type=int, default=40,
                     help="tamanho do ranking gravado por data (o site corta dentro dele)")
