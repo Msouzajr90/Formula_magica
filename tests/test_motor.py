@@ -825,3 +825,60 @@ def test_cota_de_bancos_nao_liberta_as_concessionarias():
     aprov2, _ = fundamentals.aplicar_filtros(universo, p2)
     assert (aprov2["TIPO"] == "utilidade").any()
     assert not (aprov2["TIPO"] == "financeira").any(), "bancos nao foram pedidos"
+
+
+# ---------------------------------------------------------------------------
+# Lucro liquido dos bancos: o codigo da conta muda entre planos
+# ---------------------------------------------------------------------------
+def _dre_linha(cvm_id, conta, descricao, valor, ref="2026-06-30"):
+    return {"CD_CVM": cvm_id, "CNPJ_CIA": f"{cvm_id:014d}",
+            "DENOM_CIA": f"Empresa {cvm_id}", "CD_CONTA": conta,
+            "DS_CONTA": descricao, "VL_CONTA": valor,
+            "DT_REFER": pd.Timestamp(ref), "DT_INI_EXERC": pd.Timestamp("2026-01-01"),
+            "DT_FIM_EXERC": pd.Timestamp(ref), "DT_RECEB": pd.Timestamp(ref)}
+
+
+def test_lucro_do_banco_e_achado_mesmo_sem_a_conta_3_11():
+    """Itau, BTG e BMG nao tem 3.11 — era so isso que os excluia do ranking."""
+    from magicb3 import cvm as _cvm
+    dre = pd.DataFrame([
+        # industria: plano padrao
+        _dre_linha(1, "3.11", "Lucro/Prejuízo Consolidado do Período", 100.0),
+        _dre_linha(1, "3.99.01.01", "Lucro por Ação - Básico ON", 1.5),
+        # banco: mesma descricao, outro codigo
+        _dre_linha(19348, "3.09", "Lucro/Prejuízo Consolidado do Período", 500.0),
+        _dre_linha(19348, "3.99.01.01", "Lucro por Ação - Básico ON", 4.2),
+    ])
+    ll = _cvm.marcar_lucro_liquido(dre)
+    achados = dict(zip(ll["CD_CVM"], ll["VL_CONTA"]))
+    assert achados == {1: 100.0, 19348: 500.0}
+    assert set(ll["CD_CONTA"]) == {"LL"}, "o codigo tem que ser normalizado"
+    assert set(ll["CD_CONTA_ORIGEM"]) == {"3.11", "3.09"}
+
+
+def test_lucro_por_acao_nunca_e_confundido_com_lucro():
+    """3.99 e um indice em R$/acao; entrar como lucro daria um ROE absurdo."""
+    from magicb3 import cvm as _cvm
+    dre = pd.DataFrame([
+        _dre_linha(7, "3.99.01.01", "Lucro por Ação - Básico ON", 2.5),
+        _dre_linha(7, "3.99.02.01", "Lucro Diluído por Ação ON", 2.4),
+    ])
+    assert _cvm.marcar_lucro_liquido(dre).empty
+
+
+def test_entre_consolidado_e_controlador_fica_o_mais_alto():
+    from magicb3 import cvm as _cvm
+    dre = pd.DataFrame([
+        _dre_linha(2, "3.11.01", "Lucro/Prejuízo do Período Atribuído a Controladores", 80.0),
+        _dre_linha(2, "3.11", "Lucro/Prejuízo Consolidado do Período", 100.0),
+    ])
+    ll = _cvm.marcar_lucro_liquido(dre)
+    assert list(ll["VL_CONTA"]) == [100.0]
+
+
+def test_contas_lidas_da_cvm_incluem_os_candidatos_de_lucro():
+    """De nada adianta procurar pela descricao se a linha foi descartada na
+    leitura: o filtro por codigo acontece antes, dentro do _ler_membro."""
+    from magicb3.pipeline import CONTAS_USADAS
+    for cod in C.CD_LUCRO_CANDIDATOS:
+        assert cod in CONTAS_USADAS, f"{cod} sairia do arquivo antes de ser procurado"
