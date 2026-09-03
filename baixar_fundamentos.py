@@ -113,8 +113,9 @@ def main() -> int:
     bp = cvm.balanco_mais_recente(bpa, bpp, CONTAS_BP)
     print(f"  {len(bp):,} empresas com balanço")
 
-    lucro = cvm.ebit_ltm(dfp["DRE"], itr.get("DRE", pd.DataFrame()),
-                         C.CD_LUCRO_LIQUIDO)[["CD_CVM", "EBIT_LTM"]]
+    lucro = cvm.ebit_ltm(cvm.marcar_lucro_liquido(dfp["DRE"]),
+                         cvm.marcar_lucro_liquido(itr.get("DRE", pd.DataFrame())),
+                         "LL")[["CD_CVM", "EBIT_LTM"]]
     ebit = ebit.merge(lucro.rename(columns={"EBIT_LTM": "LUCRO_LTM"}),
                       on="CD_CVM", how="left")
     bp = bp.merge(cvm.patrimonio_liquido(bpp), on="CD_CVM", how="left")

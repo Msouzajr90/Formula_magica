@@ -144,7 +144,9 @@ def gerar(anos: int, freq: str, pool: int, liquidez: float,
         anual = dre[dre["DT_REFER"].dt.month == 12]
         trim = dre[dre["DT_REFER"].dt.month != 12]
         ebit = cvm.ebit_ltm(anual, trim, C.CD_EBIT)
-        lucro = cvm.ebit_ltm(anual, trim, C.CD_LUCRO_LIQUIDO)[["CD_CVM", "EBIT_LTM"]]
+        lucro = cvm.ebit_ltm(cvm.marcar_lucro_liquido(anual),
+                             cvm.marcar_lucro_liquido(trim),
+                             "LL")[["CD_CVM", "EBIT_LTM"]]
         ebit = ebit.merge(lucro.rename(columns={"EBIT_LTM": "LUCRO_LTM"}),
                           on="CD_CVM", how="left")
         bp = cvm.balanco_mais_recente(bpa, bpp, CONTAS_BP)
