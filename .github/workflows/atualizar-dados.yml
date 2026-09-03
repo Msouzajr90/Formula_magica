@@ -30,7 +30,7 @@ jobs:
       - name: Rodar os testes
         run: python -m pytest tests -q
       - name: Gerar o dados.json
-        run: python atualizar_dados.py --pool 80 --fundamentos web/public/fundamentos.json
+        run: python atualizar_dados.py --pool 80
       - name: Conferir o resultado
         run: python validar_dados.py
       - name: Publicar
