@@ -12,6 +12,15 @@ from typing import Literal
 CD_RECEITA_LIQUIDA = "3.01"
 CD_EBIT = "3.05"           # Resultado Antes do Resultado Financeiro e dos Tributos
 CD_LUCRO_LIQUIDO = "3.11"  # Lucro/Prejuízo Consolidado do Período
+# Mesma história do patrimônio líquido: o plano de contas dos bancos usa outra
+# numeração. Itaú, BTG, BMG e Inter não têm 3.11 — sem estes candidatos, a
+# linha do lucro é descartada JÁ NA LEITURA do arquivo da CVM e nenhuma busca
+# posterior consegue encontrá-la.
+CD_LUCRO_CANDIDATOS = ("3.07", "3.08", "3.09", "3.10", "3.11", "3.12", "3.13")
+DS_LUCRO_LIQUIDO = "lucro/prejuízo consolidado do período"
+DS_LUCRO_ALTERNATIVAS = ("lucro/prejuízo do período",
+                         "resultado líquido do período",
+                         "lucro ou prejuízo líquido consolidado do período")
 CD_LPA_BASICO_ON = "3.99.01.01"
 
 # BPA (Ativo)

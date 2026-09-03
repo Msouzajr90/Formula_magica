@@ -23,6 +23,7 @@ CONTAS_BP = [
 # Únicos códigos que precisam sair dos CSVs da CVM — tudo o mais é descartado
 # durante a leitura, para o processo caber na memória do Streamlit Cloud.
 CONTAS_USADAS = (set(CONTAS_BP) | set(C.CD_PL_CANDIDATOS)
+                 | set(C.CD_LUCRO_CANDIDATOS)
                  | {C.CD_EBIT, C.CD_LUCRO_LIQUIDO, C.CD_LPA_BASICO_ON})
 
 
@@ -109,9 +110,11 @@ def montar_universo(params: C.Params, *, anos: list[int] | None = None,
 
         # Métricas das financeiras: lucro líquido de 12 meses e patrimônio
         # líquido localizado pela descrição (o código muda entre planos).
-        lucro = cvm.ebit_ltm(dfp["DRE"], itr.get("DRE", pd.DataFrame()),
-                             C.CD_LUCRO_LIQUIDO)[["CD_CVM", "EBIT_LTM"]]
+        lucro = cvm.ebit_ltm(cvm.marcar_lucro_liquido(dfp["DRE"]),
+                             cvm.marcar_lucro_liquido(itr.get("DRE", pd.DataFrame())),
+                             "LL")[["CD_CVM", "EBIT_LTM"]]
         lucro = lucro.rename(columns={"EBIT_LTM": "LUCRO_LTM"})
+        log.info("lucro líquido localizado em %d companhias", len(lucro))
         ebit = ebit.merge(lucro, on="CD_CVM", how="left")
         bp = bp.merge(cvm.patrimonio_liquido(bpp), on="CD_CVM", how="left")
 

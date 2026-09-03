@@ -440,6 +440,40 @@ def composicao_capital(anos: list[int], *, consolidado: bool = True,
     return df[["CNPJ_CIA", "ACOES", "ACOES_BRUTO", "ESCALA_CONFIRMADA"]]
 
 
+def marcar_lucro_liquido(dre: pd.DataFrame) -> pd.DataFrame:
+    """Devolve só as linhas de lucro líquido, com CD_CONTA normalizado para "LL".
+
+    Mesmo motivo do `patrimonio_liquido`: o plano de contas das instituições
+    financeiras usa outra numeração. Verificado no fundamentos.json de
+    30/06/2026 — de 438 companhias, exatamente 4 ficaram sem lucro líquido, e
+    3 delas são bancos: Itaú (19348), BTG (22616) e BMG (24600). Nenhuma tem a
+    conta 3.11. A descrição, essa, é a mesma nos dois planos.
+
+    Normalizar o código permite reaproveitar `ebit_ltm` sem duplicar a lógica
+    de 12 meses móveis.
+    """
+    if dre.empty or "DS_CONTA" not in dre.columns:
+        return dre
+    ds = dre["DS_CONTA"].astype("string").str.strip().str.lower()
+    # "Lucro por Ação" e "Lucro Básico por Ação" não são resultado, são índice
+    nao_e_lucro = ds.str.contains(r"por a[çc][ãa]o", na=False, regex=True)
+    alvos = [C.DS_LUCRO_LIQUIDO, *C.DS_LUCRO_ALTERNATIVAS]
+    bate = pd.Series(False, index=dre.index)
+    for alvo in alvos:
+        bate |= ds.str.startswith(alvo, na=False)
+    ll = dre[bate & ~nao_e_lucro].copy()
+    if ll.empty:
+        return ll
+    # entre "Consolidado" e "Atribuído ao Controlador", fica o de código mais curto
+    ll["_prof"] = ll["CD_CONTA"].astype(str).str.count(r"\.")
+    ll = ll.sort_values(["CD_CVM", "DT_REFER", "_prof"])
+    ll = ll.drop_duplicates(subset=["CD_CVM", "DT_REFER", "DT_INI_EXERC", "DT_FIM_EXERC"],
+                            keep="first")
+    ll["CD_CONTA_ORIGEM"] = ll["CD_CONTA"]
+    ll["CD_CONTA"] = "LL"
+    return ll.drop(columns=["_prof"])
+
+
 def patrimonio_liquido(bpp: pd.DataFrame) -> pd.DataFrame:
     """Patrimônio líquido localizado pela DESCRIÇÃO da conta, não pelo código.
 
