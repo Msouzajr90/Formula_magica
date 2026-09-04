@@ -18,7 +18,7 @@ def _nada(frac: float, texto: str) -> None:      # progresso silencioso
 
 
 def coletar(p: ParamsFII | None = None, *, ano: int | None = None,
-            usar_cache: bool = True, usar_b3: bool = True,
+            usar_cache: bool = True, usar_b3: bool = False,
             por_familia: bool = False, arquivo_informe: str | None = None,
             progresso=None) -> dict:
     """Roda tudo e devolve as tabelas e os metadados da coleta.
@@ -74,7 +74,12 @@ def coletar(p: ParamsFII | None = None, *, ano: int | None = None,
     if com_ticker == 0:
         raise RuntimeError("Nenhum fundo ficou com código de negociação — "
                            "a B3 não respondeu e o ISIN não veio no informe.")
-    if (mapa["ORIGEM_TICKER"] == "isin").all():
+    # Só avisa se a B3 foi pedida e não entregou. O teste anterior era
+    # `(ORIGEM_TICKER == "isin").all()`, que nunca dava verdadeiro: os fundos sem
+    # ticker têm origem nula, e nulo não é igual a "isin" — o aviso ficou morto
+    # no código enquanto a B3 devolvia lista vazia em silêncio.
+    origens = mapa["ORIGEM_TICKER"].dropna()
+    if usar_b3 and len(origens) and (origens == "isin").all():
         avisos.append("A API da B3 não respondeu; os códigos vieram do ISIN da CVM.")
 
     simbolos = tickers_fii.para_yahoo(mapa["TICKER"].dropna().unique())

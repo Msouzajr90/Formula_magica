@@ -68,6 +68,29 @@ def _dy_para_score(df: pd.DataFrame, p: ParamsFII) -> pd.Series:
     return pd.concat([dy12, med], axis=1).min(axis=1, skipna=True)
 
 
+def _arredondar_score(v):
+    """Score em 0..1 -> nota em 0..100 com uma casa, meio para cima.
+
+    O `+ 0.5` seguido de `floor` reproduz o `Math.round` do navegador, que
+    arredonda meio para cima — o `round` do numpy arredondaria meio para o par.
+
+    O passo do meio existe por um motivo menos óbvio. Como os percentis são
+    frações de inteiros, a soma ponderada cai EXATAMENTE em x,x5 com alguma
+    frequência: no caso que quebrou em produção, o valor exato era 352,5. Em
+    ponto flutuante ninguém acerta 352,5 na mosca — dá 352,5000000000001 numa
+    máquina e 352,4999999999999 noutra, conforme a versão do numpy/pandas
+    mudar a ordem das somas. Um lado arredonda para 35,3, o outro para 35,2, e
+    o teste de paridade acusa uma divergência que não existe: a diferença é de
+    1e-13, e nenhuma decisão de investimento depende dela.
+
+    Encaixar o valor no milionésimo antes de arredondar mata esse ruído sem
+    tocar em nada que seja informação. O navegador faz o mesmo, na mesma ordem.
+    """
+    milesimos = v * 1000
+    milesimos = np.floor(milesimos * 1e6 + 0.5) / 1e6
+    return np.floor(milesimos + 0.5) / 10
+
+
 def calcular(df: pd.DataFrame, p: ParamsFII | None = None,
              *, por_familia: bool = False) -> pd.DataFrame:
     """Acrescenta as colunas de percentil, o SCORE e a posição no ranking.
@@ -96,11 +119,7 @@ def calcular(df: pd.DataFrame, p: ParamsFII | None = None,
             soma += pesos[nome] * pc
         df.loc[idx, "SCORE"] = soma
 
-    # Arredonda meio para cima, e não com o `round` do numpy, que arredonda meio
-    # para o par. É a mesma regra do `Math.round` do navegador — sem isso, um
-    # score que cai exatamente em x,x5 (o que acontece: percentis são frações de
-    # inteiros) sairia diferente nos dois lados e o teste de paridade quebraria.
-    df["SCORE"] = np.floor(df["SCORE"] * 1000 + 0.5) / 10
+    df["SCORE"] = _arredondar_score(df["SCORE"])
     ordem = ["FAMILIA"] if por_familia else []
     df["POSICAO"] = (df.groupby(ordem)["SCORE"].rank(ascending=False, method="min")
                      if ordem else df["SCORE"].rank(ascending=False, method="min"))

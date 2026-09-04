@@ -142,8 +142,10 @@ def main() -> int:
                     help="dados sintéticos, sem acessar a rede")
     ap.add_argument("--liquidez", type=float, default=500_000.0)
     ap.add_argument("--patrimonio", type=float, default=100_000_000.0)
-    ap.add_argument("--sem-b3", action="store_true",
-                    help="não consulta a API da B3; usa só o ISIN da CVM")
+    ap.add_argument("--com-b3", action="store_true",
+                    help="tambem consulta a API de fundos listados da B3; ela "
+                         "mudou de contrato e hoje devolve lista vazia, e o ISIN "
+                         "do informe ja cobre 100%% dos fundos negociados")
     ap.add_argument("--por-familia", action="store_true",
                     help="ranqueia papel, tijolo e híbrido em listas separadas")
     ap.add_argument("--sem-cache", action="store_true")
@@ -164,7 +166,7 @@ def main() -> int:
     else:
         from fiib3 import pipeline
         res = pipeline.coletar(
-            p, usar_cache=not args.sem_cache, usar_b3=not args.sem_b3,
+            p, usar_cache=not args.sem_cache, usar_b3=args.com_b3,
             por_familia=args.por_familia, arquivo_informe=args.informe,
             progresso=lambda f, t: print(f"  [{f * 100:3.0f}%] {t}", flush=True))
 

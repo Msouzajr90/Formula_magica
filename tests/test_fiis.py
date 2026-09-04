@@ -640,3 +640,29 @@ def test_pipeline_usa_a_ponte_ao_chamar_o_downloader(monkeypatch):
     mercado_mod.baixar_cotacoes(["MXRF11.SA"], progresso=lambda f, t: vistos.append(0.30 * f))
     assert vistos, "o progresso não foi repassado"
     assert isinstance(vistos[0], float)
+
+
+def test_isin_exige_quatro_letras_no_prefixo():
+    """Prefixo com dígito não é código de negociação — o Yahoo devolve 404.
+
+    Aceitar `[A-Z0-9]{4}` gerava 225 símbolos inexistentes na competência
+    07/2026 (`003H11`, `01M911`, ...), cada um virando uma consulta perdida e
+    uma linha de "sem cotação no Yahoo" que escondia os casos de verdade.
+    """
+    assert cvm_fii.ticker_do_isin("BRMXRFCTF008") == "MXRF"
+    assert cvm_fii.ticker_do_isin("BR003HCTF001") is None
+    assert cvm_fii.ticker_do_isin("BR01M9CTF002") is None
+    assert cvm_fii.ticker_do_isin("BR0SI4CTF002") is None
+
+
+def test_mapa_nao_consulta_a_b3_por_padrao(monkeypatch):
+    """A API mudou de contrato; ligar por padrão só gastaria tentativas."""
+    def nao_deveria(*a, **k):
+        raise AssertionError("a B3 foi consultada sem ser pedida")
+
+    monkeypatch.setattr(tickers_fii, "baixar_fundos_b3", nao_deveria)
+    informe = pd.DataFrame({"CNPJ": ["1", "2"],
+                            "ISIN": ["BRMXRFCTF008", "BR003HCTF001"]})
+    mapa = tickers_fii.montar_mapa(informe)
+    assert list(mapa["TICKER"]) == ["MXRF11", None] or \
+           (mapa["TICKER"].iloc[0] == "MXRF11" and pd.isna(mapa["TICKER"].iloc[1]))

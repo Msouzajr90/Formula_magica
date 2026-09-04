@@ -358,16 +358,24 @@ def baixar_cadastro(*, usar_cache: bool = True) -> pd.DataFrame:
 
 
 def ticker_do_isin(isin: str | None) -> str | None:
-    """ISIN brasileiro -> prefixo do ticker.
+    """ISIN brasileiro -> prefixo do ticker. 'BRMXRFCTF004' -> 'MXRF'.
 
-    'BRMXRFCTF004' -> 'MXRF'. O padrão é BR + 4 caracteres do emissor + tipo.
-    Vale para a quase totalidade dos FII e serve de reserva quando a API da B3
-    não responde. Não devolve o sufixo: quem chama decide entre 11 e 11B.
+    Exige **quatro letras**, e não quatro caracteres alfanuméricos. Medido na
+    competência 07/2026: dos 674 fundos marcados como negociados em bolsa, 653
+    tinham ISIN aceito pelo padrão frouxo, mas 225 deles produziam códigos como
+    `003H11` e `01M911` — que o Yahoo responde "Not Found", porque código de
+    negociação da B3 é sempre quatro letras seguidas de dígitos. Aceitar dígitos
+    no prefixo gerava 225 símbolos inexistentes, 225 consultas jogadas fora e
+    225 linhas de "sem cotação no Yahoo" na aba de excluídos, escondendo os
+    casos em que a ausência de cotação significa alguma coisa.
+
+    O padrão restrito deixa 428 códigos, que é a ordem de grandeza do universo
+    de FII efetivamente listados.
     """
     # `pd.isna` primeiro: com dtype "string" do pandas, um valor ausente é o
     # pd.NA, e testar a verdade dele levanta TypeError em vez de devolver False.
     if isin is None or pd.isna(isin):
         return None
     s = str(isin).strip().upper()
-    m = re.fullmatch(r"BR([A-Z0-9]{4})[A-Z]{3}\d{3}", s)
+    m = re.fullmatch(r"BR([A-Z]{4})[A-Z]{3}\d{3}", s)
     return m.group(1) if m else None

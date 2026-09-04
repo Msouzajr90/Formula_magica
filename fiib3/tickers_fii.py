@@ -1,18 +1,14 @@
 """CNPJ do fundo <-> código de negociação na B3.
 
-Duas fontes, porque nenhuma das duas é confiável sozinha:
+A fonte é o **ISIN do informe mensal da CVM**. O ISIN brasileiro embute o
+prefixo do código de negociação (BR**MXRF**CTF008 -> MXRF11), vem junto com os
+dados que já baixamos e é oficial.
 
-  1. **API de fundos listados da B3.** Traz o código de negociação oficial e o
-     segmento. É a fonte boa — e é a que cai. No lado das ações essa mesma API
-     já derrubou coletas inteiras com "Read timed out".
-
-  2. **ISIN do informe mensal da CVM.** O ISIN brasileiro embute o prefixo do
-     ticker (BR**MXRF**CTF004 -> MXRF11). Não depende da B3, vem junto com os
-     dados que já baixamos e cobre praticamente todo fundo listado.
-
-A B3 é tentada primeiro e o ISIN preenche o que faltar. Se a B3 não responder,
-o ISIN sozinho sustenta a coleta — que era exatamente o que faltava do outro
-lado da plataforma.
+A API de fundos listados da B3 continua implementada, mas desligada por padrão.
+Ela mudou de contrato: o endereço responde 200 e devolve `totalRecords: 0` para
+todo `typeFund` de 1 a 40. Mais importante — ela deixou de fazer falta: na
+competência 07/2026, os 674 fundos marcados como negociados em bolsa têm ISIN,
+sem exceção. O que era fonte de reserva virou fonte principal.
 """
 from __future__ import annotations
 
@@ -98,14 +94,26 @@ def baixar_fundos_b3(*, usar_cache: bool = True) -> pd.DataFrame:
     return df
 
 
-def montar_mapa(informe: pd.DataFrame, *, usar_b3: bool = True,
+def montar_mapa(informe: pd.DataFrame, *, usar_b3: bool = False,
                 usar_cache: bool = True) -> pd.DataFrame:
-    """Acrescenta TICKER (e a origem dele) ao informe mensal."""
+    """Acrescenta TICKER (e a origem dele) ao informe mensal.
+
+    `usar_b3` vem desligado. A API de fundos listados mudou de contrato: o
+    endereço ainda responde 200, mas devolve `totalRecords: 0` para todo
+    `typeFund` de 1 a 40 — testado um a um. Consultá-la só gastaria quatro
+    tentativas com espera crescente para receber uma lista vazia.
+
+    E não faz falta: na competência 07/2026, **os 674 fundos marcados como
+    negociados em bolsa têm ISIN no informe da CVM**, sem exceção. A fonte de
+    reserva virou a fonte principal, e é oficial. Ligue `usar_b3=True` se a
+    API voltar — o cruzamento continua implementado.
+    """
     df = informe.copy()
     b3 = baixar_fundos_b3(usar_cache=usar_cache) if usar_b3 else pd.DataFrame()
 
     if not b3.empty:
         df = df.merge(b3, on="CNPJ", how="left")
+        log.info("B3: %d fundos cruzados por CNPJ.", int(b3["SIGLA"].notna().sum()))
     else:
         df["SIGLA"] = pd.NA
         df["SEGMENTO_B3"] = pd.NA

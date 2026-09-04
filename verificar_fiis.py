@@ -132,13 +132,16 @@ def checar_cadastro(detalhado: bool) -> bool:
 
 
 def checar_b3(detalhado: bool) -> bool:
-    _titulo("4. API de fundos listados da B3")
+    # Desligada por padrao no pipeline: a API mudou de contrato e devolve lista
+    # vazia. Todos os fundos negociados em bolsa tem ISIN no informe da CVM.
+    _titulo("4. API de fundos listados da B3 — opcional")
     try:
         from fiib3 import tickers_fii
         df = tickers_fii.baixar_fundos_b3()
         if df.empty:
-            print(f"{AVISO} a B3 nao respondeu.")
-            print("        impacto: nenhum. Os codigos saem do ISIN da CVM.")
+            print(f"{AVISO} a B3 devolveu lista vazia (contrato mudou).")
+            print("        impacto: nenhum. Os codigos saem do ISIN da CVM,")
+            print("        que cobre 100% dos fundos negociados em bolsa.")
             return True
         print(f"{OK} {len(df)} FII listados; exemplo: "
               f"{', '.join(df['SIGLA'].head(5))}")
