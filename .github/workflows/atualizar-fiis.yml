@@ -1,0 +1,82 @@
+name: Atualizar FIIs
+on:
+  workflow_dispatch:
+  schedule:
+    # 23h UTC (20h em Brasilia), de segunda a sexta — depois do fechamento.
+    # Meia hora depois da coleta de acoes, para as duas nao brigarem pelo push.
+    - cron: "30 23 * * 1-5"
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar o repositorio
+        uses: actions/checkout@v4
+      - name: Instalar o Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+      - name: Recuperar o que ja foi baixado
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.fiib3_cache
+          key: fiib3-dados-${{ github.run_id }}
+          restore-keys: fiib3-
+      - name: Conferir que o informe da CVM esta no repositorio
+        run: |
+          # A CVM recusa conexoes de servidores no exterior — este robo roda nos
+          # Estados Unidos e nunca vai conseguir baixar o informe. Ele le o
+          # arquivo que voce gera no Brasil com baixar_informe_fii.py.
+          if [ ! -f web/public/informe_fii.json ]; then
+            echo "web/public/informe_fii.json nao existe."
+            echo "Rode 'python baixar_informe_fii.py' no seu computador e suba o"
+            echo "arquivo para web/public/ antes de acionar este robo."
+            echo "Explicacao completa em COMO_ATUALIZAR_FIIS.md."
+            exit 1
+          fi
+          python -c "from fiib3 import arquivo_informe as a; c='web/public/informe_fii.json'; print('competencia', a.competencia(c), '- gerado ha', a.idade_em_dias(c), 'dias')"
+      - name: Verificar as fontes de dados
+        continue-on-error: true
+        run: python verificar_fiis.py --informe web/public/informe_fii.json
+      - name: Rodar os testes
+        run: python -m pytest tests -q
+      - name: Gerar o fiis.json
+        run: python atualizar_fiis.py --informe web/public/informe_fii.json
+      - name: Conferir o resultado
+        run: python validar_fiis.py
+      - name: Publicar
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          test -f web/public/fiis.json || (echo "Arquivo nao foi gerado." && exit 1)
+          cp web/public/fiis.json /tmp/gerado.json
+          for tentativa in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p web/public
+            cp /tmp/gerado.json web/public/fiis.json
+            git add web/public/fiis.json
+            if git diff --staged --quiet; then
+              echo "Nada mudou."
+              exit 0
+            fi
+            git commit -m "Atualizacao automatica dos FIIs"
+            if git push; then
+              echo "Publicado na tentativa $tentativa."
+              exit 0
+            fi
+            echo "Alguem publicou antes; refazendo em cima do main atual."
+            sleep 5
+          done
+          echo "Nao consegui publicar depois de 5 tentativas."
+          exit 1
+      - name: Guardar o progresso mesmo se falhar
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.fiib3_cache
+          key: fiib3-dados-${{ github.run_id }}
