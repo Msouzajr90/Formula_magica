@@ -161,6 +161,29 @@ def montar_indicadores(
     return df
 
 
+def _motivos_incalculavel(df: pd.DataFrame) -> dict[str, pd.Series]:
+    """Agrupa as empresas sem indicador pelo ingrediente que faltou."""
+    rotulos = {
+        "LUCRO_LTM": "lucro líquido",
+        "PATRIMONIO": "patrimônio líquido",
+        "EBIT_LTM": "EBIT",
+        "EV": "EV",
+        "VALOR_MERCADO": "valor de mercado (nº de ações)",
+        "CAPITAL_TANGIVEL": "capital tangível",
+    }
+    ehfin = df["TIPO"].eq("financeira") if "TIPO" in df.columns else pd.Series(False, index=df.index)
+    motivos = {}
+    for i in df.index:
+        cols = (("LUCRO_LTM", "PATRIMONIO", "VALOR_MERCADO") if bool(ehfin.get(i, False))
+                else ("EBIT_LTM", "EV", "VALOR_MERCADO", "CAPITAL_TANGIVEL"))
+        faltas = [rotulos[c] for c in cols
+                  if c not in df.columns or pd.isna(df.at[i, c])]
+        chave = ("sem " + ", ".join(faltas)) if faltas else "indicador não calculável"
+        motivos.setdefault(chave, []).append(i)
+    return {k: pd.Series(True, index=pd.Index(v)).reindex(df.index, fill_value=False)
+            for k, v in motivos.items()}
+
+
 def aplicar_filtros(df: pd.DataFrame, params: C.Params) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Remove o que Greenblatt manda remover. Devolve (aprovados, rejeitados+motivo)."""
     df = df.copy()
@@ -212,7 +235,15 @@ def aplicar_filtros(df: pd.DataFrame, params: C.Params) -> tuple[pd.DataFrame, p
     if params.exigir_ev_positivo:
         df = corta((df["EV"] <= 0) & ~fin, "EV negativo ou nulo")
 
-    df = corta(df["ROIC"].isna() | df["EY"].isna(), "indicador não calculável")
+    # "indicador não calculável" não ajuda ninguém: some com a empresa sem dizer
+    # o que faltou. Nomear o ingrediente ausente transformou uma investigação de
+    # dois dias (o caso ITUB4) em algo que a própria execução responde.
+    sem_conta = df["ROIC"].isna() | df["EY"].isna()
+    if sem_conta.any():
+        for motivo, mask in _motivos_incalculavel(df[sem_conta]).items():
+            alvo = pd.Series(False, index=df.index)
+            alvo.loc[mask.index[mask]] = True
+            df = corta(alvo, motivo)
 
     if params.apenas_um_ticker_por_empresa and not df.empty:
         # entre PETR3/PETR4 do mesmo CNPJ, fica o de maior liquidez

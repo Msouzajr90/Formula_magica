@@ -110,6 +110,8 @@ def main() -> int:
 
     print(f"  {len(informe):,} fundos | competencia {informe['COMPETENCIA'].max()}")
     for campo, rotulo in (("PL", "patrimonio liquido"),
+                          ("NOME", "razao social"),
+                          ("PCT_IMOVEIS", "composicao da carteira"),
                           ("VP_COTA", "valor patrimonial por cota"),
                           ("COTAS", "numero de cotas"),
                           ("COTISTAS", "numero de cotistas"),
@@ -123,14 +125,17 @@ def main() -> int:
             print("          -> rode verificar_fiis.py --colunas: a CVM "
                   "provavelmente renomeou a coluna.")
 
-    print("\nBaixando o cadastro de fundos...")
+    # O cad_fii.csv responde 404 desde a reestruturacao dos arquivos de FII. Ele
+    # so acrescentava a situacao cadastral: a razao social vem do proprio
+    # informe (`Nome_Fundo_Classe`). Por isso a falha aqui e informativa.
+    print("\nBaixando o cadastro de fundos (opcional)...")
     try:
         cadastro = cvm_fii.baixar_cadastro(usar_cache=not args.sem_cache)
         print(f"  {len(cadastro):,} fundos no cadastro")
     except Exception as exc:                                   # noqa: BLE001
-        log.warning("Cadastro indisponivel: %s", exc)
-        print("  AVISO: os fundos vao ficar sem razao social. O resto funciona.")
-        cadastro = pd.DataFrame(columns=["CNPJ", "NOME", "SITUACAO", "TIPO"])
+        log.info("Cadastro indisponivel (%s).", str(exc)[:60])
+        print("  cadastro fora do ar — sem impacto: o nome vem do informe.")
+        cadastro = pd.DataFrame(columns=["CNPJ", "SITUACAO", "TIPO"])
 
     saida = Path(args.saida)
     dados = arqi.exportar(informe, cadastro, saida)

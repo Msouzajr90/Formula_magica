@@ -61,12 +61,13 @@ def checar_arquivo(caminho: str, detalhado: bool) -> bool:
         for campo, rotulo in (("PL", "patrimonio liquido"),
                               ("VP_COTA", "valor patrimonial por cota"),
                               ("COTAS", "numero de cotas"),
+                              ("NOME", "razao social"),
+                              ("PCT_IMOVEIS", "composicao da carteira"),
                               ("ISIN", "codigo ISIN")):
-            n = int(informe[campo].notna().sum())
+            n = int(informe[campo].notna().sum()) if campo in informe.columns else 0
             frac = n / max(len(informe), 1)
             marca = OK if frac > 0.7 else (AVISO if frac > 0.2 else FALHA)
             print(f"{marca} {rotulo:32s}: {n}/{len(informe)} preenchidos")
-        print(f"{OK} cadastro: {int(cadastro['NOME'].notna().sum())} com razao social")
         return True
     except Exception as exc:                                   # noqa: BLE001
         _erro(exc, detalhado)
@@ -116,7 +117,9 @@ def checar_informe(ano: int, detalhado: bool, listar: bool) -> bool:
 
 
 def checar_cadastro(detalhado: bool) -> bool:
-    _titulo("3. Cadastro de fundos (cad_fii.csv)")
+    # Opcional desde que a CVM tirou o cad_fii.csv do ar: o nome do fundo passou
+    # a sair do proprio informe. Fica no diagnostico so para avisar se voltar.
+    _titulo("3. Cadastro de fundos (cad_fii.csv) — opcional")
     try:
         from fiib3 import cvm_fii
         df = cvm_fii.baixar_cadastro()
@@ -124,8 +127,8 @@ def checar_cadastro(detalhado: bool) -> bool:
         return True
     except Exception as exc:                                   # noqa: BLE001
         _erro(exc, detalhado)
-        print("        impacto: os fundos ficam sem nome. O resto funciona.")
-        return False
+        print("        impacto: nenhum. O nome do fundo vem do informe mensal.")
+        return True
 
 
 def checar_b3(detalhado: bool) -> bool:

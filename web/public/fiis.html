@@ -262,6 +262,42 @@
         qual a aba de ações separa bancos das demais empresas.
       </div>
 
+      <h2 style="margin-top:24px">Como cada fundo é classificado</h2>
+      <p class="note">Pela carteira, não pelo rótulo.</p>
+      <p>A CVM tem um campo de mandato que diria isso de graça, mas ele veio
+        <b>vazio nos 1.375 fundos</b> da competência mais recente, e o campo de
+        segmento trocou de vocabulário: &ldquo;Títulos e Val. Mob.&rdquo; deixou
+        de existir e 637 fundos passaram a se declarar &ldquo;Multicategoria&rdquo;.
+        Classificar por esses campos marcaria o mercado inteiro como tijolo,
+        MXRF11 e KNCR11 incluídos.</p>
+      <p>Então a classificação usa o informe de ativo e passivo, que abre a
+        carteira em cerca de cinquenta contas. Somamos o que está em imóveis, o
+        que está em recebíveis (CRI, LCI, LIG, debêntures) e o que está em cotas
+        de outros fundos. Acima de <b>65%</b> em um dos três, o fundo é daquele
+        tipo; abaixo disso, é híbrido.</p>
+      <div class="scroll">
+        <table><thead><tr>
+          <th class="l">Fundo</th><th>Imóveis</th><th>Recebíveis</th>
+          <th>Cotas de FII</th><th class="l">Resultado</th>
+        </tr></thead><tbody>
+          <tr><td class="l tk">MXRF11</td><td class="num">4%</td><td class="num">74%</td>
+              <td class="num">15%</td><td class="l">Papel</td></tr>
+          <tr><td class="l tk">KNCR11</td><td class="num">0%</td><td class="num">93%</td>
+              <td class="num">7%</td><td class="l">Papel</td></tr>
+          <tr><td class="l tk">HGLG11</td><td class="num">85%</td><td class="num">0%</td>
+              <td class="num">2%</td><td class="l">Tijolo</td></tr>
+          <tr><td class="l tk">KNRI11</td><td class="num">92%</td><td class="num">7%</td>
+              <td class="num">0%</td><td class="l">Tijolo</td></tr>
+          <tr><td class="l tk">XPML11</td><td class="num">56%</td><td class="num">2%</td>
+              <td class="num">30%</td><td class="l">Híbrido</td></tr>
+        </tbody></table>
+      </div>
+      <p class="note">É um critério melhor do que o rótulo mesmo que a CVM
+        voltasse a preenchê-lo: mede onde o dinheiro está, e não como o fundo se
+        declara. Os fundos que não informam a carteira aparecem como
+        <b>Sem dado</b> e são ranqueados à parte, em vez de entrarem num grupo
+        por omissão.</p>
+
       <h2 style="margin-top:24px">O que este score não olha</h2>
       <p class="note">A lista importa mais que a fórmula.</p>
       <ul class="note">
@@ -289,8 +325,11 @@
           <tr><td class="l">Patrimônio, cotas, VP/cota, cotistas, segmento</td>
               <td class="l">Informe mensal da CVM</td>
               <td class="l">até 15º dia útil do mês seguinte</td></tr>
-          <tr><td class="l">Razão social e situação cadastral</td>
-              <td class="l"><code>cad_fii.csv</code> da CVM</td><td class="l">diária</td></tr>
+          <tr><td class="l">Razão social</td>
+              <td class="l">Informe mensal da CVM</td><td class="l">mensal</td></tr>
+          <tr><td class="l">Composição da carteira</td>
+              <td class="l">Informe mensal da CVM (ativo e passivo)</td>
+              <td class="l">mensal</td></tr>
           <tr><td class="l">Código de negociação</td>
               <td class="l">API da B3, com o ISIN da CVM como reserva</td>
               <td class="l">—</td></tr>

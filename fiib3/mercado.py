@@ -39,6 +39,27 @@ def _yf():
 # ---------------------------------------------------------------------------
 # Preço e liquidez
 # ---------------------------------------------------------------------------
+def _adaptar_progresso(progresso):
+    """Traduz o callback do `magicb3` para a convenção do `fiib3`.
+
+    Os dois módulos combinaram sinais diferentes: `magicb3.prices` chama
+    `progresso(mensagem, valor)` e aqui a convenção é `progresso(fracao, texto)`.
+    Passar um pelo outro faz `0.30 * f` multiplicar uma string, e a coleta morre
+    com `TypeError` no meio do download — foi o que aconteceu na primeira
+    execução real. Como o `prices` não diz quantos lotes faltam, a fração é
+    estimada pelo número de chamadas; serve para a barra andar, não para medir.
+    """
+    if progresso is None:
+        return None
+    estado = {"n": 0}
+
+    def ponte(mensagem, valor=None):
+        estado["n"] += 1
+        progresso(min(0.95, estado["n"] / 12.0), str(mensagem))
+
+    return ponte
+
+
 def baixar_cotacoes(tickers: list[str], *, anos: float = 1.5,
                     usar_cache: bool = True, progresso=None) -> dict[str, pd.DataFrame]:
     """{'preco', 'fechamento', 'volume'} — reaproveita o downloader das ações."""
@@ -46,8 +67,8 @@ def baixar_cotacoes(tickers: list[str], *, anos: float = 1.5,
         raise RuntimeError("magicb3.prices não está disponível.")
     fim = date.today() + timedelta(days=1)
     inicio = fim - timedelta(days=int(365 * anos) + 10)
-    return _px.baixar_historico(tickers, inicio, fim,
-                                usar_cache=usar_cache, progresso=progresso)
+    return _px.baixar_historico(tickers, inicio, fim, usar_cache=usar_cache,
+                                progresso=_adaptar_progresso(progresso))
 
 
 def liquidez(fechamento: pd.DataFrame, volume: pd.DataFrame,

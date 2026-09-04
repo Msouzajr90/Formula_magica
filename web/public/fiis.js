@@ -384,7 +384,9 @@ function renderChips() {
 
 function linhaRank(f) {
   const marcado = estado.sel.has(f.ticker);
-  const fam = (f.familia || '').toLowerCase().replace('í', 'i');
+  // "Fundo de fundos" viraria três classes CSS soltas sem o slug.
+  const fam = (f.familia || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-');
   return `<tr class="${marcado ? 'escolhido' : ''}" data-t="${esc(f.ticker)}">
     <td class="sel"><input type="checkbox" ${marcado ? 'checked' : ''}
         aria-label="incluir ${esc(f.ticker)} na carteira"></td>

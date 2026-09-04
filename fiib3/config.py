@@ -28,30 +28,54 @@ B3_TIPO_FII = 7
 CACHE_DIR = Path.home() / ".fiib3_cache"
 
 # ---------------------------------------------------------------------------
-# Segmentos
+# Papel, tijolo e fundo de fundos
 # ---------------------------------------------------------------------------
-# A CVM classifica em duas dimensões que interessam:
-#   Mandato          -> Híbrido / Renda / Desenvolvimento para Renda / Títulos e Valores Mobiliários
-#   Segmento_Atuacao -> Lajes Corporativas / Shoppings / Logística / Híbrido / Residencial ...
+# A classificação NÃO usa o rótulo da CVM, e a razão é empírica: na competência
+# 07/2026 a coluna `Mandato` veio vazia nos 1.343 fundos, e o `Segmento_Atuacao`
+# trocou de vocabulário — "Títulos e Val. Mob." deixou de existir e 637 fundos
+# caíram em "Multicategoria". Qualquer classificador baseado nesses campos
+# rotularia o mercado inteiro como tijolo, MXRF11 e KNCR11 incluídos.
 #
-# O mercado fala em "papel" e "tijolo". A tradução abaixo é uma conveniência de
-# apresentação, não uma classificação oficial — e por isso fica explícita aqui
-# em vez de escondida no meio do cálculo.
-MANDATO_PAPEL = ("títulos e valores mobiliários", "titulos e valores mobiliarios")
-SEGMENTO_PAPEL = ("títulos e val. mob.", "titulos e val. mob.")
+# Em vez do rótulo, olhamos a carteira: o informe de ativo e passivo diz quanto
+# de cada fundo está em imóveis, em recebíveis e em cotas de outros fundos. É um
+# critério melhor mesmo que o rótulo voltasse a ser preenchido — mede onde o
+# dinheiro está, e não como o fundo se declara.
+#
+# Grupos de contas do `inf_mensal_fii_ativo_passivo`:
+CONTAS_IMOVEIS = ("Direitos_Bens_Imoveis",)
+CONTAS_PAPEL = ("CRI", "CRI_CRA", "Letras_Hipotecarias", "LCI", "LCI_LCA", "LIG",
+                "Debentures", "Cedulas_Debentures", "Notas_Promissorias")
+CONTAS_FOF = ("FII", "Outras_Cotas_FI", "Fundo_Acoes", "FDIC")
+CONTA_TOTAL_INVESTIDO = "Total_Investido"
+CONTA_CAIXA = "Total_Necessidades_Liquidez"
+
+# Acima desta fatia da carteira o fundo é considerado "puro" daquele tipo.
+# 65% é uma escolha: separa bem os casos conhecidos (KNRI11 92% imóveis vira
+# tijolo, XPML11 com 56% imóveis e 30% em cotas de outros FII vira híbrido) sem
+# criar uma categoria "híbrido" que engula metade do mercado.
+LIMITE_CONCENTRACAO = 0.65
 
 
-def familia(mandato: str | None, segmento: str | None) -> str:
-    """'Papel', 'Tijolo', 'Híbrido' ou 'Outros' — rótulo de apresentação."""
-    m = (mandato or "").strip().lower()
-    s = (segmento or "").strip().lower()
-    if any(p in m for p in MANDATO_PAPEL) or any(p in s for p in SEGMENTO_PAPEL):
-        return "Papel"
-    if "híbrido" in m or "hibrido" in m or "híbrido" in s or "hibrido" in s:
-        return "Híbrido"
-    if m or s:
+def familia(pct_imoveis, pct_papel, pct_fof) -> str:
+    """'Tijolo', 'Papel', 'Fundo de fundos', 'Híbrido' ou 'Sem dado'.
+
+    Recebe as fatias da carteira, não rótulos. Ausência de dado devolve
+    'Sem dado' em vez de chutar — 65 dos 1.343 fundos não informam a carteira,
+    e colocá-los em qualquer grupo sujaria o ranking daquele grupo.
+    """
+    try:
+        i, p, f = float(pct_imoveis), float(pct_papel), float(pct_fof)
+    except (TypeError, ValueError):
+        return "Sem dado"
+    if not (i == i and p == p and f == f):        # NaN
+        return "Sem dado"
+    if i >= LIMITE_CONCENTRACAO:
         return "Tijolo"
-    return "Outros"
+    if p >= LIMITE_CONCENTRACAO:
+        return "Papel"
+    if f >= LIMITE_CONCENTRACAO:
+        return "Fundo de fundos"
+    return "Híbrido"
 
 
 # ---------------------------------------------------------------------------

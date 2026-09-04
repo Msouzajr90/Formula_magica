@@ -882,3 +882,22 @@ def test_contas_lidas_da_cvm_incluem_os_candidatos_de_lucro():
     from magicb3.pipeline import CONTAS_USADAS
     for cod in C.CD_LUCRO_CANDIDATOS:
         assert cod in CONTAS_USADAS, f"{cod} sairia do arquivo antes de ser procurado"
+
+
+def test_motivo_de_exclusao_nomeia_o_ingrediente_que_faltou():
+    """"indicador nao calculavel" some com a empresa sem dizer o que faltou."""
+    base = dict(SETOR="Bancos", SEGMENTO="Novo Mercado", LIQUIDEZ_MEDIA=1e8,
+                EBIT_LTM=1e9, EV=5e9, CAPITAL_TANGIVEL=1e9, DENOM_CIA="Banco X")
+    df = pd.DataFrame([
+        {**base, "CD_CVM": 1, "TICKER": "SEMLU4.SA", "TIPO": "financeira", "ROIC": np.nan,
+         "EY": np.nan, "LUCRO_LTM": np.nan, "PATRIMONIO": 2e11, "VALOR_MERCADO": 3e11},
+        {**base, "CD_CVM": 2, "TICKER": "SEMVM4.SA", "TIPO": "financeira", "ROIC": 0.2,
+         "EY": np.nan, "LUCRO_LTM": 4e10, "PATRIMONIO": 2e11, "VALOR_MERCADO": np.nan},
+        {**base, "CD_CVM": 3, "TICKER": "OKAY4.SA", "TIPO": "financeira", "ROIC": 0.2,
+         "EY": 0.13, "LUCRO_LTM": 4e10, "PATRIMONIO": 2e11, "VALOR_MERCADO": 3e11},
+    ])
+    aprov, rej = fundamentals.aplicar_filtros(df, C.Params(vagas_financeiras=3))
+    assert list(aprov["TICKER"]) == ["OKAY4.SA"]
+    motivos = dict(zip(rej["TICKER"], rej["MOTIVO_EXCLUSAO"]))
+    assert motivos["SEMLU4.SA"] == "sem lucro líquido"
+    assert motivos["SEMVM4.SA"] == "sem valor de mercado (nº de ações)"

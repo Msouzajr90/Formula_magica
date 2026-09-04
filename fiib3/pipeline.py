@@ -61,10 +61,12 @@ def coletar(p: ParamsFII | None = None, *, ano: int | None = None,
         try:
             cadastro = cvm_fii.baixar_cadastro(usar_cache=usar_cache)
         except Exception as exc:                               # noqa: BLE001
-            log.warning("Cadastro indisponível: %s", exc)
-            avisos.append("O cadastro da CVM não respondeu; "
-                          "os fundos ficaram sem razão social.")
-            cadastro = pd.DataFrame(columns=["CNPJ", "NOME", "SITUACAO", "TIPO"])
+            # O `cad_fii.csv` saiu do ar (404) e só acrescentava situação
+            # cadastral: a razão social vem no próprio informe. Não é motivo
+            # para assustar quem está lendo o log.
+            log.info("Cadastro indisponível (%s); seguindo com o informe.",
+                     str(exc)[:80])
+            cadastro = pd.DataFrame(columns=["CNPJ", "SITUACAO", "TIPO"])
 
     prog(0.25, "Códigos de negociação")
     mapa = tickers_fii.montar_mapa(informe, usar_b3=usar_b3, usar_cache=usar_cache)
@@ -86,6 +88,13 @@ def coletar(p: ParamsFII | None = None, *, ano: int | None = None,
     var12 = mercado.variacao(px["preco"], 12)
 
     negociados = [s for s in simbolos if s in px["preco"].columns]
+    # Os proventos custam UMA requisição por fundo — mil fundos são mil idas ao
+    # Yahoo, que demora e convida a um bloqueio por excesso de chamadas. Como
+    # patrimônio, liquidez e número de cotistas já bastam para saber quem nunca
+    # entraria no ranking, o corte vem antes da coleta: sobram algumas centenas
+    # em vez de mais de mil. Quem é cortado aqui aparece na aba "Excluídos" com
+    # o motivo certo, porque esses filtros são avaliados antes do de rendimento.
+    negociados = _com_chance(mapa, negociados, preco, liq, p)
     prog(0.70, f"Rendimentos de {len(negociados)} fundos")
     prov = mercado.baixar_proventos(negociados, meses=p.janela_consistencia_meses,
                                     usar_cache=usar_cache,
@@ -122,6 +131,31 @@ def coletar(p: ParamsFII | None = None, *, ano: int | None = None,
             "demo": False,
         },
     }
+
+
+def _com_chance(mapa: pd.DataFrame, negociados: list[str], preco: pd.Series,
+                liq: pd.Series, p: ParamsFII) -> list[str]:
+    """Fundos que ainda podem entrar no ranking depois dos filtros de tamanho.
+
+    Só olha o que já está em mãos — patrimônio e cotistas vêm do informe, preço
+    e liquidez do lote de cotações. Nada aqui depende de provento, que é
+    justamente o que se quer evitar baixar à toa.
+    """
+    if not negociados:
+        return []
+    chave = mapa["TICKER"].astype("string").str.upper() + ".SA"
+    pl = pd.to_numeric(mapa.get("PL"), errors="coerce").fillna(0.0)
+    cotistas = pd.to_numeric(mapa.get("COTISTAS"), errors="coerce").fillna(0.0)
+    liquidez = chave.map(liq).fillna(0.0)
+    preco_ok = chave.map(preco).fillna(0.0)
+
+    passa = ((pl >= p.patrimonio_minimo) & (cotistas >= p.cotistas_minimo)
+             & (liquidez >= p.liquidez_minima_diaria) & (preco_ok > 0))
+    escolhidos = set(chave[passa].dropna())
+    restantes = [t for t in negociados if t in escolhidos]
+    log.info("Proventos: %d de %d fundos passam nos filtros de tamanho.",
+             len(restantes), len(negociados))
+    return restantes
 
 
 def _competencia(informe: pd.DataFrame) -> str:

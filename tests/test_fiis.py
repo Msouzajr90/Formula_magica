@@ -76,11 +76,26 @@ def test_competencia_mais_recente_vence_a_anterior():
     assert r["PL"].iloc[0] == "novo"
 
 
-def test_familia_classifica_papel_e_tijolo():
-    assert familia("Títulos e Valores Mobiliários", None) == "Papel"
-    assert familia("Renda", "Lajes Corporativas") == "Tijolo"
-    assert familia("Híbrido", "Híbrido") == "Híbrido"
-    assert familia(None, None) == "Outros"
+def test_familia_vem_da_carteira_e_nao_do_rotulo():
+    """A CVM zerou o campo `Mandato` e trocou o vocabulário do segmento.
+
+    Classificar pelo rótulo passou a marcar o mercado inteiro como tijolo,
+    MXRF11 e KNCR11 inclusive. Estes números são os reais da competência
+    07/2026, conferidos no arquivo da CVM.
+    """
+    assert familia(0.04, 0.74, 0.15) == "Papel"      # MXRF11
+    assert familia(0.00, 0.93, 0.07) == "Papel"      # KNCR11
+    assert familia(0.92, 0.07, 0.00) == "Tijolo"     # KNRI11
+    assert familia(0.85, 0.00, 0.02) == "Tijolo"     # HGLG11
+    assert familia(0.56, 0.02, 0.30) == "Híbrido"    # XPML11
+    assert familia(0.05, 0.05, 0.88) == "Fundo de fundos"
+
+
+def test_familia_sem_carteira_nao_chuta_grupo():
+    """65 dos 1.375 fundos não informam a carteira; jogá-los num grupo sujaria
+    os percentis daquele grupo."""
+    assert familia(None, None, None) == "Sem dado"
+    assert familia(float("nan"), 0.5, 0.5) == "Sem dado"
 
 
 # ---------------------------------------------------------------------------
@@ -270,8 +285,8 @@ def test_campo_ausente_nao_exclui_sozinho():
 def test_indicadores_calculam_pvp_e_dy():
     informe = pd.DataFrame([{
         "TICKER": "AAAA11", "CNPJ": "1", "VP_COTA": 100.0, "PL": 1e9,
-        "MANDATO": "Renda", "SEGMENTO": "Logística",
-        "DT_FUNCIONAMENTO": pd.Timestamp("2015-01-01"),
+        "SEGMENTO": "Logística", "PCT_IMOVEIS": 0.90, "PCT_PAPEL": 0.02,
+        "PCT_FOF": 0.0, "DT_FUNCIONAMENTO": pd.Timestamp("2015-01-01"),
     }])
     preco = pd.Series({"AAAA11.SA": 80.0})
     liq = pd.Series({"AAAA11.SA": 3e6})
@@ -327,6 +342,8 @@ def _informe_exemplo() -> pd.DataFrame:
          "DT_FUNCIONAMENTO": pd.Timestamp("2012-03-01"),
          "COTAS": 6_000_000_000.0, "VP_COTA": 9.1234, "COTISTAS": 1_100_000.0,
          "PL": 5.4e9, "ATIVO_TOTAL": 5.6e9,
+         "PCT_IMOVEIS": 0.04, "PCT_PAPEL": 0.74, "PCT_FOF": 0.15,
+         "NOME": "FII MAXI RENDA RL",
          "RENT_EFETIVA_MES": 0.87, "DY_MES_CVM": 0.95},
         {"CNPJ": "17098794000170", "COMPETENCIA": "2026-07",
          "DT_INFORME": pd.Timestamp("2026-07-31"), "ISIN": "BRKNRICTF001",
@@ -336,6 +353,8 @@ def _informe_exemplo() -> pd.DataFrame:
          "DT_FUNCIONAMENTO": pd.Timestamp("2010-08-01"),
          "COTAS": 30_000_000.0, "VP_COTA": 168.55, "COTISTAS": 200_000.0,
          "PL": 5.05e9, "ATIVO_TOTAL": 5.2e9,
+         "PCT_IMOVEIS": 0.92, "PCT_PAPEL": 0.07, "PCT_FOF": 0.0,
+         "NOME": "KINEA RENDA IMOBILIARIA FII",
          "RENT_EFETIVA_MES": None, "DY_MES_CVM": None},
     ])
 
@@ -345,7 +364,6 @@ def test_arquivo_de_informe_sobrevive_a_ida_e_volta(tmp_path):
 
     informe = _informe_exemplo()
     cadastro = pd.DataFrame({"CNPJ": ["00832480000117", "17098794000170"],
-                             "NOME": ["MAXI RENDA FII", "KINEA RENDA FII"],
                              "SITUACAO": ["EM FUNCIONAMENTO NORMAL"] * 2,
                              "TIPO": ["FII", "FII"]})
     caminho = tmp_path / "informe_fii.json"
@@ -360,7 +378,9 @@ def test_arquivo_de_informe_sobrevive_a_ida_e_volta(tmp_path):
     assert linha["MANDATO"] == "Títulos e Valores Mobiliários"
     assert linha["DT_FUNCIONAMENTO"] == pd.Timestamp("2012-03-01")
     assert linha["COTISTAS"] == pytest.approx(1_100_000)
-    assert cad.set_index("CNPJ").loc["00832480000117", "NOME"] == "MAXI RENDA FII"
+    assert linha["NOME"] == "FII MAXI RENDA RL"     # vem do informe, não do cadastro
+    assert linha["PCT_PAPEL"] == pytest.approx(0.74)
+    assert cad.set_index("CNPJ").loc["00832480000117", "SITUACAO"] == "EM FUNCIONAMENTO NORMAL"
 
 
 def test_cnpj_nao_perde_o_zero_a_esquerda(tmp_path):
@@ -487,3 +507,136 @@ def test_para_yahoo_e_idempotente():
     assert tickers_fii.para_yahoo(["MXRF11"]) == ["MXRF11.SA"]
     assert tickers_fii.para_yahoo(["MXRF11.SA"]) == ["MXRF11.SA"]
     assert tickers_fii.sem_sufixo("MXRF11.SA") == "MXRF11"
+
+
+# ---------------------------------------------------------------------------
+# Regressão: os nomes reais dos arquivos da CVM
+# ---------------------------------------------------------------------------
+def _zip_da_cvm(destino: Path) -> Path:
+    """Um informe mínimo com os nomes de coluna REAIS da competência 07/2026.
+
+    Este teste existe porque a primeira versão procurava `Patrimonio_Liquido` no
+    arquivo de ativo e passivo, onde ele não está — e o resultado foi a coluna
+    sair vazia nos 1.375 fundos, sem erro nenhum. Um teste com nomes inventados
+    não pegaria isso; só um com os nomes de verdade pega.
+    """
+    import zipfile
+
+    geral = (
+        "Tipo_Fundo_Classe;CNPJ_Fundo_Classe;Data_Referencia;Versao;Data_Entrega;"
+        "Nome_Fundo_Classe;Data_Funcionamento;Publico_Alvo;Codigo_ISIN;"
+        "Quantidade_Cotas_Emitidas;Fundo_Exclusivo;Mandato;Segmento_Atuacao;"
+        "Tipo_Gestao;Mercado_Negociacao_Bolsa;Nome_Administrador\n"
+        "Classe;97.521.225/0001-25;2026-07-01;1;2026-08-14;FII MAXI RENDA RL;"
+        "2012-04-13;Investidores em geral;BRMXRFCTF008;567206273;N;;Logística;"
+        "Ativa;S;BTG PACTUAL\n"
+    )
+    complemento = (
+        "CNPJ_Fundo_Classe;Data_Referencia;Versao;Total_Numero_Cotistas;Valor_Ativo;"
+        "Patrimonio_Liquido;Cotas_Emitidas;Valor_Patrimonial_Cotas;"
+        "Percentual_Rentabilidade_Efetiva_Mes;Percentual_Dividend_Yield_Mes\n"
+        "97.521.225/0001-25;2026-07-01;1;1509087;5367034055.79;5253747540.01;"
+        "567206273;9.262499;0.0081;0.00808\n"
+    )
+    ativo = (
+        "CNPJ_Fundo_Classe;Data_Referencia;Versao;Total_Necessidades_Liquidez;"
+        "Total_Investido;Direitos_Bens_Imoveis;CRI;LCI;FII;Total_Passivo\n"
+        "97.521.225/0001-25;2026-07-01;1;100000;1000000;40000;700000;40000;150000;5000\n"
+    )
+    caminho = destino / "inf_mensal_fii_2026.zip"
+    with zipfile.ZipFile(caminho, "w") as z:
+        z.writestr("inf_mensal_fii_geral_2026.csv", geral.encode("ISO-8859-1"))
+        z.writestr("inf_mensal_fii_complemento_2026.csv", complemento.encode("ISO-8859-1"))
+        z.writestr("inf_mensal_fii_ativo_passivo_2026.csv", ativo.encode("ISO-8859-1"))
+    return caminho
+
+
+def test_le_o_layout_real_da_cvm(tmp_path, monkeypatch):
+    _zip_da_cvm(tmp_path)
+    monkeypatch.setattr(cvm_fii, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(cvm_fii, "_cache", lambda nome: tmp_path / nome)
+
+    df = cvm_fii.ler_informe(2026)
+    assert len(df) == 1
+    r = df.iloc[0]
+    assert r["CNPJ"] == "97521225000125"
+    assert r["NOME"] == "FII MAXI RENDA RL"            # vem do informe, não do cad_fii
+    assert r["PL"] == pytest.approx(5_253_747_540.01)  # está no complemento
+    assert r["VP_COTA"] == pytest.approx(9.262499)
+    assert r["COTAS"] == pytest.approx(567_206_273)
+    assert r["COTISTAS"] == pytest.approx(1_509_087)
+    assert r["ISIN"] == "BRMXRFCTF008"
+    assert r["COMPETENCIA"] == "2026-07"
+    # composição: 700k CRI + 40k LCI = 740k de 1M -> papel
+    assert r["PCT_PAPEL"] == pytest.approx(0.74)
+    assert r["PCT_IMOVEIS"] == pytest.approx(0.04)
+    assert r["PCT_FOF"] == pytest.approx(0.15)
+
+
+def test_mandato_vazio_nao_derruba_a_classificacao(tmp_path, monkeypatch):
+    """`Mandato` veio vazio nos 1.375 fundos; a família tem que sair mesmo assim."""
+    _zip_da_cvm(tmp_path)
+    monkeypatch.setattr(cvm_fii, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(cvm_fii, "_cache", lambda nome: tmp_path / nome)
+
+    df = cvm_fii.ler_informe(2026)
+    assert pd.isna(df.iloc[0]["MANDATO"])
+    tabela = indicadores.montar(
+        df.assign(TICKER="MXRF11"), pd.DataFrame(),
+        pd.Series({"MXRF11.SA": 9.50}), pd.Series({"MXRF11.SA": 3e7}),
+        pd.Series({"MXRF11.SA": 0.02}), pd.DataFrame())
+    assert tabela.iloc[0]["FAMILIA"] == "Papel"
+
+
+def test_informe_atrasado_sai_do_ranking():
+    """Fundo que parou de entregar informe seguiria com patrimônio velho."""
+    base = dict(PRECO=100.0, VP_COTA=100.0, PL=5e8, COTISTAS=10_000,
+                LIQUIDEZ=2e6, MESES_PAGOS_12M=12, IDADE_MESES=60,
+                SITUACAO="EM FUNCIONAMENTO NORMAL", EXCLUSIVO="N", NEGOCIA_BOLSA="S")
+    df = pd.DataFrame([
+        {**base, "TICKER": "ATUAL11", "COMPETENCIA": "2026-07"},
+        {**base, "TICKER": "VELHO11", "COMPETENCIA": "2026-02"},
+    ])
+    ok, fora = indicadores.filtrar(df, ParamsFII())
+    assert list(ok["TICKER"]) == ["ATUAL11"]
+    assert "último informe" in fora.iloc[0]["MOTIVO_EXCLUSAO"]
+
+
+def test_ponte_de_progresso_entre_os_dois_modulos():
+    """`magicb3` chama (mensagem, valor); `fiib3` usa (fracao, texto).
+
+    Sem a ponte, a fração recebida é uma string e o `0.30 * f` do pipeline
+    levanta TypeError no meio do download das cotações — que foi como isto
+    apareceu na primeira execução com dados reais.
+    """
+    recebidos = []
+    ponte = mercado._adaptar_progresso(lambda f, t: recebidos.append((f, t)))
+    ponte("Cotações: lote 1 de 8...", None)
+    ponte("Cotações: lote 2 de 8...", None)
+
+    assert len(recebidos) == 2
+    for fracao, texto in recebidos:
+        assert isinstance(fracao, float) and 0.0 <= fracao <= 1.0
+        assert isinstance(texto, str)
+    assert recebidos[1][0] > recebidos[0][0]
+    assert mercado._adaptar_progresso(None) is None
+
+
+def test_pipeline_usa_a_ponte_ao_chamar_o_downloader(monkeypatch):
+    """O pipeline passa uma lambda `(f, t)`; o downloader chama `(msg, valor)`."""
+    from fiib3 import mercado as mercado_mod
+
+    capturado = {}
+
+    def falso_baixar_historico(tickers, inicio, fim, *, usar_cache=True, progresso=None):
+        capturado["progresso"] = progresso
+        if progresso:
+            progresso("Cotações: lote 1 de 3...", None)   # a chamada real
+        vazio = pd.DataFrame()
+        return {"preco": vazio, "fechamento": vazio, "volume": vazio}
+
+    monkeypatch.setattr(mercado_mod._px, "baixar_historico", falso_baixar_historico)
+    vistos = []
+    mercado_mod.baixar_cotacoes(["MXRF11.SA"], progresso=lambda f, t: vistos.append(0.30 * f))
+    assert vistos, "o progresso não foi repassado"
+    assert isinstance(vistos[0], float)

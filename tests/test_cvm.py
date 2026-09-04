@@ -249,9 +249,11 @@ def test_composicao_capital_corrige_escala_em_milhares(tmp_path):
     def cap(cnpj, nome, on, pn):
         return f"{cnpj};2025-12-31;1;{nome};{on};{pn};{on + pn};0;0;0"
 
-    def dre(cnpj, cd_cvm, conta, valor):
+    def dre(cnpj, cd_cvm, conta, valor, ds=None):
+        ds = ds or ("Lucro/Prejuízo Consolidado do Período" if conta.startswith("3.1")
+                    else "Lucro por Ação - Básico ON")
         return (f"{cnpj};2025-12-31;1;CIA;{cd_cvm};DF Consolidado;REAL;MIL;"
-                f"ÚLTIMO;2025-01-01;2025-12-31;{conta};d;{valor};S")
+                f"ÚLTIMO;2025-01-01;2025-12-31;{conta};{ds};{valor};S")
 
     # UNIDADES: 2 bi de ações, lucro 4 bi (em mil), LPA R$ 2,00 -> 2 bi implícito
     # MILHARES: 16 mil (= 16 mi), lucro 32.000 mil, LPA R$ 2,00 -> 16 mi implícito
@@ -290,3 +292,32 @@ def test_composicao_capital_sem_lpa_nao_chuta(tmp_path):
     assert not bool(linha["ESCALA_CONFIRMADA"])
     assert pd.isna(linha["ACOES"])
     assert linha["ACOES_BRUTO"] == pytest.approx(5000)
+
+
+def test_escala_do_banco_sem_conta_3_11(tmp_path):
+    """Itau, BTG e BMG nao tem 3.11. Sem lucro nao ha escala; sem escala nao ha
+    nº de acoes; sem acoes nao ha valor de mercado — e o banco cai em
+    "indicador nao calculavel". Foi este ponto, e nao o ranking, que manteve o
+    ITUB4 fora depois da primeira correcao."""
+    from magicb3 import cvm
+
+    def cap(cnpj, nome, on):
+        return f"{cnpj};2025-12-31;1;{nome};{on};0;{on};0;0;0"
+
+    def dre(cnpj, cd_cvm, conta, ds, valor):
+        return (f"{cnpj};2025-12-31;1;CIA;{cd_cvm};DF Consolidado;REAL;MIL;"
+                f"ÚLTIMO;2025-01-01;2025-12-31;{conta};{ds};{valor};S")
+
+    pasta = _zip_com_capital(
+        tmp_path,
+        [cap("33.333.333/0001-33", "BANCO SEM 3.11", 10_000)],   # milhares
+        # o banco reporta o lucro em 3.09, com a MESMA descricao
+        [dre("33.333.333/0001-33", 19348, "3.09",
+             "Lucro/Prejuízo Consolidado do Período", 20_000),
+         dre("33.333.333/0001-33", 19348, "3.99.01.01",
+             "Lucro por Ação - Básico ON", 2.0)],
+    )
+    out = cvm.composicao_capital([2025], pasta_zips=pasta).set_index("CNPJ_CIA")
+    banco = out.loc["33.333.333/0001-33"]
+    assert bool(banco["ESCALA_CONFIRMADA"]), "sem o lucro a escala fica sem confirmacao"
+    assert banco["ACOES"] == pytest.approx(10e6), "10.000 mil = 10 milhoes"

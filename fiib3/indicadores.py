@@ -41,8 +41,13 @@ def montar(informe: pd.DataFrame, cadastro: pd.DataFrame,
     df = informe.copy()
     df = df[df["TICKER"].notna()]
 
+    # O informe já traz a razão social; do cadastro só entra o que ele acrescenta.
+    # Sem esta checagem o merge criaria NOME_x e NOME_y, e o resto do código
+    # procuraria por NOME e não acharia nenhuma das duas.
     if cadastro is not None and not cadastro.empty:
-        df = df.merge(cadastro, on="CNPJ", how="left")
+        novas = [c for c in cadastro.columns if c == "CNPJ" or c not in df.columns]
+        if len(novas) > 1:
+            df = df.merge(cadastro[novas], on="CNPJ", how="left")
     for col in ("NOME", "SITUACAO"):
         if col not in df.columns:
             df[col] = pd.NA
@@ -53,9 +58,21 @@ def montar(informe: pd.DataFrame, cadastro: pd.DataFrame,
     df["VAR_12M"] = chave.map(var12)
     for col in resumo.columns:
         df[col] = chave.map(resumo[col])
+    # Se o Yahoo não devolver provento nenhum, o resumo vem sem colunas e o
+    # cálculo abaixo quebraria com KeyError. Melhor a tela sair com o DY vazio
+    # e o filtro de "pagou em menos de N meses" cortando os fundos: o problema
+    # fica visível na aba Excluídos em vez de derrubar a coleta inteira.
+    for col in ("PROV_12M", "PROV_MEDIANA_12M", "MESES_PAGOS_12M",
+                "MESES_PAGOS_36M", "CV_PROVENTOS", "RAZAO_EXTRA",
+                "ULTIMO_PROVENTO", "DT_ULTIMO_PROVENTO"):
+        if col not in df.columns:
+            df[col] = pd.NA
 
-    df["FAMILIA"] = [C.familia(m, s) for m, s in
-                     zip(df.get("MANDATO"), df.get("SEGMENTO"))]
+    vazio = pd.Series(float("nan"), index=df.index)
+    df["FAMILIA"] = [C.familia(i, p, f) for i, p, f in
+                     zip(df.get("PCT_IMOVEIS", vazio),
+                         df.get("PCT_PAPEL", vazio),
+                         df.get("PCT_FOF", vazio))]
 
     # ---- indicadores -----------------------------------------------------
     vp = pd.to_numeric(df["VP_COTA"], errors="coerce")
@@ -132,12 +149,33 @@ def filtrar(df: pd.DataFrame, p: ParamsFII) -> tuple[pd.DataFrame, pd.DataFrame]
     regra(df["IDADE_MESES"].fillna(999) < p.idade_minima_meses,
           f"menos de {p.idade_minima_meses} meses de funcionamento")
 
+    # O arquivo da CVM traz o ano inteiro e guardamos a última competência de
+    # cada fundo. Um fundo que parou de entregar informe há meses provavelmente
+    # foi liquidado ou incorporado — e seguiria no ranking com patrimônio velho,
+    # que é pior que não aparecer.
+    if "COMPETENCIA" in df.columns:
+        comps = df["COMPETENCIA"].dropna()
+        if len(comps):
+            atual = comps.max()
+            atrasado = df["COMPETENCIA"].fillna("") < _competencia_anterior(atual, 2)
+            regra(atrasado, f"último informe é de antes de "
+                            f"{_competencia_anterior(atual, 2)} (atual: {atual})")
+
     juntos = pd.concat(motivos, axis=1)
     primeiro = juntos.apply(lambda linha: next((m for m in linha if m), ""), axis=1)
     df["MOTIVO_EXCLUSAO"] = primeiro
     elegiveis = df[primeiro == ""].drop(columns=["MOTIVO_EXCLUSAO"])
     excluidos = df[primeiro != ""]
     return elegiveis.reset_index(drop=True), excluidos.reset_index(drop=True)
+
+
+def _competencia_anterior(comp: str, meses: int) -> str:
+    """'2026-07' recuado 2 meses -> '2026-05'."""
+    try:
+        p = pd.Period(str(comp), freq="M") - meses
+        return str(p)
+    except Exception:                                          # noqa: BLE001
+        return ""
 
 
 def _brl(v: float) -> str:

@@ -187,6 +187,13 @@ def ler_informe(ano: int, *, meses: int = 3,
         "DT_INFORME": g["_data"],
     })
     out["ISIN"] = _texto(g, coluna(g, "codigo_isin", "isin", obrigatoria=False))
+    # A razão social vem no próprio informe (`Nome_Fundo_Classe`). Antes ela era
+    # buscada no `cad_fii.csv`, que a CVM tirou do ar — a dependência sumiu junto.
+    out["NOME"] = _texto(g, coluna(g, "nome_fundo_classe", "denominacao_social",
+                                   "nome_fundo", obrigatoria=False))
+    out["TIPO_CLASSE"] = _texto(g, coluna(g, "tipo_fundo_classe", obrigatoria=False))
+    out["DT_ENTREGA"] = pd.to_datetime(
+        _texto(g, coluna(g, "data_entrega", obrigatoria=False)), errors="coerce")
     out["MANDATO"] = _texto(g, coluna(g, "mandato", obrigatoria=False))
     out["SEGMENTO"] = _texto(g, coluna(g, "segmento_atuacao", "segmento",
                                        obrigatoria=False))
@@ -242,9 +249,17 @@ def _cnpj_limpo(serie: pd.Series) -> pd.Series:
 
 
 def _do_complemento(compl: pd.DataFrame) -> pd.DataFrame:
+    """Patrimônio, cotas, VP/cota e cotistas.
+
+    O patrimônio líquido mora AQUI, e não no arquivo de ativo e passivo — que é
+    o que o nome sugeriria e o que a primeira versão deste módulo supôs. O
+    resultado foi a coluna sair vazia nos 1.375 fundos sem erro nenhum, que é
+    exatamente o modo de falha silencioso contra o qual o `validar_fiis.py`
+    existe.
+    """
     if compl.empty:
-        return pd.DataFrame(columns=["CNPJ", "VP_COTA", "COTISTAS",
-                                     "RENT_EFETIVA_MES", "DY_MES_CVM"])
+        return pd.DataFrame(columns=["CNPJ", "VP_COTA", "COTISTAS", "PL",
+                                     "ATIVO_TOTAL", "RENT_EFETIVA_MES", "DY_MES_CVM"])
     c_cnpj = coluna(compl, "cnpj_fundo", "cnpj")
     c_data = coluna(compl, "data_referencia", "data_competencia")
     d = _ultimo_por_fundo(compl, c_cnpj, c_data,
@@ -256,8 +271,12 @@ def _do_complemento(compl: pd.DataFrame) -> pd.DataFrame:
     out["COTISTAS"] = _valor(d, coluna(d, "total_numero_cotistas",
                                        "numero_cotistas", "cotistas",
                                        obrigatoria=False))
-    out["COTAS_COMPL"] = _valor(d, coluna(d, "total_numero_cotas_emitidas",
+    out["COTAS_COMPL"] = _valor(d, coluna(d, "cotas_emitidas",
+                                          "total_numero_cotas_emitidas",
                                           "numero_cotas", obrigatoria=False))
+    out["PL"] = _valor(d, coluna(d, "patrimonio_liquido", obrigatoria=False))
+    out["ATIVO_TOTAL"] = _valor(d, coluna(d, "valor_ativo", "total_ativo",
+                                          "ativo_total", obrigatoria=False))
     out["RENT_EFETIVA_MES"] = _valor(d, coluna(d, "percentual_rentabilidade_efetiva_mes",
                                                obrigatoria=False))
     out["DY_MES_CVM"] = _valor(d, coluna(d, "percentual_dividend_yield_mes",
@@ -265,17 +284,52 @@ def _do_complemento(compl: pd.DataFrame) -> pd.DataFrame:
     return out.drop_duplicates(subset=["CNPJ"])
 
 
+def _soma_contas(d: pd.DataFrame, contas) -> pd.Series:
+    """Soma as contas que existirem, tratando ausente como zero.
+
+    Zero, e não NaN: uma conta que não aparece no arquivo é uma conta em que o
+    fundo não tem nada. Propagar NaN aqui apagaria a carteira inteira de
+    qualquer fundo com uma única conta faltando.
+    """
+    total = pd.Series(0.0, index=d.index)
+    for nome in contas:
+        col = coluna(d, nome, obrigatoria=False)
+        if col is not None:
+            total = total + _numero(d[col]).fillna(0.0)
+    return total
+
+
 def _do_ativo_passivo(ativo: pd.DataFrame) -> pd.DataFrame:
+    """Composição da carteira: quanto está em imóvel, em recebível e em cota.
+
+    Este arquivo não traz patrimônio líquido — traz a carteira aberta em ~50
+    contas. É dela que sai a classificação papel/tijolo, agora que o `Mandato`
+    da CVM vem vazio (ver `config.familia`).
+    """
+    vazio = ["CNPJ", "PCT_IMOVEIS", "PCT_PAPEL", "PCT_FOF",
+             "TOTAL_INVESTIDO", "CAIXA", "PASSIVO"]
     if ativo.empty:
-        return pd.DataFrame(columns=["CNPJ", "PL", "ATIVO_TOTAL"])
+        return pd.DataFrame(columns=vazio)
     c_cnpj = coluna(ativo, "cnpj_fundo", "cnpj")
     c_data = coluna(ativo, "data_referencia", "data_competencia")
     d = _ultimo_por_fundo(ativo, c_cnpj, c_data,
                           coluna(ativo, "versao", obrigatoria=False))
+
+    imoveis = _soma_contas(d, C.CONTAS_IMOVEIS)
+    papel = _soma_contas(d, C.CONTAS_PAPEL)
+    fof = _soma_contas(d, C.CONTAS_FOF)
+    total = _soma_contas(d, (C.CONTA_TOTAL_INVESTIDO,))
+    # Sem total investido não há fração possível; o fundo fica "Sem dado" em vez
+    # de ser jogado num grupo por omissão.
+    base = total.where(total > 0)
+
     out = pd.DataFrame({"CNPJ": _cnpj_limpo(d[c_cnpj])})
-    out["PL"] = _valor(d, coluna(d, "patrimonio_liquido", obrigatoria=False))
-    out["ATIVO_TOTAL"] = _valor(d, coluna(d, "total_ativo", "ativo_total",
-                                          obrigatoria=False))
+    out["PCT_IMOVEIS"] = (imoveis / base).to_numpy()
+    out["PCT_PAPEL"] = (papel / base).to_numpy()
+    out["PCT_FOF"] = (fof / base).to_numpy()
+    out["TOTAL_INVESTIDO"] = total.to_numpy()
+    out["CAIXA"] = _soma_contas(d, (C.CONTA_CAIXA,)).to_numpy()
+    out["PASSIVO"] = _soma_contas(d, ("Total_Passivo",)).to_numpy()
     return out.drop_duplicates(subset=["CNPJ"])
 
 
@@ -310,7 +364,9 @@ def ticker_do_isin(isin: str | None) -> str | None:
     Vale para a quase totalidade dos FII e serve de reserva quando a API da B3
     não responde. Não devolve o sufixo: quem chama decide entre 11 e 11B.
     """
-    if not isin or pd.isna(isin):
+    # `pd.isna` primeiro: com dtype "string" do pandas, um valor ausente é o
+    # pd.NA, e testar a verdade dele levanta TypeError em vez de devolver False.
+    if isin is None or pd.isna(isin):
         return None
     s = str(isin).strip().upper()
     m = re.fullmatch(r"BR([A-Z0-9]{4})[A-Z]{3}\d{3}", s)

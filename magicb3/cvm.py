@@ -395,7 +395,15 @@ def composicao_capital(anos: list[int], *, consolidado: bool = True,
         # referência para a escala: ações implícitas no lucro por ação
         alvo = _achar_membro(zf, "dfp", "DRE", suf, ano)
         if alvo:
-            dre = _normalizar(_ler_membro(zf, alvo, {CD_LUCRO_LIQUIDO, CD_LPA_ON}))
+            # Os mesmos candidatos do ranking: Itaú, BTG e BMG não têm 3.11, e
+            # sem o lucro não há como inferir a escala do nº de ações — o valor
+            # de mercado fica NaN e a empresa cai em "indicador não calculável".
+            # Foi este segundo ponto, e não o ranking, que manteve o ITUB4 fora
+            # depois da primeira correção.
+            dre = _normalizar(_ler_membro(
+                zf, alvo, set(C.CD_LUCRO_CANDIDATOS) | {CD_LUCRO_LIQUIDO, CD_LPA_ON}))
+            dre = pd.concat([marcar_lucro_liquido(dre),
+                             dre[dre["CD_CONTA"] == CD_LPA_ON]], ignore_index=True)
             piv = dre.pivot_table(index="CNPJ_CIA", columns="CD_CONTA",
                                   values="VL_CONTA", aggfunc="last")
             piv.columns.name = None
@@ -410,7 +418,7 @@ def composicao_capital(anos: list[int], *, consolidado: bool = True,
 
             # o LPA já vem em R$/ação; a normalização de escala não se aplica a ele
             lpa = _serie(CD_LPA_ON) / 1000.0
-            lucro = _serie(CD_LUCRO_LIQUIDO)
+            lucro = _serie("LL")
             cap["ACOES_IMPLICITO"] = lucro / lpa.replace(0, np.nan)
         else:
             cap["ACOES_IMPLICITO"] = np.nan
@@ -462,6 +470,15 @@ def marcar_lucro_liquido(dre: pd.DataFrame) -> pd.DataFrame:
     for alvo in alvos:
         bate |= ds.str.startswith(alvo, na=False)
     ll = dre[bate & ~nao_e_lucro].copy()
+
+    # Rede de segurança: para quem a descrição não pegou, vale a conta 3.11 do
+    # plano padrão. A busca por descrição é para quem NÃO tem 3.11 — ela não
+    # pode fazer o caso comum piorar.
+    achadas = set(ll["CD_CVM"]) if not ll.empty else set()
+    resto = dre[(dre["CD_CONTA"].astype(str) == C.CD_LUCRO_LIQUIDO)
+                & ~dre["CD_CVM"].isin(achadas)]
+    if not resto.empty:
+        ll = pd.concat([ll, resto.assign(_prof=1)], ignore_index=True)
     if ll.empty:
         return ll
     # entre "Consolidado" e "Atribuído ao Controlador", fica o de código mais curto

@@ -27,7 +27,9 @@ from pathlib import Path
 
 import pandas as pd
 
-VERSAO = 1
+# 2: acrescenta a composição da carteira (PCT_IMOVEIS/PAPEL/FOF), traz o NOME
+# do próprio informe e deixa de depender do cad_fii.csv, que a CVM tirou do ar.
+VERSAO = 2
 
 # coluna no DataFrame -> nome curto no JSON
 CAMPOS_TEXTO = {
@@ -35,14 +37,19 @@ CAMPOS_TEXTO = {
     "MANDATO": "mandato", "SEGMENTO": "segmento", "GESTAO": "gestao",
     "ADMINISTRADOR": "admin", "PUBLICO_ALVO": "publico",
     "EXCLUSIVO": "exclusivo", "NEGOCIA_BOLSA": "bolsa",
+    "TIPO_CLASSE": "tipoClasse",
     "NOME": "nome", "SITUACAO": "situacao", "TIPO": "tipo",
 }
 CAMPOS_NUMERO = {
     "COTAS": "cotas", "VP_COTA": "vpCota", "COTISTAS": "cotistas",
     "PL": "pl", "ATIVO_TOTAL": "ativo",
     "RENT_EFETIVA_MES": "rentMes", "DY_MES_CVM": "dyMes",
+    # composição da carteira — é o que decide papel/tijolo/FoF
+    "PCT_IMOVEIS": "pctImoveis", "PCT_PAPEL": "pctPapel", "PCT_FOF": "pctFof",
+    "TOTAL_INVESTIDO": "investido", "CAIXA": "caixa", "PASSIVO": "passivo",
 }
-CAMPOS_DATA = {"DT_INFORME": "dtInforme", "DT_FUNCIONAMENTO": "dtFuncionamento"}
+CAMPOS_DATA = {"DT_INFORME": "dtInforme", "DT_FUNCIONAMENTO": "dtFuncionamento",
+               "DT_ENTREGA": "dtEntrega"}
 
 # Colunas que o pipeline espera receber de volta. Uma que falte vira coluna
 # vazia na importação em vez de KeyError três funções adiante.
@@ -108,7 +115,7 @@ def exportar(informe: pd.DataFrame, cadastro: pd.DataFrame | None,
             "geradoEm": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M"),
             "competencia": competencia,
             "nFundos": len(fundos),
-            "origem": "dados.cvm.gov.br (informe mensal de FII + cad_fii)",
+            "origem": "dados.cvm.gov.br (informe mensal de FII)",
         },
         "fundos": fundos,
     }
@@ -148,8 +155,11 @@ def importar(caminho: Path | str) -> tuple[pd.DataFrame, pd.DataFrame]:
     informe["CNPJ"] = (informe["CNPJ"].str.replace(r"\D", "", regex=True)
                        .str.zfill(14))
 
-    cadastro = informe[["CNPJ", "NOME", "SITUACAO", "TIPO"]].copy()
-    informe = informe.drop(columns=["NOME", "SITUACAO", "TIPO"])
+    # NOME fica no informe (vem do `Nome_Fundo_Classe`); o cadastro carrega só o
+    # que era exclusivo dele, e hoje costuma vir vazio porque a CVM tirou o
+    # cad_fii.csv do ar.
+    cadastro = informe[["CNPJ", "SITUACAO", "TIPO"]].copy()
+    informe = informe.drop(columns=["SITUACAO", "TIPO"])
     return informe.reset_index(drop=True), cadastro.reset_index(drop=True)
 
 

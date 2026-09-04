@@ -38,6 +38,18 @@ FUNDOS = [
 ]
 
 
+def _composicao(mandato: str, rng) -> tuple[float, float, float]:
+    """Fatias plausíveis da carteira conforme o tipo do fundo."""
+    if "Títulos" in mandato:                       # fundo de papel
+        p = rng.uniform(0.75, 0.98)
+        return round(1 - p - 0.02, 4), round(p, 4), 0.02
+    if "Híbrido" in mandato:
+        i = rng.uniform(0.35, 0.6)
+        return round(i, 4), round(rng.uniform(0.1, 0.3), 4), round(0.1, 4)
+    i = rng.uniform(0.78, 0.97)                    # tijolo
+    return round(i, 4), 0.0, round(1 - i, 4)
+
+
 def coletar(p: ParamsFII | None = None, *, semente: int = 7,
             por_familia: bool = False, **_) -> dict:
     p = p or ParamsFII()
@@ -52,10 +64,14 @@ def coletar(p: ParamsFII | None = None, *, semente: int = 7,
     linhas = []
     for i, (cod, nome, mandato, segmento) in enumerate(FUNDOS):
         mensal = preco[i] * dy[i] / 12
+        # A composição da carteira é o que decide a família (ver config.familia),
+        # então o modo demonstração precisa sortear composição, não rótulo.
+        pi, pp, pf = _composicao(mandato, rng)
         linhas.append({
             "TICKER": cod, "CNPJ": f"{i:014d}", "NOME": nome,
             "MANDATO": mandato, "SEGMENTO": segmento,
-            "FAMILIA": familia(mandato, segmento),
+            "PCT_IMOVEIS": pi, "PCT_PAPEL": pp, "PCT_FOF": pf,
+            "FAMILIA": familia(pi, pp, pf),
             "GESTAO": rng.choice(["Ativa", "Passiva"]),
             "ADMINISTRADOR": "Administradora Exemplo",
             "SITUACAO": "EM FUNCIONAMENTO NORMAL",
