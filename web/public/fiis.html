@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fundos imobiliários — Fórmula Mágica B3</title>
+<meta name="description" content="Ranking de fundos imobiliários por dividend yield, P/VP, consistência do rendimento e liquidez, com simulador de carteira.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='54'>🏢</text></svg>">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="nav">
+  <a href="index.html">Ações</a>
+  <a href="fiis.html" aria-current="page">Fundos imobiliários</a>
+</nav>
+
+<header>
+  <h1>Fundos imobiliários</h1>
+  <p class="sub">Indicadores do informe mensal da CVM cruzados com preço e
+     rendimentos de mercado. Ranqueia por quatro fatores e deixa você montar
+     a carteira escolhendo fundo a fundo.</p>
+  <div class="stamp">
+    <span><span class="dot"></span>Dados de <b id="stamp">—</b></span>
+    <span id="stampFonte"></span>
+  </div>
+</header>
+
+<div class="warn hidden" id="dadosDemo"
+     style="border-left-color:var(--bad);background:color-mix(in srgb, var(--bad) 8%, transparent)">
+  <b>⚠ Não use esta tela para investir.</b> O arquivo está em modo demonstração:
+  preço, patrimônio e rendimentos foram sorteados. Os códigos são reais, os
+  números não. Rode a ação <code>Atualizar FIIs</code> no GitHub para
+  substituir por dados de verdade.
+</div>
+
+<div id="loading" class="load">Carregando dados…</div>
+<div id="erro" class="load hidden"></div>
+
+<main id="app" class="hidden">
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="controls">
+    <div class="ctl">
+      <label>Peso do dividend yield: <b id="lblDy">35</b></label>
+      <input type="range" id="ctlDy" min="0" max="100" value="35" step="5">
+    </div>
+    <div class="ctl">
+      <label>Peso do P/VP: <b id="lblPvp">30</b></label>
+      <input type="range" id="ctlPvp" min="0" max="100" value="30" step="5">
+    </div>
+    <div class="ctl">
+      <label>Peso da consistência: <b id="lblCons">20</b></label>
+      <input type="range" id="ctlCons" min="0" max="100" value="20" step="5">
+    </div>
+    <div class="ctl">
+      <label>Peso da liquidez: <b id="lblLiq">15</b></label>
+      <input type="range" id="ctlLiq" min="0" max="100" value="15" step="5">
+    </div>
+    <div class="ctl">
+      <label>Liquidez mínima: <b id="lblLiqMin">R$ 500 mil</b>/dia</label>
+      <input type="range" id="ctlLiqMin" min="0" max="30" value="5" step="1">
+    </div>
+    <div class="ctl">
+      <label for="ctlCap">Capital a investir (R$)</label>
+      <input type="number" id="ctlCap" value="100000" min="1000" step="1000">
+    </div>
+    <label class="chk"><input type="checkbox" id="ctlFamilia" checked>
+      Ranquear papel e tijolo em listas separadas</label>
+    <label class="chk"><input type="checkbox" id="ctlMediano" checked>
+      Usar o DY mediano quando for menor</label>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true"  data-p="ranking">Ranking</button>
+    <button role="tab" aria-selected="false" data-p="carteira">Minha carteira <span id="nSel" class="muted"></span></button>
+    <button role="tab" aria-selected="false" data-p="excluidos">Excluídos</button>
+    <button role="tab" aria-selected="false" data-p="metodo">Como o score é calculado</button>
+  </div>
+
+  <!-- ============ RANKING ============ -->
+  <section id="p-ranking">
+    <div class="card" style="margin-bottom:18px">
+      <h2>Rendimento contra preço</h2>
+      <p class="note">Cada ponto é um fundo: à direita paga mais, embaixo custa
+        menos em relação ao patrimônio. O canto inferior direito é onde a
+        triagem começa — não onde ela termina.</p>
+      <div class="legend">
+        <span><i style="background:var(--s1)"></i>Papel</span>
+        <span><i style="background:var(--s3)"></i>Tijolo</span>
+        <span><i style="background:var(--s2)"></i>Híbrido</span>
+        <span class="muted">clique num ponto para incluir na carteira</span>
+      </div>
+      <svg id="chDisp" class="chart"></svg>
+    </div>
+
+    <div class="card">
+      <h2>Ranking</h2>
+      <p class="note">Marque a caixa para levar o fundo à aba
+        <b>Minha carteira</b>. Clique no cabeçalho para reordenar.</p>
+
+      <input class="busca" id="ctlBusca" type="search"
+             placeholder="Filtrar por código, nome, segmento ou administrador…"
+             autocomplete="off">
+      <div class="chips" id="chips"></div>
+
+      <div class="scroll tall">
+        <table id="tbRank"><thead><tr>
+          <th class="sel"></th>
+          <th class="l ord" data-c="posicao">#</th>
+          <th class="l ord" data-c="ticker">Fundo</th>
+          <th class="l">Segmento</th>
+          <th class="ord" data-c="score">Score</th>
+          <th class="ord" data-c="dy12m">DY 12m</th>
+          <th class="ord" data-c="pvp">P/VP</th>
+          <th class="ord" data-c="consistencia">Consist.</th>
+          <th class="ord" data-c="rendMensal">R$/cota mês</th>
+          <th class="ord" data-c="preco">Preço</th>
+          <th class="ord" data-c="liquidez">Liquidez/dia</th>
+          <th class="ord" data-c="pl">Patrimônio</th>
+          <th class="l">Atenção</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+      <p class="note" style="margin:14px 0 0" id="rodapeRank"></p>
+    </div>
+  </section>
+
+  <!-- ============ CARTEIRA ============ -->
+  <section id="p-carteira" class="hidden">
+    <div id="carteiraVazia" class="card">
+      <h2>Nenhum fundo escolhido ainda</h2>
+      <p class="note">Volte ao <b>Ranking</b> e marque os fundos que quer
+        simular. A carteira é sua: o ranking sugere a ordem de leitura, não a
+        composição.</p>
+      <p class="note"><button class="btn sec" id="btnTop10">Começar com os 10
+        primeiros do ranking</button></p>
+    </div>
+
+    <div id="carteiraCheia" class="hidden">
+      <div class="tiles" id="tilesCart"></div>
+
+      <div class="controls" style="margin-bottom:26px">
+        <div class="ctl">
+          <label for="ctlMetodo">Como dividir o capital</label>
+          <select id="ctlMetodo">
+            <option value="igual" selected>Partes iguais</option>
+            <option value="score">Proporcional ao score</option>
+            <option value="renda">Igualar a renda mensal de cada fundo</option>
+          </select>
+        </div>
+        <div class="ctl">
+          <label>Peso máximo por fundo: <b id="lblWmax">20%</b></label>
+          <input type="range" id="ctlWmax" min="5" max="100" value="20" step="1">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>Ordem de compra</h2>
+          <p class="note">Cotas inteiras para o capital informado. FII não tem
+            lote padrão: a cota é a unidade.</p>
+          <div class="scroll tall">
+            <table id="tbCart"><thead><tr>
+              <th class="l">Fundo</th><th>Peso</th><th>Preço</th><th>Cotas</th>
+              <th>Valor</th><th>Renda/mês</th><th class="sel"></th>
+            </tr></thead><tbody></tbody></table>
+          </div>
+          <p class="note" style="margin:12px 0 0" id="sobra"></p>
+        </div>
+
+        <div class="card">
+          <h2>Concentração por segmento</h2>
+          <p class="note">Dez fundos de logística não são dez apostas: são uma
+            aposta em logística feita dez vezes.</p>
+          <svg id="chSeg" class="chart"></svg>
+          <div class="warn hidden" id="avisoConc" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px">
+        <h2>Renda mensal desta carteira, se ela existisse desde sempre</h2>
+        <p class="note">Soma dos rendimentos por cota efetivamente pagos em cada
+          mês, multiplicados pelas quantidades da ordem de compra acima. Só faz
+          sentido como leitura de estabilidade — não é retorno realizado, porque
+          você não tinha essas cotas naquela época.</p>
+        <svg id="chRenda" class="chart"></svg>
+      </div>
+
+      <div class="warn" style="margin-top:18px">
+        <b>O que esta simulação não faz.</b> Não considera imposto — o rendimento
+        mensal de FII é isento para pessoa física que cumpre as três condições da
+        Lei 11.033 (fundo com 100+ cotistas, cotas negociadas em bolsa, cotista
+        com menos de 10% do fundo), mas o ganho na venda da cota é tributado em
+        15%. Não considera corretagem nem emolumento. E projeta a renda pelo
+        rendimento passado, que muda: em fundo de papel ele acompanha IPCA e CDI,
+        e em fundo de tijolo depende de renovação de contrato e de vacância.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ EXCLUÍDOS ============ -->
+  <section id="p-excluidos" class="hidden">
+    <div class="card">
+      <h2>Fundos fora da lista</h2>
+      <p class="note">Filtrados antes do ranking, com o motivo. Se um fundo
+        conhecido não aparece na tela principal, ele está aqui.</p>
+      <div class="scroll tall">
+        <table id="tbExc"><thead><tr>
+          <th class="l">Fundo</th><th class="l">Nome</th>
+          <th class="l">Segmento</th><th class="l">Motivo</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MÉTODO ============ -->
+  <section id="p-metodo" class="hidden">
+    <div class="card">
+      <h2>Como o score é calculado</h2>
+      <p class="note">Sem isso, o número ao lado do fundo é só uma opinião com
+        aparência de medida.</p>
+
+      <p>Cada fator vira um <b>percentil dentro do universo elegível</b> e o
+        score é a média ponderada desses percentis, de 0 a 100. Percentil, e não
+        o valor bruto, porque os fatores estão em unidades incomparáveis — DY em
+        porcentagem, P/VP em múltiplo, liquidez em reais — e a liquidez, que
+        varia em três ordens de grandeza, dominaria qualquer soma direta.</p>
+
+      <div class="scroll">
+        <table><thead><tr>
+          <th class="l">Fator</th><th class="l">O que mede</th><th class="l">Direção</th>
+        </tr></thead><tbody>
+          <tr><td class="l tk">Dividend yield</td>
+              <td class="l">Rendimentos dos últimos 12 meses sobre o preço de hoje.
+                Com a opção ligada, usa o menor entre esse valor e a mediana dos
+                pagamentos anualizada — o que sobra quando se tira o mês atípico.</td>
+              <td class="l">maior é melhor</td></tr>
+          <tr><td class="l tk">P/VP</td>
+              <td class="l">Preço da cota sobre o valor patrimonial declarado no
+                informe mensal da CVM.</td>
+              <td class="l">menor é melhor</td></tr>
+          <tr><td class="l tk">Consistência</td>
+              <td class="l">Metade é ter pago nos 12 meses; metade é ter pago
+                valores estáveis (1 menos o coeficiente de variação).</td>
+              <td class="l">maior é melhor</td></tr>
+          <tr><td class="l tk">Liquidez</td>
+              <td class="l">Volume financeiro médio dos últimos 63 pregões.</td>
+              <td class="l">maior é melhor</td></tr>
+        </tbody></table>
+      </div>
+
+      <div class="warn" style="margin-top:18px">
+        <b>Por que papel e tijolo são ranqueados separados.</b> Em fundo de
+        papel o patrimônio é uma carteira de CRI marcada a mercado, então o P/VP
+        fica quase colado em 1 e não distingue nada. Em fundo de tijolo o
+        patrimônio vem de laudo de avaliação, atualizado uma vez por ano, e o
+        P/VP carrega a discordância entre o laudo e o mercado. São dois números
+        com o mesmo nome medindo coisas diferentes — misturá-los num ranking só
+        faz o fundo de tijolo parecer barato o ano inteiro. É a mesma razão pela
+        qual a aba de ações separa bancos das demais empresas.
+      </div>
+
+      <h2 style="margin-top:24px">O que este score não olha</h2>
+      <p class="note">A lista importa mais que a fórmula.</p>
+      <ul class="note">
+        <li><b>Vacância</b> — física e financeira. Está no informe trimestral da
+          CVM e ainda não foi incorporada; é o próximo item.</li>
+        <li><b>Prazo e qualidade dos contratos</b> — quanto do contrato é atípico,
+          quando vencem, quem é o inquilino.</li>
+        <li><b>Risco de crédito dos CRI</b>, em fundo de papel: garantia,
+          devedor, nível de subordinação, inadimplência.</li>
+        <li><b>Alavancagem</b> — obrigações a pagar por aquisição de imóvel.</li>
+        <li><b>Taxa de administração e de performance.</b></li>
+        <li><b>Laudo de avaliação</b> — se o VP reflete valor de venda hoje.</li>
+      </ul>
+      <p class="note">Um DY alto tem três causas comuns e só uma é boa: o fundo
+        pode estar barato, pode ter distribuído um ganho de venda que não se
+        repete, ou pode estar devolvendo o seu próprio dinheiro como amortização.
+        A coluna <b>Atenção</b> marca as duas últimas quando os números
+        denunciam, mas quem separa de verdade é o relatório gerencial do mês.</p>
+
+      <h2 style="margin-top:24px">De onde vem cada número</h2>
+      <div class="scroll">
+        <table><thead><tr>
+          <th class="l">Dado</th><th class="l">Fonte</th><th class="l">Defasagem</th>
+        </tr></thead><tbody>
+          <tr><td class="l">Patrimônio, cotas, VP/cota, cotistas, segmento</td>
+              <td class="l">Informe mensal da CVM</td>
+              <td class="l">até 15º dia útil do mês seguinte</td></tr>
+          <tr><td class="l">Razão social e situação cadastral</td>
+              <td class="l"><code>cad_fii.csv</code> da CVM</td><td class="l">diária</td></tr>
+          <tr><td class="l">Código de negociação</td>
+              <td class="l">API da B3, com o ISIN da CVM como reserva</td>
+              <td class="l">—</td></tr>
+          <tr><td class="l">Preço e volume</td><td class="l">Yahoo Finance</td>
+              <td class="l">fechamento do pregão anterior</td></tr>
+          <tr><td class="l">Rendimentos por cota</td><td class="l">Yahoo Finance</td>
+              <td class="l">data de pagamento</td></tr>
+        </tbody></table>
+      </div>
+      <p class="note">O rendimento oficial de cada mês está no comunicado que o
+        administrador publica no FNET da B3. O Yahoo entrega a mesma série de
+        forma consolidada, o que serve para triar 300 fundos; antes de comprar
+        um deles, o comunicado é a fonte.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p><b>Ferramenta de estudo. Não é recomendação de investimento.</b>
+       Rentabilidade passada não garante rentabilidade futura, e em fundo
+       imobiliário o rendimento distribuído não é garantido.</p>
+    <p>Informe mensal e cadastro de FII da CVM, códigos de negociação da B3,
+       preços e proventos do Yahoo Finance. A data no topo da página diz quando
+       os dados foram coletados.</p>
+  </footer>
+</main>
+</div>
+
+<div class="tip" id="tip"></div>
+<script src="fiis.js"></script>
+</body>
+</html>

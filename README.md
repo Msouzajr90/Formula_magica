@@ -22,6 +22,14 @@ Há duas formas de usar, com o mesmo motor de cálculo por trás:
 
 Passo a passo dos dois, incluindo publicação: **`GUIA_PUBLICACAO.md`**.
 
+O site tem uma segunda aba, de **fundos imobiliários**: informe mensal da CVM
+cruzado com preço e rendimentos, ranking por DY, P/VP, consistência do
+rendimento e liquidez, e um simulador em que você escolhe os fundos. Roda pelo
+mesmo caminho (`python atualizar_fiis.py` gera o `web/public/fiis.json`) e com a
+mesma divisão Brasil/nuvem das ações — `baixar_informe_fii.py` no seu PC,
+o robô lendo o arquivo. Documentada em **`FIIS.md`** e em
+**`COMO_ATUALIZAR_FIIS.md`**.
+
 ## Começar (Windows)
 
 Dê **duplo clique em `iniciar.bat`**. Na primeira vez ele instala tudo, roda a
@@ -107,9 +115,14 @@ app.py                    interface Streamlit (roda local)
 verificar_dados.py        diagnóstico das fontes de dados
 atualizar_dados.py        gera o web/public/dados.json para o site
 backtest_historico.py     backtest point-in-time (linha de comando)
+baixar_informe_fii.py     roda no Brasil: gera o web/public/informe_fii.json
+verificar_fiis.py         diagnóstico das fontes de FII
+atualizar_fiis.py         gera o web/public/fiis.json (ver FIIS.md)
+validar_fiis.py           confere o fiis.json antes de publicar
 vercel.json               configuração do site estático
 web/public/               site publicado na Vercel (HTML + CSS + JS puros)
 .github/workflows/        robô que atualiza os dados sob demanda
+fiib3/                    fundos imobiliários — ver FIIS.md
 magicb3/
   config.py               parâmetros e códigos de conta da CVM
   cvm.py                  download e normalização de DFP/ITR, EBIT LTM
@@ -122,7 +135,7 @@ magicb3/
   pipeline.py             orquestração
   report.py               exportação Excel
   demo.py                 dados sintéticos para o modo demonstração
-tests/                    25 testes, rodam sem rede
+tests/                    107 testes, rodam sem rede
 ```
 
 ## Fontes de dados

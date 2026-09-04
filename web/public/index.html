@@ -6,134 +6,15 @@
 <title>Fórmula Mágica B3</title>
 <meta name="description" content="Carteira de ações da B3 pelo ranking de Greenblatt e pelo modelo de Markowitz.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='54'>📈</text></svg>">
-<style>
-  :root{
-    color-scheme: light;
-    --surface-0:#ffffff; --surface-1:#fcfcfb; --surface-2:#f4f4f2;
-    --line:#e3e3e0; --line-strong:#cfcfca;
-    --ink:#0b0b0b; --ink-2:#52514e; --ink-3:#8a8a85;
-    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
-    --grid:rgba(138,138,133,.22);
-    --good:#0a7d4f; --bad:#c0392b;
-    --radius:12px;
-    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
-  }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      color-scheme: dark;
-      --surface-0:#141413; --surface-1:#1a1a19; --surface-2:#232322;
-      --line:#333331; --line-strong:#454542;
-      --ink:#ffffff; --ink-2:#c3c2b7; --ink-3:#8a8a85;
-      --s1:#3987e5; --s2:#d95926; --s3:#199e70;
-      --grid:rgba(195,194,183,.18);
-      --good:#3ec98a; --bad:#e66767;
-    }
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--surface-0);color:var(--ink);font:14px/1.5 var(--font);
-       -webkit-font-smoothing:antialiased}
-  .wrap{max-width:1240px;margin:0 auto;padding:0 20px 72px}
-  a{color:var(--s1)}
-
-  /* ---------- cabeçalho ---------- */
-  header{border-bottom:1px solid var(--line);margin-bottom:26px;padding:26px 0 20px}
-  h1{margin:0 0 6px;font-size:26px;letter-spacing:-.02em}
-  .sub{color:var(--ink-2);max-width:62ch;margin:0}
-  .stamp{margin-top:12px;font-size:12px;color:var(--ink-3);display:flex;
-         gap:14px;flex-wrap:wrap;align-items:center}
-  .dot{width:7px;height:7px;border-radius:50%;background:var(--s3);display:inline-block;
-       margin-right:6px;vertical-align:middle}
-
-  /* ---------- tiles ---------- */
-  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:26px}
-  .tile{background:var(--surface-1);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
-  .tile .k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);
-           margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .tile .v{font-size:24px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-  .tile .h{font-size:11px;color:var(--ink-3);margin-top:3px}
-
-  /* ---------- controles ---------- */
-  .controls{background:var(--surface-1);border:1px solid var(--line);border-radius:var(--radius);
-            padding:16px 18px;margin-bottom:26px;display:grid;
-            grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px}
-  .ctl label{display:block;font-size:12px;color:var(--ink-2);margin-bottom:7px;font-weight:500}
-  .ctl label b{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:600}
-  input[type=range]{width:100%;accent-color:var(--s1);margin:0}
-  input[type=number],select{width:100%;padding:7px 9px;border:1px solid var(--line-strong);
-    border-radius:8px;background:var(--surface-0);color:var(--ink);font:inherit}
-  .chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);cursor:pointer;
-       padding-top:20px}
-  .chk input{accent-color:var(--s1);width:16px;height:16px}
-
-  /* ---------- seções ---------- */
-  section{margin-bottom:34px}
-  h2{font-size:17px;margin:0 0 4px;letter-spacing:-.01em}
-  .note{color:var(--ink-2);margin:0 0 16px;font-size:13px;max-width:72ch}
-  .card{background:var(--surface-1);border:1px solid var(--line);border-radius:var(--radius);
-        padding:18px}
-  .grid2{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
-  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
-
-  /* ---------- tabelas ---------- */
-  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  table{border-collapse:collapse;width:100%;font-size:13px}
-  th,td{padding:7px 10px;text-align:right;white-space:nowrap;
-        border-bottom:1px solid var(--line)}
-  th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);
-     font-weight:600;position:sticky;top:0;background:var(--surface-1);z-index:1}
-  td:first-child,th:first-child,td.l,th.l{text-align:left}
-  tbody tr:hover{background:var(--surface-2)}
-  .num{font-variant-numeric:tabular-nums}
-  .tk{font-weight:600}
-  .muted{color:var(--ink-3)}
-  .tag{font-size:10px;letter-spacing:.04em;text-transform:uppercase;background:var(--surface-2);
-       border:1px solid var(--line-strong);border-radius:4px;padding:1px 4px;color:var(--ink-2)}
-  .cap{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .tall{max-height:460px;overflow-y:auto}
-
-  /* ---------- gráficos ---------- */
-  .chart{width:100%;display:block;overflow:visible}
-  .chart text{font-family:var(--font);fill:var(--ink-2)}
-  .axis line,.axis path{stroke:var(--line-strong)}
-  .gridline{stroke:var(--grid)}
-  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);
-          margin-bottom:10px}
-  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:6px;
-            vertical-align:-1px}
-  .tip{position:fixed;pointer-events:none;background:var(--surface-0);color:var(--ink);
-       border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;font-size:12px;
-       box-shadow:0 6px 22px rgba(0,0,0,.16);opacity:0;transition:opacity .1s;z-index:50;
-       max-width:240px}
-  .tip b{display:block;margin-bottom:3px}
-  .tip .r{display:flex;justify-content:space-between;gap:14px;font-variant-numeric:tabular-nums}
-
-  /* ---------- diversos ---------- */
-  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:18px;
-        overflow-x:auto}
-  .tabs button{background:none;border:none;border-bottom:2px solid transparent;
-    padding:9px 14px;font:inherit;font-size:13px;color:var(--ink-2);cursor:pointer;
-    white-space:nowrap}
-  .tabs button[aria-selected=true]{color:var(--s1);border-bottom-color:var(--s1);font-weight:600}
-  .btn{background:var(--s1);color:#fff;border:none;border-radius:8px;padding:9px 14px;
-       font:inherit;font-weight:500;cursor:pointer}
-  .btn.sec{background:var(--surface-2);color:var(--ink);border:1px solid var(--line-strong)}
-  .warn{background:var(--surface-2);border:1px solid var(--line-strong);border-left:3px solid var(--s2);
-        border-radius:8px;padding:12px 14px;font-size:13px;color:var(--ink-2);margin-bottom:18px}
-  .warn b{color:var(--ink)}
-  footer{border-top:1px solid var(--line);padding-top:20px;color:var(--ink-3);font-size:12px}
-  .load{padding:60px 20px;text-align:center;color:var(--ink-3)}
-  .hidden{display:none!important}
-  details{border-bottom:1px solid var(--line);padding:6px 0}
-  details summary{cursor:pointer;font-size:13px;color:var(--ink-2);padding:4px 0}
-  details[open] summary{color:var(--ink);font-weight:600}
-  details table{margin:6px 0 10px}
-  details td{padding:4px 10px;border:none}
-  code{background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:12px}
-</style>
+<link rel="stylesheet" href="estilo.css">
 </head>
 <body>
 <div class="wrap">
+
+<nav class="nav">
+  <a href="index.html" aria-current="page">Ações</a>
+  <a href="fiis.html">Fundos imobiliários</a>
+</nav>
 
 <header>
   <h1>Fórmula Mágica B3</h1>
