@@ -96,11 +96,18 @@ def calcular(df: pd.DataFrame, p: ParamsFII | None = None,
             soma += pesos[nome] * pc
         df.loc[idx, "SCORE"] = soma
 
-    # Arredonda meio para cima, e não com o `round` do numpy, que arredonda meio
-    # para o par. É a mesma regra do `Math.round` do navegador — sem isso, um
-    # score que cai exatamente em x,x5 (o que acontece: percentis são frações de
-    # inteiros) sairia diferente nos dois lados e o teste de paridade quebraria.
-    df["SCORE"] = np.floor(df["SCORE"] * 1000 + 0.5) / 10
+    # Arredondamento meio para cima (não o `round` do numpy, que vai para o par),
+    # igual ao `Math.round` do navegador. E antes disso, uma quantização a 12
+    # casas.
+    #
+    # A quantização existe por causa de uma falha real, que só apareceu no
+    # GitHub Actions: percentis são frações de inteiros, então o score cai
+    # exatamente em x,x5 com frequência. Nesses pontos, uma diferença de um
+    # último bit entre a soma do numpy e a do JavaScript joga um lado para
+    # 352,4999999 e o outro para 352,5 — e a tela mostra 35,2 enquanto a
+    # exportação mostra 35,3. Zerar o ruído antes de arredondar faz os dois
+    # partirem do mesmo número.
+    df["SCORE"] = np.floor(np.floor(df["SCORE"] * 1e12 + 0.5) / 1e12 * 1000 + 0.5) / 10
     ordem = ["FAMILIA"] if por_familia else []
     df["POSICAO"] = (df.groupby(ordem)["SCORE"].rank(ascending=False, method="min")
                      if ordem else df["SCORE"].rank(ascending=False, method="min"))

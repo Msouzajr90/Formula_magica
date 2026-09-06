@@ -98,7 +98,13 @@ function calcularScore(fundos, pesos, { usarMediano = true, porFamilia = false }
     // O score arredondado é o que vai para a tela E o que ordena o ranking.
     // Ordenar pelo valor cheio e mostrar o arredondado produziria a tela em que
     // dois fundos aparecem com "72,4" e um está acima do outro sem explicação.
-    const notas = g.map((_, k) => Math.round(acumulado[k] * 1000) / 10);
+    //
+    // A quantização a 12 casas antes do arredondamento tem que ser idêntica à
+    // de `fiib3/score.py`: percentis são frações de inteiros e o score cai
+    // exatamente em x,x5 com frequência, onde uma diferença de um último bit
+    // entre a soma daqui e a do numpy mostraria 35,3 na tela e 35,2 no Excel.
+    const notas = g.map((_, k) =>
+      Math.round(Math.round(acumulado[k] * 1e12) / 1e12 * 1000) / 10);
     g.forEach((_, k) => { lista[g[k]].score = notas[k]; });
 
     // Posição dentro do grupo. Empates recebem a MENOR posição do bloco — é o

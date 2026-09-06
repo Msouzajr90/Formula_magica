@@ -138,7 +138,13 @@ def _retornos_sinteticos(tickers: list[str], dias: int, seed: int = 5) -> pd.Dat
     alfas = rng.normal(0.0002, 0.0004, p)
     X = (alfas[None, :] + mercado[:, None] * betas[None, :]
          + rng.normal(0, 1, (dias, p)) * vol_idio[None, :])
-    idx = pd.bdate_range(end=pd.Timestamp(date.today()), periods=dias)
+    # `bdate_range(end=<sabado ou domingo>, periods=252)` devolve 251 datas, não
+    # 252 — o pandas conta a partir do último pregão e perde uma. O DataFrame
+    # abaixo então recebia 252 linhas de dados com um índice de 251 e quebrava
+    # com "Shape of passed values". Só acontecia nos fins de semana, o que fez o
+    # modo demonstração e a suíte inteira falharem aos sábados e domingos.
+    fim = pd.offsets.BDay().rollback(pd.Timestamp(date.today()))
+    idx = pd.bdate_range(end=fim, periods=dias)
     return pd.DataFrame(X, index=idx, columns=tickers)
 
 

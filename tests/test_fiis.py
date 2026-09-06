@@ -200,13 +200,18 @@ def _tem_node() -> bool:
 
 @pytest.mark.skipif(not _tem_node(), reason="node não está instalado")
 @pytest.mark.parametrize("por_familia", [False, True])
-def test_score_do_site_bate_com_o_do_python(por_familia):
+@pytest.mark.parametrize("semente", [3, 11, 42, 101, 777])
+def test_score_do_site_bate_com_o_do_python(por_familia, semente):
     """A tela recalcula o score no navegador; os dois têm que concordar.
 
     Se divergirem, o usuário vê um ranking no site e outro na exportação em
     Excel do mesmo dia — e não tem como saber qual está certo.
+
+    Várias sementes de propósito: a divergência que apareceu em produção era de
+    0,1 num único fundo, num score que caía exatamente em x,x5, e passou por
+    uma semente só. É o tipo de defeito que precisa de repetição para aparecer.
     """
-    rng = np.random.default_rng(3)
+    rng = np.random.default_rng(semente)
     n = 40
     df = pd.DataFrame({
         "TICKER": [f"F{i:03d}11" for i in range(n)],
@@ -681,3 +686,25 @@ def test_workflow_usa_os_mesmos_parametros_da_geracao_manual():
     assert "--informe web/public/informe_fii.json" in geracao
     assert "--liquidez" in geracao
     assert "--por-familia" in geracao
+
+
+def test_retornos_sinteticos_nao_quebram_no_fim_de_semana(monkeypatch):
+    """`bdate_range(end=<sábado>, periods=252)` devolve 251 datas.
+
+    O modo demonstração das ações montava um DataFrame de 252 linhas com esse
+    índice de 251 e estourava com "Shape of passed values" — todo sábado e todo
+    domingo, o que derrubava a suíte inteira e, com ela, o robô do GitHub.
+    """
+    import datetime as _dt
+
+    from magicb3 import demo as demo_acoes
+
+    class SabadoFalso(_dt.date):
+        @classmethod
+        def today(cls):
+            return cls(2026, 9, 5)          # um sábado
+
+    monkeypatch.setattr(demo_acoes, "date", SabadoFalso)
+    r = demo_acoes._retornos_sinteticos(["AAAA3", "BBBB4"], 252)
+    assert r.shape == (252, 2)
+    assert r.index[-1].weekday() < 5, "a série tem que terminar num pregão"
