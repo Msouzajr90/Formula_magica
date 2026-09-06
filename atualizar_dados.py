@@ -183,9 +183,24 @@ def main() -> int:
         res = demo.resultado_demo(params)
     else:
         from magicb3 import pipeline
-        res = pipeline.montar_carteira(
-            params, progresso=lambda m, v=None: print(f"  {m}", flush=True),
-            arquivo_fundamentos=args.fundamentos)
+        andar = lambda m, v=None: print(f"  {m}", flush=True)
+        try:
+            res = pipeline.montar_carteira(
+                params, progresso=andar, arquivo_fundamentos=args.fundamentos)
+        except Exception as exc:                                # noqa: BLE001
+            # A CVM bloqueia IP estrangeiro e de datacenter, de forma
+            # intermitente: num dia o runner alcança, no outro não. Quando não
+            # alcançar, vale o fundamentos.json versionado — ele é velho, mas
+            # balanço muda quatro vezes por ano, enquanto preço muda todo dia.
+            # Uma coleta com fundamento de ontem e preço de hoje é muito melhor
+            # que nenhuma coleta.
+            reserva = Path(args.fundamentos or "web/public/fundamentos.json")
+            if args.fundamentos or not reserva.exists():
+                raise
+            print(f"\n  A CVM não respondeu ({str(exc)[:120]}).")
+            print(f"  Recuando para {reserva} — fundamentos do arquivo, preços de hoje.")
+            res = pipeline.montar_carteira(
+                params, progresso=andar, arquivo_fundamentos=str(reserva))
 
     dados = montar_json(res, params, args.pool,
                         vagas_padrao=args.vagas_financeiras,
