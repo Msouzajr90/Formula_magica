@@ -75,17 +75,6 @@ function dyScore(f, usarMediano) {
   return vs.length ? Math.min(...vs) : null;
 }
 
-/** Score em 0..1 -> nota em 0..100 com uma casa, meio para cima.
- *  O encaixe no milionésimo existe porque a soma ponderada cai exatamente em
- *  x,x5 com frequência (percentis são frações de inteiros) e aí um ruído de
- *  1e-13 — que varia com a versão do numpy do outro lado — decidiria a nota.
- *  Tem que ser idêntico ao `_arredondar_score` do fiib3/score.py. */
-function arredondarScore(v) {
-  let milesimos = v * 1000;
-  milesimos = Math.floor(milesimos * 1e6 + 0.5) / 1e6;
-  return Math.floor(milesimos + 0.5) / 10;
-}
-
 /** Devolve uma cópia dos fundos com score, percentis e posição. */
 function calcularScore(fundos, pesos, { usarMediano = true, porFamilia = false } = {}) {
   const lista = fundos.map(f => ({ ...f, dyScore: dyScore(f, usarMediano) }));
@@ -109,7 +98,7 @@ function calcularScore(fundos, pesos, { usarMediano = true, porFamilia = false }
     // O score arredondado é o que vai para a tela E o que ordena o ranking.
     // Ordenar pelo valor cheio e mostrar o arredondado produziria a tela em que
     // dois fundos aparecem com "72,4" e um está acima do outro sem explicação.
-    const notas = g.map((_, k) => arredondarScore(acumulado[k]));
+    const notas = g.map((_, k) => Math.round(acumulado[k] * 1000) / 10);
     g.forEach((_, k) => { lista[g[k]].score = notas[k]; });
 
     // Posição dentro do grupo. Empates recebem a MENOR posição do bloco — é o
@@ -152,7 +141,8 @@ function ligarTip(node, html) {
   node.addEventListener('mouseleave', esconderTip);
 }
 
-const CORES = { 'Papel': '--s1', 'Tijolo': '--s3', 'Híbrido': '--s2' };
+const CORES = { 'Papel': '--s1', 'Tijolo': '--s3', 'Híbrido': '--s2',
+                'Fundo de fundos': '--ink-2' };
 const corFamilia = (f) => css(CORES[f] || '--ink-3');
 
 function moldura(svg, altura) {
@@ -417,7 +407,7 @@ function linhaRank(f) {
     <td class="num">${brl(f.preco, 2)}</td>
     <td class="num">${compacto(f.liquidez)}</td>
     <td class="num">${compacto(f.pl)}</td>
-    <td class="l alerta">${esc(f.alerta || '')}</td>
+    <td class="l alerta" title="${esc(f.alerta || '')}">${esc(f.alertaCurto || (f.alerta ? 'atenção' : ''))}</td>
   </tr>`;
 }
 

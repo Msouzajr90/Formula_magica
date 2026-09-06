@@ -47,6 +47,9 @@ jobs:
       - name: Gerar o fiis.json
         # Os parametros tem que ser os mesmos que voce usa na mao, senao o robo
         # regenera o arquivo com outra configuracao e o site muda sozinho.
+        # --liquidez 200000: o controle de liquidez do site so consegue SUBIR a
+        #   partir do que esta no arquivo, entao vale gerar mais largo.
+        # --por-familia: papel, tijolo, hibrido e FoF ranqueados em separado.
         run: >
           python atualizar_fiis.py
           --informe web/public/informe_fii.json

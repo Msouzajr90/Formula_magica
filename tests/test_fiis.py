@@ -497,10 +497,11 @@ def test_workflow_do_github_usa_o_arquivo():
     a causa é geográfica.
     """
     yml = (RAIZ / ".github" / "workflows" / "atualizar-fiis.yml").read_text(encoding="utf-8")
-    assert "--informe web/public/informe_fii.json" in yml, (
+    geracao = yml.split("Gerar o fiis.json", 1)[1].split("- name:", 1)[0]
+    assert "atualizar_fiis.py" in geracao
+    assert "--informe web/public/informe_fii.json" in geracao, (
         "o passo de coleta precisa passar --informe; sem isso ele tenta baixar "
         "da CVM e falha por bloqueio de IP estrangeiro")
-    assert "atualizar_fiis.py --informe" in yml
 
 
 def test_para_yahoo_e_idempotente():
@@ -666,3 +667,17 @@ def test_mapa_nao_consulta_a_b3_por_padrao(monkeypatch):
     mapa = tickers_fii.montar_mapa(informe)
     assert list(mapa["TICKER"]) == ["MXRF11", None] or \
            (mapa["TICKER"].iloc[0] == "MXRF11" and pd.isna(mapa["TICKER"].iloc[1]))
+
+
+def test_workflow_usa_os_mesmos_parametros_da_geracao_manual():
+    """O robô não pode regenerar o arquivo com outra configuração.
+
+    Sem `--liquidez` e `--por-familia`, a primeira execução automática trocaria
+    silenciosamente o conteúdo do site: menos fundos e um ranking único no lugar
+    do separado por família. É o tipo de divergência que ninguém liga ao robô.
+    """
+    yml = (RAIZ / ".github" / "workflows" / "atualizar-fiis.yml").read_text(encoding="utf-8")
+    geracao = yml.split("Gerar o fiis.json", 1)[1].split("- name:", 1)[0]
+    assert "--informe web/public/informe_fii.json" in geracao
+    assert "--liquidez" in geracao
+    assert "--por-familia" in geracao

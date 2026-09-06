@@ -126,7 +126,10 @@ Ele faz, nesta ordem:
    fazer, em vez de tentar a CVM e falhar 20 minutos depois num timeout;
 2. roda o `verificar_fiis.py` (informativo, não derruba a execução);
 3. roda os 107 testes;
-4. gera o `fiis.json` lendo o arquivo + Yahoo + B3;
+4. gera o `fiis.json` lendo o arquivo + Yahoo, com os mesmos parâmetros que
+   você usaria na mão (`--liquidez 200000 --por-familia`) — se quiser mudar a
+   configuração do site, é nesse passo do `.yml` que se mexe, senão o robô
+   desfaz a sua escolha na próxima execução;
 5. roda o `validar_fiis.py` — e **se algum indicador vier vazio em mais de 20%
    dos fundos, ele falha e não publica**, deixando no ar o arquivo bom do dia
    anterior;
@@ -157,7 +160,7 @@ Com o Python instalado, dá para pular o GitHub Actions inteiro. No seu PC:
 
 ```
 .venv\Scripts\python.exe baixar_informe_fii.py
-.venv\Scripts\python.exe atualizar_fiis.py --informe web/public/informe_fii.json
+.venv\Scripts\python.exe atualizar_fiis.py --informe web/public/informe_fii.json --liquidez 200000 --por-familia
 .venv\Scripts\python.exe validar_fiis.py
 ```
 

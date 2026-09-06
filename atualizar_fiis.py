@@ -89,6 +89,7 @@ def montar_json(res: dict, p: ParamsFII) -> dict:
             "retorno12m": _num(getattr(r, "RETORNO_12M", None), 6),
             "competencia": _texto(getattr(r, "COMPETENCIA", None)),
             "alerta": _texto(getattr(r, "ALERTA", None)),
+            "alertaCurto": _texto(getattr(r, "ALERTA_CURTO", None)),
             "serie": _serie(mensal, getattr(r, "TICKER", None)),
         })
 

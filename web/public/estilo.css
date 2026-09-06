@@ -143,7 +143,8 @@
 .pill.papel{border-color:var(--s1);color:var(--s1)}
 .pill.tijolo{border-color:var(--s3);color:var(--s3)}
 .pill.hibrido{border-color:var(--s2);color:var(--s2)}
-.alerta{font-size:11.5px;color:var(--s2);max-width:280px;white-space:normal}
+.alerta{font-size:11.5px;color:var(--s2);max-width:160px;white-space:nowrap;
+        overflow:hidden;text-overflow:ellipsis;cursor:help}
 .sel{width:26px;text-align:center}
 .sel input{accent-color:var(--s1);width:15px;height:15px;cursor:pointer}
 tr.escolhido{background:color-mix(in srgb, var(--s1) 9%, transparent)}

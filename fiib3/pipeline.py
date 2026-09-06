@@ -112,6 +112,7 @@ def coletar(p: ParamsFII | None = None, *, ano: int | None = None,
     elegiveis, excluidos = indicadores.filtrar(tabela, p)
     ranking = score.calcular(elegiveis, p, por_familia=por_familia)
     ranking["ALERTA"] = score.alertas(ranking)
+    ranking["ALERTA_CURTO"] = score.alertas_curtos(ranking)
 
     prog(1.0, "Pronto")
     return {

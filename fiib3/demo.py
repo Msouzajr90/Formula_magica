@@ -110,6 +110,7 @@ def coletar(p: ParamsFII | None = None, *, semente: int = 7,
     elegiveis, excluidos = indicadores.filtrar(df, p)
     ranking = score.calcular(elegiveis, p, por_familia=por_familia)
     ranking["ALERTA"] = score.alertas(ranking)
+    ranking["ALERTA_CURTO"] = score.alertas_curtos(ranking)
 
     mensal_tab = _serie_mensal(ranking, rng)
     return {

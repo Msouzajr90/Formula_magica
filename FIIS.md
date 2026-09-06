@@ -9,10 +9,10 @@ baixar_informe_fii.py  roda no Brasil: gera o web/public/informe_fii.json
 atualizar_fiis.py      gera o web/public/fiis.json
 validar_fiis.py        confere o JSON antes de publicar
 fiib3/
-  config.py            endereços, parâmetros e a tradução papel/tijolo
-  cvm_fii.py           informe mensal e cadastro da CVM
+  config.py            endereços, parâmetros e a classificação papel/tijolo
+  cvm_fii.py           informe mensal da CVM e composição da carteira
   arquivo_informe.py   a ponte para a nuvem: grava e lê o informe_fii.json
-  tickers_fii.py       CNPJ <-> código de negociação (B3, com o ISIN de reserva)
+  tickers_fii.py       CNPJ <-> código de negociação, pelo ISIN da CVM
   mercado.py           preço, liquidez e a série de rendimentos por cota
   indicadores.py       P/VP, DY, consistência e os filtros de universo
   score.py             score multifator
@@ -51,12 +51,27 @@ o Yahoo é consultado uma vez por fundo para trazer os rendimentos. Fica tudo em
 
 | Dado | Fonte | Defasagem |
 |---|---|---|
-| Patrimônio, nº de cotas, VP/cota, cotistas | Informe mensal da CVM | até o 15º dia útil do mês seguinte |
-| Mandato, segmento de atuação, tipo de gestão | Informe mensal da CVM | idem |
-| Razão social e situação cadastral | `cad_fii.csv` da CVM | diária |
-| Código de negociação | API da B3; ISIN da CVM como reserva | — |
+| Patrimônio, nº de cotas, VP/cota, cotistas | Informe mensal da CVM (complemento) | até o 15º dia útil do mês seguinte |
+| Composição da carteira (imóvel/recebível/cota) | Informe mensal da CVM (ativo e passivo) | idem |
+| Razão social, segmento, gestão | Informe mensal da CVM (geral) | idem |
+| Código de negociação | ISIN do informe da CVM | — |
 | Preço e volume | Yahoo Finance | fechamento anterior |
 | Rendimentos por cota | Yahoo Finance | data de pagamento |
+
+Duas fontes que estavam no desenho original **saíram**, e vale registrar por quê:
+
+- **`cad_fii.csv`** responde 404 desde a reestruturação dos arquivos de FII. Só
+  acrescentava a situação cadastral; a razão social vem no próprio informe, no
+  campo `Nome_Fundo_Classe`.
+- **API de fundos listados da B3.** Mudou de contrato: responde 200 e devolve
+  `totalRecords: 0` para todo `typeFund` de 1 a 40. Continua implementada e
+  ligável com `--com-b3`, mas deixou de fazer falta — na competência 07/2026,
+  os 674 fundos marcados como negociados em bolsa têm ISIN no informe, sem
+  exceção.
+
+O código de negociação sai do ISIN: `BR`**`MXRF`**`CTF008` → `MXRF11`. O padrão
+exige **quatro letras**; aceitar dígitos gerava 225 códigos inexistentes como
+`003H11`, cada um custando uma consulta perdida ao Yahoo.
 
 O informe mensal é o equivalente, em FII, do que a DFP é para as ações — com a
 vantagem de ser mensal. É por isso que aqui o problema de defasagem que domina
@@ -71,6 +86,31 @@ contábil*. Em fundo de tijolo o laudo é anual e defasado; em fundo de papel o
 patrimônio é uma carteira de CRI marcada a mercado e o P/VP fica quase colado
 em 1. São duas coisas diferentes com o mesmo nome — daí a opção de ranquear as
 famílias em separado, ligada por padrão.
+
+## Papel, tijolo e fundo de fundos
+
+A classificação **não usa o rótulo da CVM**, e a razão é empírica: na
+competência 07/2026 o campo `Mandato` veio vazio nos 1.375 fundos, e o
+`Segmento_Atuacao` trocou de vocabulário — "Títulos e Val. Mob." deixou de
+existir e 637 fundos caíram em "Multicategoria". Classificar por esses campos
+marcaria o mercado inteiro como tijolo, MXRF11 e KNCR11 incluídos.
+
+Em vez do rótulo, o critério é a carteira, que está no informe de ativo e
+passivo. Acima de 65% em imóveis, em recebíveis (CRI, LCI, LIG, debêntures) ou
+em cotas de outros fundos, o fundo é daquele tipo; abaixo disso, híbrido. Quem
+não informa a carteira fica como **Sem dado** e é ranqueado à parte, em vez de
+entrar num grupo por omissão.
+
+| Fundo | Imóveis | Recebíveis | Cotas de FII | Resultado |
+|---|---|---|---|---|
+| MXRF11 | 4% | 74% | 15% | Papel |
+| KNCR11 | 0% | 93% | 7% | Papel |
+| HGLG11 | 85% | 0% | 2% | Tijolo |
+| KNRI11 | 92% | 7% | 0% | Tijolo |
+| XPML11 | 56% | 2% | 30% | Híbrido |
+
+É melhor que o rótulo mesmo que a CVM voltasse a preenchê-lo: mede onde o
+dinheiro está, não como o fundo se declara.
 
 **DY 12 meses** — proventos pagos nos últimos 12 meses sobre o preço de hoje.
 Convenção de mercado, e o indicador mais fácil de distorcer: um rendimento

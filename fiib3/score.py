@@ -68,29 +68,6 @@ def _dy_para_score(df: pd.DataFrame, p: ParamsFII) -> pd.Series:
     return pd.concat([dy12, med], axis=1).min(axis=1, skipna=True)
 
 
-def _arredondar_score(v):
-    """Score em 0..1 -> nota em 0..100 com uma casa, meio para cima.
-
-    O `+ 0.5` seguido de `floor` reproduz o `Math.round` do navegador, que
-    arredonda meio para cima — o `round` do numpy arredondaria meio para o par.
-
-    O passo do meio existe por um motivo menos óbvio. Como os percentis são
-    frações de inteiros, a soma ponderada cai EXATAMENTE em x,x5 com alguma
-    frequência: no caso que quebrou em produção, o valor exato era 352,5. Em
-    ponto flutuante ninguém acerta 352,5 na mosca — dá 352,5000000000001 numa
-    máquina e 352,4999999999999 noutra, conforme a versão do numpy/pandas
-    mudar a ordem das somas. Um lado arredonda para 35,3, o outro para 35,2, e
-    o teste de paridade acusa uma divergência que não existe: a diferença é de
-    1e-13, e nenhuma decisão de investimento depende dela.
-
-    Encaixar o valor no milionésimo antes de arredondar mata esse ruído sem
-    tocar em nada que seja informação. O navegador faz o mesmo, na mesma ordem.
-    """
-    milesimos = v * 1000
-    milesimos = np.floor(milesimos * 1e6 + 0.5) / 1e6
-    return np.floor(milesimos + 0.5) / 10
-
-
 def calcular(df: pd.DataFrame, p: ParamsFII | None = None,
              *, por_familia: bool = False) -> pd.DataFrame:
     """Acrescenta as colunas de percentil, o SCORE e a posição no ranking.
@@ -119,7 +96,11 @@ def calcular(df: pd.DataFrame, p: ParamsFII | None = None,
             soma += pesos[nome] * pc
         df.loc[idx, "SCORE"] = soma
 
-    df["SCORE"] = _arredondar_score(df["SCORE"])
+    # Arredonda meio para cima, e não com o `round` do numpy, que arredonda meio
+    # para o par. É a mesma regra do `Math.round` do navegador — sem isso, um
+    # score que cai exatamente em x,x5 (o que acontece: percentis são frações de
+    # inteiros) sairia diferente nos dois lados e o teste de paridade quebraria.
+    df["SCORE"] = np.floor(df["SCORE"] * 1000 + 0.5) / 10
     ordem = ["FAMILIA"] if por_familia else []
     df["POSICAO"] = (df.groupby(ordem)["SCORE"].rank(ascending=False, method="min")
                      if ordem else df["SCORE"].rank(ascending=False, method="min"))
@@ -130,6 +111,27 @@ def calcular(df: pd.DataFrame, p: ParamsFII | None = None,
 # ---------------------------------------------------------------------------
 # Alertas
 # ---------------------------------------------------------------------------
+# Rótulo curto (coluna da tabela) -> frase inteira (título ao passar o mouse).
+# A frase completa numa célula de tabela empurra a linha para oito alturas e
+# torna o ranking ilegível quando metade dos fundos tem alerta — que é o caso
+# com dados reais.
+CURTOS = {
+    "extra": "rendimento não recorrente",
+    "dy_alto": "DY muito alto",
+    "desconto": "desconto forte no VP",
+}
+
+
+def alertas_curtos(df: pd.DataFrame) -> pd.Series:
+    """Mesma lógica de `alertas`, em duas ou três palavras."""
+    longos = alertas(df)
+    fora = pd.Series("", index=df.index, dtype=object)
+    fora[longos.str.contains("não recorrente", na=False)] = CURTOS["extra"]
+    fora[longos.str.contains("amortização", na=False)] = CURTOS["dy_alto"]
+    fora[longos.str.contains("valor patrimonial", na=False)] = CURTOS["desconto"]
+    return fora
+
+
 def alertas(df: pd.DataFrame) -> pd.Series:
     """Marca o que um DY alto costuma esconder. Uma frase por fundo, ou vazio.
 
