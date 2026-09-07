@@ -379,3 +379,123 @@ def ticker_do_isin(isin: str | None) -> str | None:
     s = str(isin).strip().upper()
     m = re.fullmatch(r"BR([A-Z]{4})[A-Z]{3}\d{3}", s)
     return m.group(1) if m else None
+
+
+# ---------------------------------------------------------------------------
+# Fiagro
+# ---------------------------------------------------------------------------
+# O informe de Fiagro é o mesmo dado com outra embalagem: um zip por competência
+# (não por ano) e uma tabela larga só (não três). Os nomes também mudam —
+# `CNPJ_Classe` no lugar de `CNPJ_Fundo_Classe`, `Numero_Cotistas` no lugar de
+# `Total_Numero_Cotistas`, `Data_Registro` no lugar de `Data_Funcionamento`. O
+# localizador tolerante de colunas absorve parte disso; o resto está explícito
+# abaixo, com o nome real ao lado do alternativo.
+def _competencias(n: int = 4) -> list[str]:
+    """As `n` competências mais recentes, da mais nova para a mais velha."""
+    hoje = pd.Timestamp.today()
+    fora = []
+    ano, mes = hoje.year, hoje.month
+    for _ in range(n):
+        mes -= 1
+        if mes == 0:
+            mes, ano = 12, ano - 1
+        fora.append(f"{ano}{mes:02d}")
+    return fora
+
+
+def baixar_informe_fiagro(comp: str, *, usar_cache: bool = True) -> zipfile.ZipFile:
+    arq = _cache(f"inf_mensal_fiagro_{comp}.zip")
+    if usar_cache and arq.exists() and arq.stat().st_size > 512:
+        return zipfile.ZipFile(arq)
+    conteudo = _baixar(C.INF_MENSAL_FIAGRO.format(comp=comp), timeout=180)
+    if usar_cache:
+        arq.write_bytes(conteudo)
+        return zipfile.ZipFile(arq)
+    return zipfile.ZipFile(io.BytesIO(conteudo))
+
+
+def ler_informe_fiagro(*, competencias: int = 4,
+                       usar_cache: bool = True) -> pd.DataFrame:
+    """Informe de Fiagro consolidado, no mesmo formato que `ler_informe`.
+
+    Lê várias competências de propósito. A mais recente sai incompleta: em
+    06/09/2026 o arquivo de 08/2026 tinha 9 fundos e o de 07/2026 tinha mais de
+    cem, porque os administradores ainda estavam entregando. Ler quatro e ficar
+    com a linha mais nova de cada fundo resolve sem precisar adivinhar qual
+    competência já "fechou".
+    """
+    partes = []
+    for comp in _competencias(competencias):
+        try:
+            zf = baixar_informe_fiagro(comp, usar_cache=usar_cache)
+        except Exception as exc:                               # noqa: BLE001
+            log.info("Fiagro %s indisponível (%s).", comp, str(exc)[:60])
+            continue
+        # o zip traz também um CSV de subclasse, que não interessa aqui
+        principais = [n for n in zf.namelist()
+                      if n.lower().endswith(".csv") and "subclasse" not in n.lower()]
+        for nome in principais:
+            partes.append(_ler_csv(zf, nome))
+    if not partes:
+        log.warning("Nenhuma competência de Fiagro foi baixada.")
+        return pd.DataFrame()
+
+    bruto = pd.concat(partes, ignore_index=True)
+    c_cnpj = coluna(bruto, "cnpj_classe", "cnpj_fundo", "cnpj")
+    c_data = coluna(bruto, "data_referencia", "data_competencia")
+    d = _ultimo_por_fundo(bruto, c_cnpj, c_data,
+                          coluna(bruto, "versao", obrigatoria=False))
+
+    out = pd.DataFrame({
+        "CNPJ": _cnpj_limpo(d[c_cnpj]),
+        "COMPETENCIA": d["_data"].dt.strftime("%Y-%m"),
+        "DT_INFORME": d["_data"],
+    })
+    out["NOME"] = _texto(d, coluna(d, "nome_classe", "nome_fundo", obrigatoria=False))
+    out["ISIN"] = _texto(d, coluna(d, "codigo_isin", "isin", obrigatoria=False))
+    out["ADMINISTRADOR"] = _texto(d, coluna(d, "nome_administrador", obrigatoria=False))
+    out["GESTAO"] = _texto(d, coluna(d, "nome_gestor", obrigatoria=False))
+    out["PUBLICO_ALVO"] = _texto(d, coluna(d, "publico_alvo", obrigatoria=False))
+    out["SEGMENTO"] = _texto(d, coluna(d, "classificacao_autorregulada",
+                                       "regra_anexo", obrigatoria=False))
+    # O Fiagro descreve o mercado por extenso — "BOLSA", "BALCAO",
+    # "BALCAO NAO ORGANIZADO" — enquanto o FII usa S/N. Sem traduzir, o filtro de
+    # "não negociado em bolsa" não pegaria nenhum Fiagro de balcão, e dezenas de
+    # fundos fechados entrariam no universo só para depois cair por falta de
+    # cotação, com o motivo errado na aba de excluídos.
+    mercado = _texto(d, coluna(d, "mercado_negociacao", obrigatoria=False))
+    out["MERCADO"] = mercado
+    out["NEGOCIA_BOLSA"] = mercado.str.upper().str.contains("BOLSA", na=False).map(
+        {True: "S", False: "N"}).astype("string")
+    out["DT_ENTREGA"] = pd.to_datetime(
+        _texto(d, coluna(d, "data_entrega", obrigatoria=False)), errors="coerce")
+    out["DT_FUNCIONAMENTO"] = pd.to_datetime(
+        _texto(d, coluna(d, "data_registro", "data_funcionamento", obrigatoria=False)),
+        errors="coerce")
+    out["PL"] = _valor(d, coluna(d, "patrimonio_liquido", obrigatoria=False))
+    out["ATIVO_TOTAL"] = _valor(d, coluna(d, "valor_ativo", obrigatoria=False))
+    out["COTAS"] = _valor(d, coluna(d, "cotas_emitidas", obrigatoria=False))
+    out["VP_COTA"] = _valor(d, coluna(d, "valor_patrimonial_cotas", obrigatoria=False))
+    out["COTISTAS"] = _valor(d, coluna(d, "numero_cotistas", obrigatoria=False))
+    out["DY_MES_CVM"] = _valor(d, coluna(d, "dividend_yield_mes", obrigatoria=False))
+    out["RENT_EFETIVA_MES"] = _valor(d, coluna(d, "rentabilidade_efetiva_mes",
+                                               obrigatoria=False))
+
+    total = _soma_contas(d, (C.CONTA_FIAGRO_TOTAL,))
+    base = total.where(total > 0)
+    out["PCT_IMOVEIS"] = (_soma_contas(d, C.CONTAS_FIAGRO_IMOVEIS) / base).to_numpy()
+    out["PCT_PAPEL"] = (_soma_contas(d, C.CONTAS_FIAGRO_PAPEL) / base).to_numpy()
+    out["PCT_FOF"] = (_soma_contas(d, C.CONTAS_FIAGRO_FOF) / base).to_numpy()
+    out["TOTAL_INVESTIDO"] = total.to_numpy()
+    out["CAIXA"] = _soma_contas(d, ("Total_Necessidades_Liquidez",)).to_numpy()
+    out["PASSIVO"] = _soma_contas(d, ("Total_Passivo",)).to_numpy()
+
+    out["TIPO_FUNDO"] = C.TIPO_FIAGRO
+    # O Fiagro não tem campo de fundo exclusivo; o filtro correspondente não se
+    # aplica e a coluna fica vazia em vez de inventar um "N".
+    out["EXCLUSIVO"] = pd.NA
+    out["MANDATO"] = pd.NA
+    out["TIPO_CLASSE"] = pd.NA
+    log.info("Fiagro: %d fundos, competência mais recente %s.",
+             len(out), out["COMPETENCIA"].max())
+    return out.reset_index(drop=True)

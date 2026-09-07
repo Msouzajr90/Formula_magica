@@ -127,3 +127,38 @@ class ParamsFII:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+# ---------------------------------------------------------------------------
+# Fiagro
+# ---------------------------------------------------------------------------
+# A CVM publica o informe de Fiagro num dataset separado, com um zip por
+# COMPETÊNCIA (e não por ano, como o de FII) e uma única tabela larga em vez das
+# três do FII. O conteúdo é equivalente: patrimônio, cotas, VP/cota, cotistas,
+# ISIN e a carteira aberta.
+INF_MENSAL_FIAGRO = ("https://dados.cvm.gov.br/dados/FIAGRO/DOC/INF_MENSAL/DADOS"
+                     "/inf_mensal_fiagro_{comp}.zip")
+
+# Contas do informe de Fiagro, agrupadas como as do FII. A carteira de um Fiagro
+# é quase toda crédito do agronegócio — CRA, CPR, CDCA — que é o análogo do CRI
+# num fundo de papel. Terra e participação societária fazem o papel do imóvel.
+CONTAS_FIAGRO_IMOVEIS = ("Imoveis_Rurais", "Participacoes_Societarias")
+CONTAS_FIAGRO_PAPEL = (
+    "CRA", "CRI", "Outros_Titulos_Securitizacao",
+    "CPR", "CDCA", "Outros_Titulos_Credito_Agronegocio",
+    "Debentures", "Notas_Comerciais", "Outros_Titulos_Divida_Corporativa",
+    "Demais_Direitos_Creditorios",
+)
+CONTAS_FIAGRO_FOF = ("Cotas_Fundos_Investimento",)
+CONTA_FIAGRO_TOTAL = "Total_Investido"
+
+# Como o fundo aparece na tela. É informação, não critério de ranking: os três
+# entram no mesmo grupo de crédito (ver `FAMILIA_DE_CREDITO`), porque seguram
+# dívida, pagam todo mês e têm o patrimônio marcado a mercado. O que muda é o
+# lastro e a lei da isenção, e isso o usuário precisa enxergar.
+TIPO_FII = "FII"
+TIPO_FIAGRO = "Fiagro"
+TIPO_FIINFRA = "FI-Infra"
+
+# Fiagro e FI-Infra são ranqueados junto com os FII de papel.
+FAMILIA_DE_CREDITO = "Papel"

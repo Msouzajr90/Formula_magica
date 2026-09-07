@@ -1,0 +1,91 @@
+{
+ "registro_classe.csv": {
+  "linhas": 36680,
+  "colunas": [
+   "ID_Registro_Fundo",
+   "ID_Registro_Classe",
+   "CNPJ_Classe",
+   "Codigo_CVM",
+   "Data_Registro",
+   "Data_Constituicao",
+   "Data_Inicio",
+   "Tipo_Classe",
+   "Denominacao_Social",
+   "Situacao",
+   "Data_Inicio_Situacao",
+   "Classificacao",
+   "Indicador_Desempenho",
+   "Classe_Cotas",
+   "Classificacao_Anbima",
+   "Tributacao_Longo_Prazo",
+   "Entidade_Investimento",
+   "Permitido_Aplicacao_CemPorCento_Exterior",
+   "Classe_ESG",
+   "Forma_Condominio",
+   "Exclusivo",
+   "Publico_Alvo",
+   "Patrimonio_Liquido",
+   "Data_Patrimonio_Liquido",
+   "CNPJ_Auditor",
+   "Auditor",
+   "CNPJ_Custodiante",
+   "Custodiante",
+   "CNPJ_Controlador",
+   "Controlador"
+  ],
+  "pistas": [
+   "Codigo_CVM"
+  ]
+ },
+ "registro_fundo.csv": {
+  "linhas": 90017,
+  "colunas": [
+   "ID_Registro_Fundo",
+   "CNPJ_Fundo",
+   "Codigo_CVM",
+   "Data_Registro",
+   "Data_Constituicao",
+   "Tipo_Fundo",
+   "Denominacao_Social",
+   "Data_Cancelamento",
+   "Situacao",
+   "Data_Inicio_Situacao",
+   "Data_Adaptacao_RCVM175",
+   "Data_Inicio_Exercicio_Social",
+   "Data_Fim_Exercicio_Social",
+   "Patrimonio_Liquido",
+   "Data_Patrimonio_Liquido",
+   "Diretor",
+   "CNPJ_Administrador",
+   "Administrador",
+   "Tipo_Pessoa_Gestor",
+   "CPF_CNPJ_Gestor",
+   "Gestor"
+  ],
+  "pistas": [
+   "Codigo_CVM"
+  ]
+ },
+ "registro_subclasse.csv": {
+  "linhas": 9805,
+  "colunas": [
+   "ID_Registro_Classe",
+   "ID_Subclasse",
+   "Codigo_CVM",
+   "Data_Constituicao",
+   "Data_Inicio",
+   "Denominacao_Social",
+   "Situacao",
+   "Data_Inicio_Situacao",
+   "Forma_Condominio",
+   "Exclusivo",
+   "Publico_Alvo",
+   "Previdenciario",
+   "Exclusivo_INR",
+   "Exclusivo_Previdencia_Complementar"
+  ],
+  "pistas": [
+   "Codigo_CVM"
+  ]
+ }
+}
