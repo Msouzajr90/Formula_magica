@@ -143,6 +143,14 @@
 .pill.papel{border-color:var(--s1);color:var(--s1)}
 .pill.tijolo{border-color:var(--s3);color:var(--s3)}
 .pill.hibrido{border-color:var(--s2);color:var(--s2)}
+/* Selo do veiculo (Fiagro, FI-Infra) ao lado do codigo. Menor e mais discreto
+   que a pill de familia de proposito: a familia decide o ranking, o veiculo e
+   informacao. */
+.selo{display:inline-block;font-size:9.5px;letter-spacing:.03em;vertical-align:2px;
+      border-radius:4px;padding:1px 4px;border:1px solid var(--line-strong);
+      color:var(--ink-2);background:var(--surface-2);cursor:help}
+.selo.fiagro{border-color:var(--s3);color:var(--s3)}
+.selo.fiinfra{border-color:var(--s2);color:var(--s2)}
 .alerta{font-size:11.5px;color:var(--s2);max-width:160px;white-space:nowrap;
         overflow:hidden;text-overflow:ellipsis;cursor:help}
 .sel{width:26px;text-align:center}

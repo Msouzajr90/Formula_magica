@@ -300,6 +300,36 @@
         <b>Sem dado</b> e são ranqueados à parte, em vez de entrarem num grupo
         por omissão.</p>
 
+      <h2 style="margin-top:24px">Fiagro e FI-Infra na mesma lista</h2>
+      <p class="note">Três veículos, um grupo de ranking — e um selo para não
+        confundir.</p>
+      <p>A lista não é só de FII. Entram também os <b>Fiagro</b>, fundos do
+        agronegócio, e os <b>FI-Infra</b>, fundos incentivados de infraestrutura.
+        Os dois aparecem com um selo ao lado do código e são ranqueados junto
+        com os FII de <b>papel</b>. O motivo é o P/VP: os três carregam dívida
+        marcada a mercado e pagam todo mês, então o patrimônio é apurado do
+        mesmo jeito e o múltiplo é comparável — o que não acontece contra um
+        fundo de tijolo, cujo patrimônio vem de laudo anual.</p>
+      <p class="note">O que <b>não</b> é igual, e por isso o selo existe: o
+        lastro (CRA e CPR no Fiagro, debênture incentivada no FI-Infra) e a lei
+        que dá a isenção de imposto de renda ao cotista pessoa física — Lei
+        11.033 no FII, 14.130 no Fiagro e 12.431 no FI-Infra. São regimes
+        distintos, com condições próprias.</p>
+      <div class="warn" style="margin-top:14px">
+        <b>Como o FI-Infra entra, e por que ele é o único que depende de uma
+        lista.</b> Todo o resto do site descobre o código de negociação a partir
+        do ISIN publicado pela CVM. O FI-Infra não tem informe mensal — aos
+        olhos da CVM ele é um fundo comum, e o que existe dele é o informe
+        diário, que não traz ISIN. Procuramos o vínculo nos três arquivos do
+        cadastro novo (136 mil linhas): não há ISIN nem código de negociação em
+        lugar nenhum. Então os códigos vêm de uma lista, e a lista é
+        <b>conferida por máquina a cada coleta</b>: o CNPJ tem que existir no
+        cadastro da CVM, estar em funcionamento normal e continuar com a mesma
+        razão social. Falhou qualquer um dos três, o fundo sai da tela com o
+        motivo registrado. O erro possível é faltar um fundo, nunca aparecer um
+        fundo errado.
+      </div>
+
       <h2 style="margin-top:24px">O que este score não olha</h2>
       <p class="note">A lista importa mais que a fórmula.</p>
       <ul class="note">
@@ -332,8 +362,15 @@
           <tr><td class="l">Composição da carteira</td>
               <td class="l">Informe mensal da CVM (ativo e passivo)</td>
               <td class="l">mensal</td></tr>
+          <tr><td class="l">Patrimônio e cotistas do Fiagro</td>
+              <td class="l">Informe mensal de Fiagro da CVM</td>
+              <td class="l">mensal, um arquivo por competência</td></tr>
+          <tr><td class="l">Cota, patrimônio e cotistas do FI-Infra</td>
+              <td class="l">Informe diário de fundos da CVM</td>
+              <td class="l">diária</td></tr>
           <tr><td class="l">Código de negociação</td>
-              <td class="l">API da B3, com o ISIN da CVM como reserva</td>
+              <td class="l">ISIN do informe da CVM (FII e Fiagro); lista
+                conferida contra o cadastro da CVM (FI-Infra)</td>
               <td class="l">—</td></tr>
           <tr><td class="l">Preço e volume</td><td class="l">Yahoo Finance</td>
               <td class="l">fechamento do pregão anterior</td></tr>
@@ -352,9 +389,9 @@
     <p><b>Ferramenta de estudo. Não é recomendação de investimento.</b>
        Rentabilidade passada não garante rentabilidade futura, e em fundo
        imobiliário o rendimento distribuído não é garantido.</p>
-    <p>Informe mensal e cadastro de FII da CVM, códigos de negociação da B3,
-       preços e proventos do Yahoo Finance. A data no topo da página diz quando
-       os dados foram coletados.</p>
+    <p>Informe mensal de FII e de Fiagro, informe diário e cadastro de fundos da
+       CVM; códigos de negociação do ISIN da CVM; preços e proventos do Yahoo
+       Finance. A data no topo da página diz quando os dados foram coletados.</p>
   </footer>
 </main>
 </div>

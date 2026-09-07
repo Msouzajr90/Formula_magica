@@ -122,9 +122,20 @@ def baixar_informe_mensal(ano: int, *, usar_cache: bool = True) -> zipfile.ZipFi
 
 
 def _ler_csv(zf: zipfile.ZipFile, nome: str) -> pd.DataFrame:
+    """CSV do zip. Arquivo vazio devolve tabela vazia, e não exceção.
+
+    A CVM publica, de vez em quando, um membro sem uma linha sequer — uma
+    competência que ninguém entregou, um arquivo de subclasse que não se aplica.
+    Deixar o `EmptyDataError` subir mataria a leitura do zip inteiro por causa
+    de um arquivo que não tinha nada a dizer.
+    """
     with zf.open(nome) as fh:
-        return pd.read_csv(fh, sep=";", encoding="ISO-8859-1",
-                           dtype="string", low_memory=False)
+        try:
+            return pd.read_csv(fh, sep=";", encoding="ISO-8859-1",
+                               dtype="string", low_memory=False)
+        except pd.errors.EmptyDataError:
+            log.info("%s está vazio.", nome)
+            return pd.DataFrame()
 
 
 def _membros(zf: zipfile.ZipFile, familia: str) -> list[str]:
@@ -210,6 +221,11 @@ def ler_informe(ano: int, *, meses: int = 3,
     out["COTAS"] = _valor(g, coluna(g, "quantidade_cotas_emitidas",
                                     "total_numero_cotas", "cotas_emitidas",
                                     obrigatoria=False))
+    # Desde que Fiagro e FI-Infra entraram na mesma tabela, o tipo de veículo
+    # precisa viajar junto com a linha: é ele que decide a família no ranking e
+    # é ele que o usuário vê ao lado do código.
+    out["TIPO_FUNDO"] = C.TIPO_FII
+    out["MERCADO"] = pd.NA
 
     out = out.merge(_do_complemento(compl), on="CNPJ", how="left")
     out = out.merge(_do_ativo_passivo(ativo), on="CNPJ", how="left")
@@ -499,3 +515,158 @@ def ler_informe_fiagro(*, competencias: int = 4,
     log.info("Fiagro: %d fundos, competência mais recente %s.",
              len(out), out["COMPETENCIA"].max())
     return out.reset_index(drop=True)
+
+
+# ---------------------------------------------------------------------------
+# Cadastro novo (Resolução 175): fundo, classe e subclasse
+# ---------------------------------------------------------------------------
+def baixar_registro_classes(*, usar_cache: bool = True) -> pd.DataFrame:
+    """CNPJ, razão social e situação de TODO fundo registrado — não só FII.
+
+    É o cadastro que substituiu o `cad_fi.csv` depois da Resolução 175, quando
+    o fundo passou a ser um invólucro e a classe de cotas virou a unidade que
+    tem CNPJ, patrimônio e cotista. O zip traz três CSVs (fundo, classe e
+    subclasse); aqui interessam os dois primeiros, e os dois entram na mesma
+    tabela porque o informe diário ora identifica o fundo, ora a classe.
+
+    Serve a um propósito só: conferir a lista de FI-Infra. Cada linha da lista
+    tem que casar com um CNPJ que existe aqui e está em funcionamento normal —
+    se um fundo for incorporado ou liquidado, a conferência falha e o código
+    avisa em vez de publicar patrimônio de um fundo que não existe mais.
+
+    Atenção ao que este arquivo **não** tem: ISIN e código de negociação. Foi
+    verificado nos três CSVs, 136 mil linhas — a única coluna parecida é
+    `Codigo_CVM`, que é o número de registro na autarquia. É por isso que o
+    FI-Infra depende de uma lista de códigos, e o FII não.
+    """
+    arq = _cache("registro_fundo_classe.zip")
+    if usar_cache and arq.exists() and arq.stat().st_size > 100_000:
+        zf = zipfile.ZipFile(arq)
+    else:
+        conteudo = _baixar(C.REGISTRO_FUNDO_CLASSE, timeout=600)
+        if usar_cache:
+            arq.write_bytes(conteudo)
+            zf = zipfile.ZipFile(arq)
+        else:
+            zf = zipfile.ZipFile(io.BytesIO(conteudo))
+
+    partes = []
+    for nome in zf.namelist():
+        if not nome.lower().endswith(".csv") or "subclasse" in nome.lower():
+            continue
+        bruto = _ler_csv(zf, nome)
+        if bruto.empty:
+            continue
+        c_cnpj = coluna(bruto, "cnpj_classe", "cnpj_fundo", "cnpj",
+                        obrigatoria=False)
+        if c_cnpj is None:
+            continue
+        pedaco = pd.DataFrame({"CNPJ": _cnpj_limpo(bruto[c_cnpj])})
+        pedaco["NOME"] = _texto(bruto, coluna(
+            bruto, "denominacao_social", "nome_classe", "nome_fundo",
+            "denominacao", obrigatoria=False))
+        pedaco["SITUACAO"] = _texto(bruto, coluna(bruto, "situacao",
+                                                  obrigatoria=False))
+        pedaco["TIPO_CLASSE"] = _texto(bruto, coluna(
+            bruto, "tipo_classe", "tipo_fundo", obrigatoria=False))
+        pedaco["CLASSIFICACAO"] = _texto(bruto, coluna(
+            bruto, "classificacao", obrigatoria=False))
+        pedaco["DT_FUNCIONAMENTO"] = pd.to_datetime(
+            _texto(bruto, coluna(bruto, "data_inicio_situacao", "data_registro",
+                                 "data_constituicao", obrigatoria=False)),
+            errors="coerce", dayfirst=False)
+        pedaco["ORIGEM"] = Path(nome).stem
+        partes.append(pedaco[pedaco["CNPJ"].str.fullmatch(r"\d{14}", na=False)])
+
+    if not partes:
+        raise RuntimeError(
+            "O registro de fundos e classes não trouxe nenhuma tabela com CNPJ. "
+            f"Conteúdo do zip: {zf.namelist()}")
+
+    todos = pd.concat(partes, ignore_index=True)
+    # Um CNPJ pode aparecer como fundo e como classe. Fica a linha ativa, se
+    # houver — é ela que interessa para dizer se o fundo ainda existe.
+    todos["_ativo"] = todos["SITUACAO"].str.upper().str.strip().eq(
+        C.SITUACAO_ATIVA).fillna(False)
+    todos = todos.sort_values(["CNPJ", "_ativo"])
+    todos = todos.drop_duplicates(subset=["CNPJ"], keep="last")
+    log.info("Registro CVM: %d CNPJ distintos, %d em funcionamento normal.",
+             len(todos), int(todos["_ativo"].sum()))
+    return todos.drop(columns=["_ativo"]).reset_index(drop=True)
+
+
+# ---------------------------------------------------------------------------
+# Informe diário (FI comum) — a única fonte de patrimônio do FI-Infra
+# ---------------------------------------------------------------------------
+def ler_informe_diario(cnpjs, *, competencias: int = 3,
+                       usar_cache: bool = True) -> pd.DataFrame:
+    """Última cota, patrimônio e nº de cotistas dos CNPJ pedidos.
+
+    O arquivo mensal do informe diário tem dezenas de MB e milhares de fundos;
+    ler tudo para ficar com uma dúzia de linhas seria desperdício de memória em
+    máquina modesta. Daí a leitura em blocos, filtrando por CNPJ antes de
+    acumular.
+    """
+    alvo = {str(c).strip() for c in cnpjs if str(c).strip()}
+    if not alvo:
+        return pd.DataFrame(columns=["CNPJ", "DT_INFORME", "VP_COTA", "PL",
+                                     "COTISTAS", "COMPETENCIA"])
+
+    partes: list[pd.DataFrame] = []
+    for comp in _competencias(competencias):
+        try:
+            zf = _zip_informe_diario(comp, usar_cache=usar_cache)
+        except Exception as exc:                                # noqa: BLE001
+            log.info("Informe diário %s indisponível (%s).", comp, str(exc)[:60])
+            continue
+        for nome in zf.namelist():
+            if not nome.lower().endswith(".csv"):
+                continue
+            with zf.open(nome) as fh:
+                try:
+                    blocos = pd.read_csv(fh, sep=";", encoding="ISO-8859-1",
+                                         dtype="string", chunksize=250_000)
+                except pd.errors.EmptyDataError:
+                    continue
+                for bloco in blocos:
+                    c_cnpj = coluna(bloco, "cnpj_fundo_classe", "cnpj_fundo",
+                                    "cnpj", obrigatoria=False)
+                    if c_cnpj is None:
+                        break
+                    limpo = _cnpj_limpo(bloco[c_cnpj])
+                    achou = bloco[limpo.isin(alvo)].copy()
+                    if achou.empty:
+                        continue
+                    achou["CNPJ"] = limpo[limpo.isin(alvo)]
+                    partes.append(achou)
+
+    if not partes:
+        log.warning("Nenhum dos %d CNPJ apareceu no informe diário.", len(alvo))
+        return pd.DataFrame(columns=["CNPJ", "DT_INFORME", "VP_COTA", "PL",
+                                     "COTISTAS", "COMPETENCIA"])
+
+    bruto = pd.concat(partes, ignore_index=True)
+    c_data = coluna(bruto, "dt_comptc", "data_competencia", "data_referencia")
+    d = _ultimo_por_fundo(bruto, "CNPJ", c_data, None)
+
+    out = pd.DataFrame({"CNPJ": d["CNPJ"].to_numpy(),
+                        "DT_INFORME": d["_data"].to_numpy()})
+    out["COMPETENCIA"] = d["_data"].dt.strftime("%Y-%m").to_numpy()
+    out["VP_COTA"] = _valor(d, coluna(d, "vl_quota", "valor_cota",
+                                      obrigatoria=False)).to_numpy()
+    out["PL"] = _valor(d, coluna(d, "vl_patrim_liq", "patrimonio_liquido",
+                                 obrigatoria=False)).to_numpy()
+    out["COTISTAS"] = _valor(d, coluna(d, "nr_cotst", "numero_cotistas",
+                                       obrigatoria=False)).to_numpy()
+    return out.reset_index(drop=True)
+
+
+def _zip_informe_diario(comp: str, *, usar_cache: bool = True) -> zipfile.ZipFile:
+    arq = _cache(f"inf_diario_fi_{comp}.zip")
+    if usar_cache and arq.exists() and arq.stat().st_size > 100_000:
+        return zipfile.ZipFile(arq)
+    conteudo = _baixar(C.INF_DIARIO_FI.format(comp=comp), timeout=900)
+    if usar_cache:
+        arq.write_bytes(conteudo)
+        return zipfile.ZipFile(arq)
+    return zipfile.ZipFile(io.BytesIO(conteudo))

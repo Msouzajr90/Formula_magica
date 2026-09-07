@@ -343,7 +343,8 @@ function visiveis() {
   let lista = comScore;
   if (estado.familia !== 'todas') lista = lista.filter(f => f.familia === estado.familia);
   if (q) {
-    lista = lista.filter(f => [f.ticker, f.nome, f.segmento, f.admin, f.mandato]
+    lista = lista.filter(f => [f.ticker, f.nome, f.segmento, f.admin, f.mandato,
+                               f.tipoFundo]
       .some(v => String(v ?? '').toLowerCase().includes(q)));
   }
   const c = estado.ordem, sinal = estado.dir === 'asc' ? 1 : -1;
@@ -389,6 +390,26 @@ function renderChips() {
     b.addEventListener('click', () => { estado.familia = b.dataset.f; render(); }));
 }
 
+// Fiagro e FI-Infra são ranqueados junto com os FII de papel, mas não são FII:
+// mudam o lastro (crédito do agronegócio, debênture de infraestrutura) e a lei
+// que dá a isenção de imposto de renda. O selo existe para o usuário não
+// confundir os três só porque estão na mesma lista.
+const TITULO_TIPO = {
+  'Fiagro': 'Fiagro — fundo do agronegócio. Ranqueado com os FII de papel '
+          + 'porque o lastro é crédito (CRA, CPR, CDCA), mas a isenção de IR '
+          + 'vem da Lei 14.130, não da 11.033.',
+  'FI-Infra': 'FI-Infra — fundo incentivado de infraestrutura (Lei 12.431). '
+            + 'Ranqueado com os FII de papel: carrega debênture incentivada, '
+            + 'paga todo mês e tem o patrimônio marcado a mercado.',
+};
+
+function selo(f) {
+  const t = f.tipoFundo && f.tipoFundo !== 'FII' ? f.tipoFundo : '';
+  if (!t) return '';
+  const cls = t.toLowerCase().replace(/[^a-z]/g, '');
+  return ` <span class="selo ${cls}" title="${esc(TITULO_TIPO[t] || t)}">${esc(t)}</span>`;
+}
+
 function linhaRank(f) {
   const marcado = estado.sel.has(f.ticker);
   // "Fundo de fundos" viraria três classes CSS soltas sem o slug.
@@ -398,7 +419,7 @@ function linhaRank(f) {
     <td class="sel"><input type="checkbox" ${marcado ? 'checked' : ''}
         aria-label="incluir ${esc(f.ticker)} na carteira"></td>
     <td class="l num">${f.posicao ?? '—'}</td>
-    <td class="l"><span class="tk">${esc(f.ticker)}</span>
+    <td class="l"><span class="tk">${esc(f.ticker)}</span>${selo(f)}
         <div class="muted cap" title="${esc(f.nome || '')}">${esc(f.nome || '')}</div></td>
     <td class="l"><span class="pill ${fam}">${esc(f.familia || '—')}</span>
         <div class="muted cap">${esc(f.segmento || '')}</div></td>

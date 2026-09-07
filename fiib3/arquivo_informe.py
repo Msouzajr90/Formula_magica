@@ -28,8 +28,11 @@ from pathlib import Path
 import pandas as pd
 
 # 2: acrescenta a composição da carteira (PCT_IMOVEIS/PAPEL/FOF), traz o NOME
-# do próprio informe e deixa de depender do cad_fii.csv, que a CVM tirou do ar.
-VERSAO = 2
+#    do próprio informe e deixa de depender do cad_fii.csv, que a CVM tirou do ar.
+# 3: o arquivo deixa de ser só de FII. Passa a carregar Fiagro e FI-Infra na
+#    mesma tabela, com TIPO_FUNDO dizendo qual é qual, e TICKER preenchido para
+#    o FI-Infra, que é o único sem ISIN de onde derivar o código.
+VERSAO = 3
 
 # coluna no DataFrame -> nome curto no JSON
 CAMPOS_TEXTO = {
@@ -38,6 +41,7 @@ CAMPOS_TEXTO = {
     "ADMINISTRADOR": "admin", "PUBLICO_ALVO": "publico",
     "EXCLUSIVO": "exclusivo", "NEGOCIA_BOLSA": "bolsa",
     "TIPO_CLASSE": "tipoClasse",
+    "TIPO_FUNDO": "tipoFundo", "MERCADO": "mercado", "TICKER": "ticker",
     "NOME": "nome", "SITUACAO": "situacao", "TIPO": "tipo",
 }
 CAMPOS_NUMERO = {
@@ -154,6 +158,10 @@ def importar(caminho: Path | str) -> tuple[pd.DataFrame, pd.DataFrame]:
     # dígitos e os zeros à esquerda que o JSON preservou como texto.
     informe["CNPJ"] = (informe["CNPJ"].str.replace(r"\D", "", regex=True)
                        .str.zfill(14))
+
+    # Arquivo da versão 2 não tem TIPO_FUNDO: tudo o que havia lá era FII, e
+    # deixar a coluna vazia mandaria o fundo inteiro para "Sem dado" no ranking.
+    informe["TIPO_FUNDO"] = informe["TIPO_FUNDO"].fillna("FII")
 
     # NOME fica no informe (vem do `Nome_Fundo_Classe`); o cadastro carrega só o
     # que era exclusivo dele, e hoje costuma vir vazio porque a CVM tirou o

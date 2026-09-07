@@ -124,7 +124,17 @@ def montar_mapa(informe: pd.DataFrame, *, usar_b3: bool = False,
     df["ORIGEM_TICKER"] = sigla_b3.notna().map({True: "b3", False: "isin"})
     df["SIGLA"] = sigla_b3.fillna(pd.Series(do_isin, index=df.index, dtype="string"))
     df.loc[df["SIGLA"].isna(), "ORIGEM_TICKER"] = pd.NA
-    df["TICKER"] = df["SIGLA"].where(df["SIGLA"].isna(), df["SIGLA"] + "11")
+    derivado = df["SIGLA"].where(df["SIGLA"].isna(), df["SIGLA"] + "11")
+
+    # O FI-Infra chega com o código já preenchido, porque não há ISIN de onde
+    # derivá-lo (ver `fiib3/fiinfra.py`). O código que veio na linha vence o
+    # derivado: sem isso, um fundo cujo ISIN levasse a outro prefixo teria o
+    # código sobrescrito por um palpite.
+    ja_tinha = (df["TICKER"].astype("string").str.strip().str.upper()
+                if "TICKER" in df.columns
+                else pd.Series(pd.NA, index=df.index, dtype="string"))
+    df["TICKER"] = ja_tinha.fillna(derivado)
+    df.loc[ja_tinha.notna(), "ORIGEM_TICKER"] = "lista"
     return df
 
 

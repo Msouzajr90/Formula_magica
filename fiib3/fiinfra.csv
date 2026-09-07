@@ -1,0 +1,29 @@
+# Fundos de infraestrutura (FI-Infra) que entram no ranking.
+#
+# POR QUE ESTE ARQUIVO EXISTE
+# O FI-Infra e o unico veiculo do projeto cujo codigo de negociacao nao pode ser
+# derivado do dado aberto: ele nao tem informe mensal, e o informe diario e o
+# cadastro novo da CVM nao trazem ISIN nem codigo de negociacao (conferido nos
+# tres CSVs do registro_fundo_classe.zip, 136 mil linhas). Ou o FI-Infra fica de
+# fora, ou entra por lista.
+#
+# COMO A LISTA NAO ENVELHECE EM SILENCIO
+# Voce escreve so o TICKER. O resto e a maquina que preenche e reconfere a cada
+# execucao (fiib3/fiinfra.py):
+#   - o CNPJ e descoberto casando o nome do fundo no Yahoo com a razao social do
+#     cadastro da CVM, com corte de semelhanca e vantagem sobre o segundo lugar;
+#   - a cada rodada o CNPJ tem que continuar no cadastro, em funcionamento
+#     normal, e com a mesma razao social.
+# Falhou qualquer um desses, o fundo sai do universo e o motivo aparece no log.
+# O erro possivel e "faltou um fundo", nunca "publicou o fundo errado".
+#
+# COMO ACRESCENTAR UM FUNDO
+# Escreva o codigo numa linha nova, deixando as outras colunas em branco, e rode
+# `python baixar_informe_fii.py`. Ele preenche CNPJ, NOME_CVM e CONFERIDO_EM.
+# Se nao conseguir casar, ele diz qual foi o candidato mais parecido e a que
+# distancia ficou — ai voce confere e preenche o CNPJ a mao, se for o caso.
+#
+# NAO coloque aqui FII nem Fiagro: esses dois entram sozinhos, pelo ISIN.
+TICKER;CNPJ;NOME_CVM;CONFERIDO_EM
+CDII11;;;
+JURO11;;;

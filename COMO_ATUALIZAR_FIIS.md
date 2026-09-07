@@ -44,7 +44,8 @@ descarta em silêncio** (é o problema descrito no `COMO_CRIAR_A_ACTION.md`).
 O que precisa ir para o repositório:
 
 ```
-fiib3/                              pasta nova, 10 arquivos
+fiib3/                              pasta nova, 12 arquivos
+                                    (inclui fiinfra.py e fiinfra.csv)
 baixar_informe_fii.py               roda no seu PC
 atualizar_fiis.py                   roda no robô
 verificar_fiis.py                   diagnóstico
@@ -80,9 +81,19 @@ O resto sobe arrastando normalmente.
 .venv\Scripts\python.exe baixar_informe_fii.py
 ```
 
-Ele testa a rota até a CVM, baixa o zip do informe mensal (~1 MB), lê as três
-últimas competências, junta com o cadastro de fundos e grava
-`web\public\informe_fii.json`. Leva menos de um minuto.
+Ele testa a rota até a CVM e baixa **três coisas**, porque a tela tem três tipos
+de veículo:
+
+| Veículo | Fonte na CVM | Formato |
+|---|---|---|
+| FII | `FII/DOC/INF_MENSAL` | um zip por ano, três CSVs por mês |
+| Fiagro | `FIAGRO/DOC/INF_MENSAL` | um zip por competência, uma tabela só |
+| FI-Infra | `FI/DOC/INF_DIARIO` + cadastro | informe diário, filtrado pela lista |
+
+Tudo isso vira um arquivo só, `web\public\informe_fii.json`, com uma coluna
+dizendo qual fundo é de qual tipo. Leva um a dois minutos — o informe diário é o
+arquivo grande da história (dezenas de MB), e fica em cache em
+`~\.fiib3_cache` para as próximas execuções.
 
 Ao terminar, imprime algo assim:
 
@@ -92,9 +103,25 @@ Ao terminar, imprime algo assim:
   [ok   ] valor patrimonial por cota    : 1.238 preenchidos
   [ok   ] numero de cotas               : 1.244 preenchidos
   [ok   ] codigo ISIN                   : 1.180 preenchidos
+
+Lendo o informe mensal de Fiagro...
+  118 fundos | competencia 2026-07
+
+Conferindo a lista de FI-Infra...
+  6 fundos conferidos | competencia 2026-08
+
+Total por tipo de veiculo:
+  FII       : 1.247
+  Fiagro    : 118
+  FI-Infra  : 6
+
   Gravado em web\public\informe_fii.json
-  1.247 fundos | 243 KB | competencia 2026-08
 ```
+
+Se o Fiagro ou o FI-Infra falharem, ele avisa e **segue com o que deu certo** —
+uma fonte fora do ar não pode derrubar a atualização inteira.
+
+Para pular um deles: `--sem-fiagro` ou `--sem-fiinfra`.
 
 **Se aparecer `FALHA` em alguma linha**, a CVM renomeou a coluna. Rode:
 
@@ -105,6 +132,39 @@ Ao terminar, imprime algo assim:
 Ele despeja os nomes reais das colunas do CSV. O conserto é acrescentar o nome
 novo à lista daquele campo em `fiib3/cvm_fii.py` — o código procura por padrões,
 não por nome exato, então basta uma linha.
+
+### 1b. Acrescentar um FI-Infra à lista
+
+Este é o único ponto do projeto em que você digita um código de fundo, e vale
+saber por quê: FII e Fiagro têm ISIN no informe da CVM, e do ISIN sai o código
+de negociação (`BRMXRFCTF008` → `MXRF11`). O FI-Infra não tem informe mensal —
+para a CVM ele é um fundo comum, e o informe diário não traz ISIN. Procurei o
+vínculo nos três arquivos do cadastro novo (`registro_fundo_classe.zip`, 136 mil
+linhas): a única coluna parecida é `Codigo_CVM`, que é o número de registro na
+autarquia. Não existe, no dado aberto, ponte entre o CNPJ e o código da B3.
+
+Então a lista fica em `fiib3/fiinfra.csv`, e **você escreve só o código**:
+
+```
+TICKER;CNPJ;NOME_CVM;CONFERIDO_EM
+CDII11;;;
+JURO11;;;
+KDIF11;;;          ← linha nova, o resto em branco
+```
+
+Rode o `baixar_informe_fii.py`. Ele descobre o CNPJ sozinho: pega o nome longo
+do fundo no Yahoo, normaliza os dois lados e casa contra a razão social do
+cadastro da CVM, exigindo semelhança alta **e** vantagem clara sobre o segundo
+colocado. Deu certo, ele grava CNPJ, razão social e a data no CSV. Não deu, ele
+diz qual foi o candidato mais parecido e a que distância ficou — aí você confere
+e decide.
+
+A partir daí a lista é **reconferida a cada execução**: o CNPJ tem que continuar
+no cadastro, em funcionamento normal, e com a mesma razão social. Se o fundo for
+incorporado ou trocar de nome, ele sai da tela com o motivo no log. A lista pode
+ficar desatualizada; o que ela não pode é publicar um fundo errado em silêncio.
+
+Não coloque FII nem Fiagro aqui — esses dois entram sozinhos.
 
 ### 2. Subir o arquivo
 

@@ -162,3 +162,53 @@ TIPO_FIINFRA = "FI-Infra"
 
 # Fiagro e FI-Infra são ranqueados junto com os FII de papel.
 FAMILIA_DE_CREDITO = "Papel"
+
+
+def familia_do_fundo(tipo, pct_imoveis, pct_papel, pct_fof) -> str:
+    """A família usada no ranking, considerando o tipo de veículo.
+
+    Fiagro e FI-Infra vão para o grupo de papel por decisão, não por medida da
+    carteira. A razão é que o ranking compara P/VP, e P/VP só é comparável entre
+    fundos cujo patrimônio é apurado do mesmo jeito: os três seguram dívida
+    marcada a mercado e pagam todo mês, enquanto um fundo de tijolo carrega
+    laudo anual. Ranquear um Fiagro contra uma laje corporativa mistura duas
+    escalas — é o mesmo motivo pelo qual o ranking pode ser rodado por família.
+
+    A composição continua exportada (PCT_IMOVEIS/PAPEL/FOF), então um Fiagro de
+    terra aparece na tela com a carteira que tem; o que ele não faz é mudar de
+    lista. E `TIPO_FUNDO` fica visível na tabela, para ninguém confundir a
+    isenção de IR de um FII com a de um FI-Infra, que vem de lei diferente.
+    """
+    t = "" if tipo is None else str(tipo).strip()
+    if t in (TIPO_FIAGRO, TIPO_FIINFRA):
+        return FAMILIA_DE_CREDITO
+    return familia(pct_imoveis, pct_papel, pct_fof)
+
+
+# ---------------------------------------------------------------------------
+# FI-Infra
+# ---------------------------------------------------------------------------
+# O FI-Infra (fundo incentivado de investimento em infraestrutura, art. 3º da
+# Lei 12.431) não tem informe mensal próprio: ele é um FI comum aos olhos da
+# CVM, e o que existe dele é o INFORME DIÁRIO — cota, patrimônio e cotistas,
+# um arquivo por competência.
+#
+# E há um problema que não se resolve com dado aberto: **nenhum arquivo da CVM
+# liga o CNPJ do fundo ao código de negociação na B3**. O `cad_fi.csv` não tem
+# ISIN; o `registro_fundo_classe.zip` (cadastro novo, pós-Resolução 175) traz
+# `Codigo_CVM`, que é o número de registro, não o ticker. Foi verificado nos
+# três CSVs do zip, 136 mil linhas: não há ISIN nem código de negociação.
+#
+# Por isso o FI-Infra entra por uma LISTA (`fiinfra.csv`) — e a lista é
+# conferida por máquina a cada execução, ver `fiib3/fiinfra.py`.
+INF_DIARIO_FI = ("https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS"
+                 "/inf_diario_fi_{comp}.zip")
+REGISTRO_FUNDO_CLASSE = ("https://dados.cvm.gov.br/dados/FI/CAD/DADOS"
+                         "/registro_fundo_classe.zip")
+
+# Situação cadastral aceitável para um fundo entrar no universo.
+SITUACAO_ATIVA = "EM FUNCIONAMENTO NORMAL"
+
+# Rótulo de segmento dos FI-Infra na tela. Eles não têm "segmento de atuação"
+# no sentido do FII; o que descreve o fundo é o lastro.
+SEGMENTO_FIINFRA = "Debêntures incentivadas"

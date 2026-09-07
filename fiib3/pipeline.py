@@ -128,6 +128,7 @@ def coletar(p: ParamsFII | None = None, *, ano: int | None = None,
             "fundos_com_ticker": int(com_ticker),
             "fundos_com_cotacao": int(preco.notna().sum()),
             "elegiveis": int(len(elegiveis)),
+            "tipos_no_ranking": _por_tipo(ranking),
             "excluidos": int(len(excluidos)),
             "origem_ticker_b3": int((mapa["ORIGEM_TICKER"] == "b3").sum()),
             "origem_informe": ("arquivo" if arquivo_informe else "cvm"),
@@ -162,6 +163,19 @@ def _com_chance(mapa: pd.DataFrame, negociados: list[str], preco: pd.Series,
     log.info("Proventos: %d de %d fundos passam nos filtros de tamanho.",
              len(restantes), len(negociados))
     return restantes
+
+
+def _por_tipo(ranking: pd.DataFrame) -> dict:
+    """Quantos FII, Fiagro e FI-Infra sobraram no ranking.
+
+    Vai para o rodapé do site. Serve de alarme barato: se o número de Fiagro
+    zerar de uma semana para a outra, alguma coisa quebrou na coleta — e sem
+    esta contagem isso passaria como "o mercado encolheu".
+    """
+    if ranking is None or ranking.empty or "TIPO_FUNDO" not in ranking.columns:
+        return {}
+    return {str(k): int(v) for k, v in
+            ranking["TIPO_FUNDO"].fillna("FII").value_counts().items()}
 
 
 def _competencia(informe: pd.DataFrame) -> str:

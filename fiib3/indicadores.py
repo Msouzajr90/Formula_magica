@@ -69,8 +69,12 @@ def montar(informe: pd.DataFrame, cadastro: pd.DataFrame,
             df[col] = pd.NA
 
     vazio = pd.Series(float("nan"), index=df.index)
-    df["FAMILIA"] = [C.familia(i, p, f) for i, p, f in
-                     zip(df.get("PCT_IMOVEIS", vazio),
+    if "TIPO_FUNDO" not in df.columns:
+        df["TIPO_FUNDO"] = C.TIPO_FII
+    df["TIPO_FUNDO"] = df["TIPO_FUNDO"].fillna(C.TIPO_FII)
+    df["FAMILIA"] = [C.familia_do_fundo(t, i, p, f) for t, i, p, f in
+                     zip(df["TIPO_FUNDO"],
+                         df.get("PCT_IMOVEIS", vazio),
                          df.get("PCT_PAPEL", vazio),
                          df.get("PCT_FOF", vazio))]
 
@@ -153,13 +157,26 @@ def filtrar(df: pd.DataFrame, p: ParamsFII) -> tuple[pd.DataFrame, pd.DataFrame]
     # cada fundo. Um fundo que parou de entregar informe há meses provavelmente
     # foi liquidado ou incorporado — e seguiria no ranking com patrimônio velho,
     # que é pior que não aparecer.
+    #
+    # A comparação é feita DENTRO de cada tipo de fundo, e não na tabela toda,
+    # porque as três fontes têm calendários diferentes: o informe diário do
+    # FI-Infra sai no dia seguinte, o mensal do FII sai até o 15º dia útil do mês
+    # seguinte, e o arquivo-ponte do FII costuma ser gerado uma vez por mês. Uma
+    # régua só, tirada do máximo global, cortaria o mercado inteiro de FII
+    # sempre que o arquivo-ponte atrasasse duas competências.
     if "COMPETENCIA" in df.columns:
-        comps = df["COMPETENCIA"].dropna()
-        if len(comps):
+        tipos = df.get("TIPO_FUNDO", pd.Series(C.TIPO_FII, index=df.index))
+        tipos = tipos.fillna(C.TIPO_FII).astype("string")
+        for tipo in tipos.dropna().unique():
+            no_tipo = tipos.eq(tipo).fillna(False)
+            comps = df.loc[no_tipo, "COMPETENCIA"].dropna()
+            if not len(comps):
+                continue
             atual = comps.max()
-            atrasado = df["COMPETENCIA"].fillna("") < _competencia_anterior(atual, 2)
-            regra(atrasado, f"último informe é de antes de "
-                            f"{_competencia_anterior(atual, 2)} (atual: {atual})")
+            limite = _competencia_anterior(atual, 2)
+            atrasado = no_tipo & (df["COMPETENCIA"].fillna("") < limite)
+            regra(atrasado, f"último informe é de antes de {limite} "
+                            f"(atual em {tipo}: {atual})")
 
     juntos = pd.concat(motivos, axis=1)
     primeiro = juntos.apply(lambda linha: next((m for m in linha if m), ""), axis=1)

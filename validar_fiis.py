@@ -47,6 +47,14 @@ def main() -> int:
     print(f"excluidos          : {len(d.get('excluidos') or [])}")
     print(f"tamanho            : {caminho.stat().st_size / 1024:.0f} KB")
 
+    # Contagem por veiculo. E informativa de proposito: no dia em que o Fiagro
+    # zerar, o numero total de fundos mal se mexe — sao ~15 de 100 — e nenhuma
+    # das checagens abaixo dispara. Ver a linha some do log e o alarme.
+    por_tipo = meta.get("tipos_no_ranking") or {}
+    if por_tipo:
+        print("  por veiculo      : "
+              + ", ".join(f"{k} {v}" for k, v in sorted(por_tipo.items())))
+
     problemas = []
     if meta.get("demo"):
         problemas.append("arquivo veio em modo demonstracao (numeros sorteados)")

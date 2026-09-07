@@ -61,6 +61,19 @@ def _testar_rota() -> bool:
     return False
 
 
+def _juntar(base: pd.DataFrame, extra: pd.DataFrame) -> pd.DataFrame:
+    """Empilha um informe no outro, sem deixar o mesmo CNPJ duas vezes.
+
+    Quem chega depois nao derruba quem ja estava: se um fundo aparecer nas duas
+    fontes — nao deveria, mas a CVM ja reclassificou veiculo antes —, vale a
+    linha do informe mensal de FII, que e a mais completa.
+    """
+    if extra is None or extra.empty:
+        return base
+    junto = pd.concat([base, extra], ignore_index=True)
+    return junto.drop_duplicates(subset=["CNPJ"], keep="first").reset_index(drop=True)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--ano", type=int, default=date.today().year,
@@ -72,6 +85,10 @@ def main() -> int:
                     help="rebaixa, ignorando ~/.fiib3_cache")
     ap.add_argument("--zip", default=None,
                     help="caminho de um inf_mensal_fii_AAAA.zip ja baixado")
+    ap.add_argument("--sem-fiagro", action="store_true",
+                    help="nao baixa o informe mensal de Fiagro")
+    ap.add_argument("--sem-fiinfra", action="store_true",
+                    help="nao baixa o informe diario dos FI-Infra da lista")
     args = ap.parse_args()
 
     print("=" * 68)
@@ -124,6 +141,40 @@ def main() -> int:
         if frac <= 0.2:
             print("          -> rode verificar_fiis.py --colunas: a CVM "
                   "provavelmente renomeou a coluna.")
+
+    # ---- Fiagro e FI-Infra ------------------------------------------------
+    # Os tres vao para a mesma tabela. Fiagro e FI-Infra sao ranqueados junto
+    # com os FII de papel (ver `config.familia_do_fundo`), e a coluna TIPO_FUNDO
+    # e o que o site mostra ao lado do codigo.
+    if not args.sem_fiagro:
+        print("\nLendo o informe mensal de Fiagro...")
+        try:
+            fiagro = cvm_fii.ler_informe_fiagro(usar_cache=not args.sem_cache)
+            print(f"  {len(fiagro):,} fundos | competencia "
+                  f"{fiagro['COMPETENCIA'].max() if len(fiagro) else '-'}")
+            informe = _juntar(informe, fiagro)
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("Fiagro falhou (%s).", str(exc)[:120])
+            print("  AVISO: nao consegui ler o Fiagro; sigo so com FII.")
+
+    if not args.sem_fiinfra:
+        print("\nConferindo a lista de FI-Infra...")
+        try:
+            from fiib3 import fiinfra as _fiinfra
+            infra, avisos = _fiinfra.coletar(usar_cache=not args.sem_cache)
+            print(f"  {len(infra):,} fundos conferidos"
+                  + (f" | competencia {infra['COMPETENCIA'].max()}" if len(infra) else ""))
+            for aviso in avisos:
+                print(f"  - {aviso}")
+            informe = _juntar(informe, infra)
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("FI-Infra falhou (%s).", str(exc)[:120])
+            print("  AVISO: nao consegui montar os FI-Infra; sigo sem eles.")
+
+    if "TIPO_FUNDO" in informe.columns:
+        print("\nTotal por tipo de veiculo:")
+        for tipo, n in informe["TIPO_FUNDO"].value_counts().items():
+            print(f"  {tipo:10s}: {n:,}")
 
     # O cad_fii.csv responde 404 desde a reestruturacao dos arquivos de FII. Ele
     # so acrescentava a situacao cadastral: a razao social vem do proprio

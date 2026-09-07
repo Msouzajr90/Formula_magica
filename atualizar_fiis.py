@@ -60,6 +60,7 @@ def montar_json(res: dict, p: ParamsFII) -> dict:
             "nome": _texto(getattr(r, "NOME", None)) or _texto(getattr(r, "NOME_B3", None)),
             "cnpj": _texto(getattr(r, "CNPJ", None)),
             "familia": _texto(getattr(r, "FAMILIA", None)),
+            "tipoFundo": _texto(getattr(r, "TIPO_FUNDO", None)) or "FII",
             "segmento": _texto(getattr(r, "SEGMENTO", None)),
             "mandato": _texto(getattr(r, "MANDATO", None)),
             "gestao": _texto(getattr(r, "GESTAO", None)),
@@ -98,6 +99,7 @@ def montar_json(res: dict, p: ParamsFII) -> dict:
         excluidos.append({
             "ticker": _texto(getattr(r, "TICKER", None)),
             "nome": _texto(getattr(r, "NOME", None)),
+            "tipoFundo": _texto(getattr(r, "TIPO_FUNDO", None)) or "FII",
             "segmento": _texto(getattr(r, "SEGMENTO", None)),
             "motivo": _texto(getattr(r, "MOTIVO_EXCLUSAO", None)),
         })

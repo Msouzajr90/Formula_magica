@@ -54,7 +54,9 @@ o Yahoo é consultado uma vez por fundo para trazer os rendimentos. Fica tudo em
 | Patrimônio, nº de cotas, VP/cota, cotistas | Informe mensal da CVM (complemento) | até o 15º dia útil do mês seguinte |
 | Composição da carteira (imóvel/recebível/cota) | Informe mensal da CVM (ativo e passivo) | idem |
 | Razão social, segmento, gestão | Informe mensal da CVM (geral) | idem |
-| Código de negociação | ISIN do informe da CVM | — |
+| Patrimônio, cotas e carteira de Fiagro | Informe mensal de Fiagro da CVM | um zip por competência |
+| Cota, patrimônio e cotistas de FI-Infra | Informe diário de fundos da CVM | diária |
+| Código de negociação | ISIN do informe da CVM; lista conferida contra o cadastro, no FI-Infra | — |
 | Preço e volume | Yahoo Finance | fechamento anterior |
 | Rendimentos por cota | Yahoo Finance | data de pagamento |
 
@@ -129,6 +131,54 @@ renda, e o DY sozinho não distingue os dois.
 
 **Liquidez** — volume financeiro médio dos últimos 63 pregões. Em FII isso é
 restrição de verdade: boa parte do mercado não negocia R$ 500 mil por dia.
+
+## Fiagro e FI-Infra
+
+A tela não é só de FII. Entram também os **Fiagro** (fundos do agronegócio) e os
+**FI-Infra** (fundos incentivados de infraestrutura), com um selo ao lado do
+código, e os dois são ranqueados **junto com os FII de papel**.
+
+A razão é o P/VP. O ranking compara preço com valor patrimonial, e esse múltiplo
+só significa a mesma coisa entre fundos cujo patrimônio é apurado do mesmo jeito.
+Os três carregam dívida marcada a mercado e pagam todo mês; o fundo de tijolo
+carrega laudo de avaliação anual. Misturar tijolo com os outros três é comparar
+duas escalas — o mesmo erro que a separação por família existe para evitar.
+
+O que não é igual, e por isso o selo aparece: o lastro (CRI no FII de papel, CRA
+e CPR no Fiagro, debênture incentivada no FI-Infra) e a lei que dá a isenção de
+IR ao cotista pessoa física — 11.033, 14.130 e 12.431, respectivamente. São
+regimes distintos, com condições próprias.
+
+A classificação por carteira continua valendo para o FII e é exportada para os
+três: um Fiagro de terra aparece com `pctImoveis` alto na tela, mas segue no
+grupo de papel, porque o que decide o grupo é como o patrimônio é medido, não o
+que ele contém.
+
+### Por que o FI-Infra depende de uma lista
+
+É o único ponto do projeto com um dado escrito à mão, e essa exceção precisa de
+justificativa. FII e Fiagro publicam ISIN no informe, e do ISIN sai o código de
+negociação. O FI-Infra não tem informe mensal — para a CVM ele é um fundo comum,
+e o informe diário não traz ISIN. O cadastro novo (`registro_fundo_classe.zip`,
+três CSVs, 136 mil linhas) também não: a única coluna parecida é `Codigo_CVM`,
+que é o número de registro na autarquia. **Não existe, no dado aberto, ponte
+entre o CNPJ e o código da B3.**
+
+Lista mantida à mão é exatamente o que a auditoria deste projeto critica — número
+que ninguém revalida e que envelhece em silêncio. A saída foi fazer a lista ser
+conferida por máquina a cada execução (`fiib3/fiinfra.py`):
+
+- o CNPJ de cada código é **descoberto**, não digitado: o nome longo do fundo no
+  Yahoo é normalizado e casado contra a razão social do cadastro da CVM, com
+  corte de semelhança e exigência de vantagem sobre o segundo colocado — dois
+  fundos de nome parecido não são desempatados por sorteio, ficam de fora;
+- a cada rodada, o CNPJ tem que continuar no cadastro, estar em funcionamento
+  normal e manter a mesma razão social;
+- falhou qualquer um desses, o fundo sai do universo com o motivo registrado.
+
+O modo de falha possível é "faltou um fundo na tela", nunca "apareceu um fundo
+errado". Acrescentar um código: escreva o ticker em `fiib3/fiinfra.csv`, deixe o
+resto em branco e rode o `baixar_informe_fii.py`.
 
 ## O score
 
