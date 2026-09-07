@@ -90,7 +90,18 @@ def _ler_membro(zf: zipfile.ZipFile, nome: str,
                     bloco[c] = pd.NA
             bloco = bloco[_COLS]
             if contas:
-                bloco = bloco[bloco["CD_CONTA"].isin(contas)]
+                cod = bloco["CD_CONTA"].astype("string")
+                exatos = {c for c in contas if not c.endswith("*")}
+                prefixos = tuple(c[:-1] for c in contas if c.endswith("*"))
+                mask = cod.isin(exatos)
+                if prefixos:
+                    # "3.*" mantém a DRE inteira até o 3º nível. A DRE é pequena
+                    # perto do balanço, e ler por prefixo é o que permite achar
+                    # o lucro de quem numera as contas de outro jeito — os
+                    # bancos — sem eu ter de adivinhar o código exato.
+                    mask |= cod.str.startswith(prefixos, na=False) & (
+                        cod.str.count(r"\.") <= 2)
+                bloco = bloco[mask]
             ordem = bloco["ORDEM_EXERC"].astype("string").str.strip().str.upper()
             bloco = bloco[ordem == "ÚLTIMO"]
             if len(bloco):
@@ -448,6 +459,12 @@ def composicao_capital(anos: list[int], *, consolidado: bool = True,
     return df[["CNPJ_CIA", "ACOES", "ACOES_BRUTO", "ESCALA_CONFIRMADA"]]
 
 
+def _sem_acento(serie: pd.Series) -> pd.Series:
+    """Minúsculas e sem acento — a CVM não é consistente na acentuação."""
+    return (serie.astype("string").str.strip().str.lower()
+            .str.normalize("NFKD").str.encode("ascii", "ignore").str.decode("ascii"))
+
+
 def marcar_lucro_liquido(dre: pd.DataFrame) -> pd.DataFrame:
     """Devolve só as linhas de lucro líquido, com CD_CONTA normalizado para "LL".
 
@@ -462,14 +479,25 @@ def marcar_lucro_liquido(dre: pd.DataFrame) -> pd.DataFrame:
     """
     if dre.empty or "DS_CONTA" not in dre.columns:
         return dre
-    ds = dre["DS_CONTA"].astype("string").str.strip().str.lower()
-    # "Lucro por Ação" e "Lucro Básico por Ação" não são resultado, são índice
-    nao_e_lucro = ds.str.contains(r"por a[çc][ãa]o", na=False, regex=True)
-    alvos = [C.DS_LUCRO_LIQUIDO, *C.DS_LUCRO_ALTERNATIVAS]
-    bate = pd.Series(False, index=dre.index)
-    for alvo in alvos:
-        bate |= ds.str.startswith(alvo, na=False)
-    ll = dre[bate & ~nao_e_lucro].copy()
+    ds = _sem_acento(dre["DS_CONTA"])
+
+    # Procurar por prefixo exato foi erro meu, três vezes seguidas: basta a CVM
+    # escrever "Resultado Líquido CONSOLIDADO do Período" para "resultado
+    # líquido do período" não casar. O que identifica a linha é o conteúdo —
+    # fala de lucro/resultado E do período —, não a ordem das palavras.
+    fala_de_lucro = ds.str.contains(r"lucro|resultado liquido|prejuizo",
+                                    na=False, regex=True)
+    fala_do_periodo = ds.str.contains(r"periodo|exercicio", na=False, regex=True)
+
+    # O que se parece com lucro mas não é: índice por ação, resultado abrangente
+    # (inclui variação patrimonial que não passou pelo resultado), subtotal
+    # "antes dos tributos", e a linha só das operações descontinuadas.
+    impostor = ds.str.contains(
+        r"por acao|acao basic|acao dilu|abrangente|antes d|descontinuad|"
+        r"por lote|imposto|tributo|participac|minoritari",
+        na=False, regex=True)
+
+    ll = dre[fala_de_lucro & fala_do_periodo & ~impostor].copy()
 
     # Rede de segurança: para quem a descrição não pegou, vale a conta 3.11 do
     # plano padrão. A busca por descrição é para quem NÃO tem 3.11 — ela não

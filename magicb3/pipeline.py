@@ -22,8 +22,12 @@ CONTAS_BP = [
 
 # Únicos códigos que precisam sair dos CSVs da CVM — tudo o mais é descartado
 # durante a leitura, para o processo caber na memória do Streamlit Cloud.
+# "3.*" mantém a DRE inteira até o terceiro nível, em vez de uma lista de
+# códigos. A DRE é pequena perto do balanço, e foi a lista fechada que manteve
+# o Itaú fora: o lucro dele não está em nenhum código que eu soubesse adivinhar,
+# e a linha era descartada na leitura, antes de qualquer busca.
 CONTAS_USADAS = (set(CONTAS_BP) | set(C.CD_PL_CANDIDATOS)
-                 | set(C.CD_LUCRO_CANDIDATOS)
+                 | set(C.CD_LUCRO_CANDIDATOS) | {"3.*"}
                  | {C.CD_EBIT, C.CD_LUCRO_LIQUIDO, C.CD_LPA_BASICO_ON})
 
 
@@ -115,6 +119,7 @@ def montar_universo(params: C.Params, *, anos: list[int] | None = None,
                              "LL")[["CD_CVM", "EBIT_LTM"]]
         lucro = lucro.rename(columns={"EBIT_LTM": "LUCRO_LTM"})
         log.info("lucro líquido localizado em %d companhias", len(lucro))
+        _explicar_lucro_ausente(dfp["DRE"], itr.get("DRE", pd.DataFrame()), lucro)
         ebit = ebit.merge(lucro, on="CD_CVM", how="left")
         bp = bp.merge(cvm.patrimonio_liquido(bpp), on="CD_CVM", how="left")
 
@@ -185,6 +190,38 @@ def montar_universo(params: C.Params, *, anos: list[int] | None = None,
 
     progresso("Calculando ROIC e Earnings Yield...", 0.88)
     return fundamentals.montar_indicadores(ebit, bp, mercado, params)
+
+
+def _explicar_lucro_ausente(dre_dfp: pd.DataFrame, dre_itr: pd.DataFrame,
+                            lucro: pd.DataFrame, limite: int = 4) -> None:
+    """Imprime as contas de DRE de quem ficou sem lucro localizado.
+
+    Existe porque três correções minhas erraram o alvo por eu estar adivinhando
+    qual conta o banco usa, sem conseguir ver o arquivo. Com isto, a própria
+    execução responde — o log passa a trazer o código e a descrição de verdade.
+    """
+    dre = pd.concat([d for d in (dre_dfp, dre_itr) if d is not None and not d.empty],
+                    ignore_index=True) if any(
+        d is not None and not d.empty for d in (dre_dfp, dre_itr)) else pd.DataFrame()
+    if dre.empty:
+        return
+    achados = set(lucro["CD_CVM"]) if not lucro.empty else set()
+    faltando = [c for c in dre["CD_CVM"].dropna().unique() if c not in achados]
+    if not faltando:
+        return
+    log.warning("%d companhias sem lucro líquido localizado. Contas de DRE das "
+                "primeiras %d, para diagnóstico:", len(faltando), min(limite, len(faltando)))
+    for cd in faltando[:limite]:
+        emp = dre[dre["CD_CVM"] == cd]
+        nome = str(emp["DENOM_CIA"].iloc[0])[:34] if "DENOM_CIA" in emp.columns else "?"
+        ult = emp["DT_REFER"].max()
+        emp = emp[(emp["DT_REFER"] == ult)
+                  & emp["CD_CONTA"].astype(str).str.match(r"^3\.\d+$")]
+        log.warning("  CD_CVM %s — %s (data-base %s)", cd, nome,
+                    ult.date() if pd.notna(ult) else "?")
+        for r in emp.sort_values("CD_CONTA").itertuples():
+            log.warning("      %-8s %-46s %14.2f", r.CD_CONTA,
+                        str(r.DS_CONTA)[:46], float(r.VL_CONTA or 0) / 1e9)
 
 
 def montar_carteira(params: C.Params, *, progresso=_nada, usar_cache: bool = True,

@@ -321,3 +321,84 @@ def test_escala_do_banco_sem_conta_3_11(tmp_path):
     banco = out.loc["33.333.333/0001-33"]
     assert bool(banco["ESCALA_CONFIRMADA"]), "sem o lucro a escala fica sem confirmacao"
     assert banco["ACOES"] == pytest.approx(10e6), "10.000 mil = 10 milhoes"
+
+
+def test_lucro_e_achado_por_conteudo_nao_por_ordem_das_palavras():
+    """Tres correcoes minhas erraram por comparar a descricao por prefixo.
+
+    Basta a CVM escrever "Resultado Liquido CONSOLIDADO do Periodo" para o
+    prefixo "resultado liquido do periodo" nao casar. O que identifica a linha
+    e o conteudo, nao a ordem das palavras.
+    """
+    from magicb3 import cvm
+
+    def linha(cd, conta, ds, valor):
+        return {"CD_CVM": cd, "CNPJ_CIA": f"{cd:014d}", "DENOM_CIA": "X",
+                "CD_CONTA": conta, "DS_CONTA": ds, "VL_CONTA": valor,
+                "DT_REFER": pd.Timestamp("2026-06-30"),
+                "DT_INI_EXERC": pd.Timestamp("2026-01-01"),
+                "DT_FIM_EXERC": pd.Timestamp("2026-06-30"),
+                "DT_RECEB": pd.Timestamp("2026-08-01")}
+
+    variantes = [
+        (1, "3.11", "Lucro/Prejuízo Consolidado do Período"),
+        (2, "3.09", "Resultado Líquido Consolidado do Período"),
+        (3, "3.13", "Lucro Líquido do Exercício"),
+        (4, "3.07", "LUCRO LIQUIDO CONSOLIDADO DO PERIODO"),      # sem acento
+        (5, "3.10", "Lucro ou Prejuízo Líquido Consolidado do Período"),
+    ]
+    dre = pd.DataFrame([linha(cd, conta, ds, 100.0) for cd, conta, ds in variantes])
+    ll = cvm.marcar_lucro_liquido(dre)
+    assert set(ll["CD_CVM"]) == {1, 2, 3, 4, 5}, \
+        f"nao achou em: {set(range(1, 6)) - set(ll['CD_CVM'])}"
+
+
+def test_o_que_parece_lucro_mas_nao_e_fica_de_fora():
+    """Cada um destes ja apareceu em DRE e produziria um ROE absurdo."""
+    from magicb3 import cvm
+
+    def linha(cd, conta, ds):
+        return {"CD_CVM": cd, "CNPJ_CIA": f"{cd:014d}", "DENOM_CIA": "X",
+                "CD_CONTA": conta, "DS_CONTA": ds, "VL_CONTA": 5.0,
+                "DT_REFER": pd.Timestamp("2026-06-30"),
+                "DT_INI_EXERC": pd.Timestamp("2026-01-01"),
+                "DT_FIM_EXERC": pd.Timestamp("2026-06-30"),
+                "DT_RECEB": pd.Timestamp("2026-08-01")}
+
+    impostores = [
+        (10, "3.99.01.01", "Lucro por Ação - Básico ON"),
+        (11, "3.98", "Resultado Abrangente Consolidado do Período"),
+        (12, "3.06", "Resultado Antes dos Tributos sobre o Lucro"),
+        (13, "3.12", "Lucro/Prejuízo do Período das Operações Descontinuadas"),
+    ]
+    dre = pd.DataFrame([linha(cd, c, ds) for cd, c, ds in impostores])
+    assert cvm.marcar_lucro_liquido(dre).empty, \
+        f"passou: {list(cvm.marcar_lucro_liquido(dre)['DS_CONTA'])}"
+
+
+def test_leitura_por_prefixo_mantem_a_dre_e_nao_o_balanco_inteiro():
+    """'3.*' precisa trazer a DRE ate o 3o nivel sem arrastar o balanco junto."""
+    import io, zipfile
+    from magicb3 import cvm
+
+    cab = ("CNPJ_CIA;DT_REFER;VERSAO;DENOM_CIA;CD_CVM;GRUPO_DFP;MOEDA;ESCALA_MOEDA;"
+           "ORDEM_EXERC;DT_INI_EXERC;DT_FIM_EXERC;CD_CONTA;DS_CONTA;VL_CONTA;ST_CONTA_FIXA")
+
+    def l(conta, ds):
+        return (f"00.000.000/0001-00;2026-06-30;1;CIA;1;DF Consolidado;REAL;MIL;"
+                f"ÚLTIMO;2026-01-01;2026-06-30;{conta};{ds};10;S")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("x.csv", "\n".join([cab,
+            l("3.05", "EBIT"), l("3.09", "Lucro Liquido"),
+            l("3.11.01", "Atribuido"), l("3.99.01.01", "Lucro por Acao"),
+            l("1.01", "Ativo Circulante"), l("2.03", "Patrimonio"),
+        ]).encode("ISO-8859-1"))
+    buf.seek(0)
+    with zipfile.ZipFile(buf) as z:
+        df = cvm._ler_membro(z, "x.csv", {"3.*", "1.01"})
+    contas = set(df["CD_CONTA"])
+    assert {"3.05", "3.09", "3.11.01", "1.01"} <= contas
+    assert "3.99.01.01" not in contas, "4o nivel nao precisa entrar"
+    assert "2.03" not in contas, "o prefixo 3.* nao pode arrastar o passivo"
