@@ -402,3 +402,31 @@ def test_leitura_por_prefixo_mantem_a_dre_e_nao_o_balanco_inteiro():
     assert {"3.05", "3.09", "3.11.01", "1.01"} <= contas
     assert "3.99.01.01" not in contas, "4o nivel nao precisa entrar"
     assert "2.03" not in contas, "o prefixo 3.* nao pode arrastar o passivo"
+
+
+def test_cache_da_cvm_muda_de_nome_quando_o_filtro_de_contas_muda(tmp_path, monkeypatch):
+    """O parquet guarda o resultado JA FILTRADO.
+
+    Se o nome do cache nao disser quais contas estao la dentro, ampliar o
+    filtro nao tem efeito: a rodada seguinte rele o parquet antigo, podado com
+    o filtro velho. Foi assim que o Itau ficou de fora por dias DEPOIS de a
+    correcao estar publicada — a linha 3.09 dele havia sido descartada quando
+    o cache foi escrito.
+    """
+    from magicb3 import cvm
+
+    monkeypatch.setattr(cvm, "_cache_path", lambda nome: tmp_path / nome)
+
+    estreito = {"3.11", "1.01"}
+    largo = {"3.*", "1.01"}
+    assert cvm._marca_das_contas(estreito) != cvm._marca_das_contas(largo)
+    # e a marca nao pode depender da ordem do conjunto
+    assert cvm._marca_das_contas({"1.01", "3.11"}) == cvm._marca_das_contas(estreito)
+    # sem filtro tem marca propria, e nao se confunde com filtro nenhum
+    assert cvm._marca_das_contas(None) == "tudo"
+    assert cvm._marca_das_contas(set()) == "tudo"
+
+    n1 = cvm._cache_path(f"itr_con_2026_{cvm._marca_das_contas(estreito)}.parquet")
+    n2 = cvm._cache_path(f"itr_con_2026_{cvm._marca_das_contas(largo)}.parquet")
+    n1.write_bytes(b"cache podado com o filtro antigo")
+    assert not n2.exists(), "o filtro novo nao pode reaproveitar o cache do antigo"

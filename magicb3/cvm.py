@@ -7,6 +7,7 @@ Corrige três problemas do script original:
 """
 from __future__ import annotations
 
+import hashlib
 import io
 import logging
 import zipfile
@@ -37,6 +38,27 @@ _ESCALA = {"MIL": 1_000.0, "MILHAO": 1_000_000.0, "UNIDADE": 1.0}
 def _cache_path(name: str) -> Path:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     return CACHE_DIR / name
+
+
+def _marca_das_contas(contas: set[str] | None) -> str:
+    """Impressão digital do filtro de contas, para entrar no nome do cache.
+
+    Sem isto o cache mente. O parquet guarda o resultado JÁ FILTRADO, mas o
+    nome do arquivo só dizia tipo, ano e consolidado — nada sobre quais contas
+    estavam lá dentro. Resultado: ampliar o filtro não tinha efeito nenhum,
+    porque a rodada seguinte relia o parquet antigo, podado com o filtro velho.
+    Foi isso, e não a busca pela descrição, que manteve o Itaú fora depois de
+    a correção estar publicada: a linha 3.09 dele tinha sido descartada quando
+    o cache foi escrito, dias antes, e nunca mais foi lida do zip.
+
+    É a segunda vez que um cache congela uma correção neste projeto — a
+    primeira foi com os lotes de cotação. O nome do cache tem que descrever o
+    que está dentro dele, não só de onde veio.
+    """
+    if not contas:
+        return "tudo"
+    bruto = "|".join(sorted(contas)).encode("utf-8")
+    return hashlib.blake2b(bruto, digest_size=4).hexdigest()
 
 
 def _erro_de_rede(url: str, exc: Exception) -> RuntimeError:
@@ -212,7 +234,8 @@ def carregar_demonstracoes(
     saida: dict[str, list[pd.DataFrame]] = {"DRE": [], "BPA": [], "BPP": []}
 
     for ano in anos:
-        cache = _cache_path(f"{tipo}_{suf}_{ano}.parquet")
+        cache = _cache_path(
+            f"{tipo}_{suf}_{ano}_{_marca_das_contas(contas)}.parquet")
         if usar_cache and cache.exists():
             df = pd.read_parquet(cache)
             for grp in saida:

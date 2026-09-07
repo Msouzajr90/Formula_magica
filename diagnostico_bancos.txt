@@ -1,0 +1,137 @@
+Baixando DRE do ITR 2026 e do DFP 2025...
+
+========================================================================
+19348 — ITAÚ UNIBANCO
+========================================================================
+  data-base 30/06/2026  |  fonte ITR
+
+  3.01     Receitas da Intermediação Financeira                     199.12 bi
+  3.01     Receitas da Intermediação Financeira                     100.07 bi
+  3.02     Despesas da Intermediação Financeira                    -127.36 bi
+  3.02     Despesas da Intermediação Financeira                     -63.01 bi
+  3.03     Resultado Bruto Intermediação Financeira                  71.76 bi
+  3.03     Resultado Bruto Intermediação Financeira                  37.06 bi
+  3.04     Outras Despesas/Receitas Operacionais                    -44.77 bi
+  3.04     Outras Despesas/Receitas Operacionais                    -22.79 bi
+  3.05     Resultado Antes dos Tributos sobre o Lucro                26.98 bi
+  3.05     Resultado Antes dos Tributos sobre o Lucro                14.27 bi
+  3.06     Imposto de Renda e Contribuição Social sobre o L          -2.78 bi
+  3.06     Imposto de Renda e Contribuição Social sobre o L          -1.95 bi
+  3.07     Resultado Líquido das Operações Continuadas               24.20 bi
+  3.07     Resultado Líquido das Operações Continuadas               12.32 bi
+  3.08     Resultado Líquido das Operações Descontinuadas             0.00 bi
+  3.08     Resultado Líquido das Operações Descontinuadas             0.00 bi
+  3.09     Lucro/Prejuízo Consolidado do Período                     24.20 bi
+  3.09     Lucro/Prejuízo Consolidado do Período                     12.32 bi
+  3.99     Lucro por Ação - (R$ / Ação)                               0.00 bi
+  3.99     Lucro por Ação - (R$ / Ação)                               0.00 bi
+
+========================================================================
+22616 — BTG PACTUAL
+========================================================================
+  data-base 30/06/2026  |  fonte ITR
+
+  3.01     Receitas da Intermediação Financeira                      18.59 bi
+  3.01     Receitas da Intermediação Financeira                       8.70 bi
+  3.02     Despesas da Intermediação Financeira                      -3.83 bi
+  3.02     Despesas da Intermediação Financeira                      -2.02 bi
+  3.03     Resultado Bruto Intermediação Financeira                  14.75 bi
+  3.03     Resultado Bruto Intermediação Financeira                   6.68 bi
+  3.04     Outras Despesas/Receitas Operacionais                     -2.80 bi
+  3.04     Outras Despesas/Receitas Operacionais                     -0.56 bi
+  3.05     Resultado Antes dos Tributos sobre o Lucro                11.95 bi
+  3.05     Resultado Antes dos Tributos sobre o Lucro                 6.13 bi
+  3.06     Imposto de Renda e Contribuição Social sobre o L          -1.88 bi
+  3.06     Imposto de Renda e Contribuição Social sobre o L          -0.99 bi
+  3.07     Resultado Líquido das Operações Continuadas               10.07 bi
+  3.07     Resultado Líquido das Operações Continuadas                5.14 bi
+  3.08     Resultado Líquido das Operações Descontinuadas             0.00 bi
+  3.08     Resultado Líquido das Operações Descontinuadas             0.00 bi
+  3.09     Lucro/Prejuízo Consolidado do Período                     10.07 bi
+  3.09     Lucro/Prejuízo Consolidado do Período                      5.14 bi
+  3.99     Lucro por Ação - (R$ / Ação)                               0.00 bi
+  3.99     Lucro por Ação - (R$ / Ação)                               0.00 bi
+
+========================================================================
+24600 — BANCO BMG
+========================================================================
+  data-base 30/06/2026  |  fonte ITR
+
+  3.01     Receitas da Intermediação Financeira                       5.08 bi
+  3.01     Receitas da Intermediação Financeira                       2.84 bi
+  3.02     Despesas da Intermediação Financeira                      -3.30 bi
+  3.02     Despesas da Intermediação Financeira                      -1.95 bi
+  3.03     Resultado Bruto Intermediação Financeira                   1.78 bi
+  3.03     Resultado Bruto Intermediação Financeira                   0.89 bi
+  3.04     Outras Despesas/Receitas Operacionais                     -1.60 bi
+  3.04     Outras Despesas/Receitas Operacionais                     -0.78 bi
+  3.05     Resultado Antes dos Tributos sobre o Lucro                 0.18 bi
+  3.05     Resultado Antes dos Tributos sobre o Lucro                 0.11 bi
+  3.06     Imposto de Renda e Contribuição Social sobre o L           0.13 bi
+  3.06     Imposto de Renda e Contribuição Social sobre o L           0.06 bi
+  3.07     Resultado Líquido das Operações Continuadas                0.31 bi
+  3.07     Resultado Líquido das Operações Continuadas                0.17 bi
+  3.08     Resultado Líquido das Operações Descontinuadas             0.00 bi
+  3.08     Resultado Líquido das Operações Descontinuadas             0.00 bi
+  3.09     Lucro/Prejuízo Consolidado do Período                      0.31 bi
+  3.09     Lucro/Prejuízo Consolidado do Período                      0.17 bi
+  3.99     Lucro por Ação - (R$ / Ação)                               0.00 bi
+  3.99     Lucro por Ação - (R$ / Ação)                               0.00 bi
+
+========================================================================
+80217 — INTER & CO
+========================================================================
+  data-base 30/06/2026  |  fonte ITR
+
+  3.01     Receitas da Intermediação Financeira                       7.49 bi
+  3.01     Receitas da Intermediação Financeira                       3.86 bi
+  3.02     Despesas da Intermediação Financeira                      -3.56 bi
+  3.02     Despesas da Intermediação Financeira                      -1.81 bi
+  3.03     Resultado Bruto Intermediação Financeira                   3.93 bi
+  3.03     Resultado Bruto Intermediação Financeira                   2.04 bi
+  3.04     Outras Despesas/Receitas Operacionais                     -2.94 bi
+  3.04     Outras Despesas/Receitas Operacionais                     -1.53 bi
+  3.05     Resultado Antes dos Tributos sobre o Lucro                 0.99 bi
+  3.05     Resultado Antes dos Tributos sobre o Lucro                 0.51 bi
+  3.06     Imposto de Renda e Contribuição Social sobre o L          -0.12 bi
+  3.06     Imposto de Renda e Contribuição Social sobre o L          -0.07 bi
+  3.07     Resultado Líquido das Operações Continuadas                0.86 bi
+  3.07     Resultado Líquido das Operações Continuadas                0.45 bi
+  3.08     Resultado Líquido das Operações Descontinuadas             0.00 bi
+  3.08     Resultado Líquido das Operações Descontinuadas             0.00 bi
+  3.09     Lucro/Prejuízo Consolidado do Período                      0.86 bi
+  3.09     Lucro/Prejuízo Consolidado do Período                      0.45 bi
+  3.99     Lucro por Ação - (R$ / Ação)                               0.00 bi
+  3.99     Lucro por Ação - (R$ / Ação)                               0.00 bi
+
+========================================================================
+906 — BRADESCO (controle: este funciona)
+========================================================================
+  data-base 30/06/2026  |  fonte ITR
+
+  3.01     Receitas de Intermediação Financeira                     155.21 bi
+  3.01     Receitas de Intermediação Financeira                      77.10 bi
+  3.02     Despesas de Intermediação Financeira                    -111.04 bi
+  3.02     Despesas de Intermediação Financeira                     -55.25 bi
+  3.03     Resultado Bruto de Intermediação Financeira               44.17 bi
+  3.03     Resultado Bruto de Intermediação Financeira               21.85 bi
+  3.04     Outras Despesas e Receitas Operacionais                  -29.01 bi
+  3.04     Outras Despesas e Receitas Operacionais                  -14.51 bi
+  3.05     Resultado antes dos Tributos sobre o Lucro                15.17 bi
+  3.05     Resultado antes dos Tributos sobre o Lucro                 7.34 bi
+  3.06     Imposto de Renda e Contribuição Social sobre o L          -2.69 bi
+  3.06     Imposto de Renda e Contribuição Social sobre o L          -0.09 bi
+  3.07     Lucro ou Prejuízo das Operações Continuadas               12.48 bi
+  3.07     Lucro ou Prejuízo das Operações Continuadas                7.25 bi
+  3.08     Resultado Líquido das Operações Descontinuadas             0.00 bi
+  3.08     Resultado Líquido das Operações Descontinuadas             0.00 bi
+  3.09     Lucro ou Prejuízo antes das Participações e Cont          12.48 bi
+  3.09     Lucro ou Prejuízo antes das Participações e Cont           7.25 bi
+  3.10     Participações nos Lucros e Contribuições Estatut           0.00 bi
+  3.10     Participações nos Lucros e Contribuições Estatut           0.00 bi
+  3.11     Lucro ou Prejuízo Líquido Consolidado do Período          12.48 bi
+  3.11     Lucro ou Prejuízo Líquido Consolidado do Período           7.25 bi
+  3.99     Lucro por Ação (R$/Ação)                                   0.00 bi
+  3.99     Lucro por Ação (R$/Ação)                                   0.00 bi
+
+Copie tudo acima e me mande.
