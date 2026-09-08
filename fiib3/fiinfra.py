@@ -1,96 +1,79 @@
-"""FI-Infra: a lista de códigos, e a máquina que confere a lista.
+"""FI-Infra: da lista da B3 até patrimônio e cota, com conferência a cada passo.
 
-Por que existe uma lista aqui e não no resto do projeto
--------------------------------------------------------
-Todo o restante do `fiib3` deriva o código de negociação do ISIN publicado pela
-CVM: `BRMXRFCTF008` -> `MXRF11`. Isso funciona para FII e para Fiagro porque o
-informe mensal desses dois traz o ISIN.
+O problema, em uma frase
+------------------------
+O FI-Infra é o único veículo do projeto cujo código de negociação não sai do
+dado da CVM. FII e Fiagro publicam ISIN no informe mensal, e do ISIN sai o
+código (`BRMXRFCTF008` → `MXRF11`). O FI-Infra não tem informe mensal: aos
+olhos da CVM ele é um fundo de investimento comum, e o que existe dele é o
+informe diário, que não traz ISIN. O cadastro novo também não — procurei nos
+três CSVs do `registro_fundo_classe.zip`, 136 mil linhas, e a única coluna
+parecida é `Codigo_CVM`, que é o número de registro na autarquia.
 
-O FI-Infra não tem informe mensal. Aos olhos da CVM ele é um fundo de
-investimento comum — o que existe dele é o **informe diário** (cota, patrimônio
-e cotistas), e o informe diário não traz ISIN. Procurei o vínculo nos três
-arquivos do cadastro novo (`registro_fundo_classe.zip`, 136 mil linhas): a
-única coluna parecida é `Codigo_CVM`, que é o número de registro na autarquia,
-não o código da B3. Não há ISIN nem código de negociação em lugar nenhum do
-dado aberto.
+A ponte que faltava
+-------------------
+A B3 publica a lista dos fundos de infraestrutura listados, com razão social e
+código de negociação (`fiib3/b3/fiinfra.csv`). Ela diz *quem negocia e com que
+código*; falta o CNPJ, que é a chave do informe diário. O CNPJ vem de casar a
+razão social da B3 com a do cadastro da CVM — ver `fiib3/casamento.py`, que
+explica por que isso é comparação de palavras pesadas por raridade e não
+semelhança de texto.
 
-Então ou o FI-Infra fica de fora, ou entra por uma lista. Lista mantida à mão é
-exatamente o tipo de coisa que a auditoria do TCC criticou — número escrito no
-código que ninguém revalida e que envelhece em silêncio. A saída é fazer a
-lista ser **conferida por máquina a cada execução**:
+Medido contra os arquivos reais: dos 41 fundos listados, 28 casam sozinhos e
+nenhum dos 28 está errado. Os outros 13 são casos em que dois fundos do mesmo
+gestor têm nomes que só diferem por uma palavra — o fundo e o FIC que investe
+nele, por exemplo. Aí a máquina não escolhe: escreve os cinco candidatos com
+CNPJ em `fiinfra_pendentes.txt` e espera alguém confirmar.
 
-    1. o CNPJ tem que existir no cadastro da CVM;
-    2. tem que estar "EM FUNCIONAMENTO NORMAL";
-    3. a razão social gravada tem que continuar batendo com a da CVM.
+O que impede a lista de envelhecer em silêncio
+----------------------------------------------
+Lista mantida à mão é o que a auditoria deste projeto critica. Esta não é
+mantida à mão — é sincronizada com a B3 e reconferida a cada execução:
 
-Falhou qualquer um dos três, o fundo sai do universo e o motivo aparece no log e
-na aba de excluídos. O erro possível vira dado faltando, nunca dado errado.
+    1. o código tem que continuar na lista da B3 (senão saiu de negociação);
+    2. o CNPJ tem que existir no cadastro da CVM;
+    3. tem que estar "Em Funcionamento Normal";
+    4. a razão social da CVM tem que continuar a mesma;
+    5. o fundo tem que aparecer no informe diário recente.
 
-O CNPJ de cada código é descoberto pela máquina, não digitado: `resolver()` lê o
-nome longo do fundo no Yahoo, normaliza e casa contra a razão social do cadastro
-da CVM, exigindo semelhança alta e vantagem clara sobre o segundo colocado.
-Depois de resolvido, o CNPJ fica gravado no CSV e as execuções seguintes só
-conferem — sem depender do Yahoo para nada além de preço.
+Falhou qualquer uma, o fundo sai do universo com o motivo registrado. O erro
+possível é "faltou um fundo", nunca "publicou o fundo errado".
 """
 from __future__ import annotations
 
 import csv
 import logging
-import re
-import unicodedata
-from difflib import SequenceMatcher
 from pathlib import Path
 
 import pandas as pd
 
-from . import config as C
-from . import cvm_fii
+from . import b3_listados, casamento, config as C, cvm_fii
 
 log = logging.getLogger(__name__)
 
 LISTA = Path(__file__).parent / "fiinfra.csv"
-COLUNAS = ("TICKER", "CNPJ", "NOME_CVM", "CONFERIDO_EM")
+EXPORT_B3 = b3_listados.EXPORT_FIINFRA
+# Diagnóstico, não dado: fica na raiz para ser aberto e lido, e o .gitignore
+# cuida para não virar arquivo versionado.
+RELATORIO = Path(__file__).parent.parent / "fiinfra_pendentes.txt"
 
-# Semelhança mínima entre o nome do Yahoo e a razão social da CVM, e vantagem
-# mínima sobre o segundo colocado. Os dois juntos: sem o primeiro, "SPARTA" casa
-# com qualquer fundo da casa; sem o segundo, um fundo e sua classe de cotas
-# (nomes quase idênticos) seriam escolhidos por sorteio.
-SEMELHANCA_MINIMA = 0.80
-VANTAGEM_MINIMA = 0.06
-
-# Ruído comum nas duas pontas. Tirar antes de comparar é o que faz
-# "SPARTA INFRA FIC FI INFRAESTRUTURA RESPONSABILIDADE LIMITADA" casar com
-# "SPARTA INFRA FUNDO INCENTIVADO DE INVESTIMENTO EM INFRAESTRUTURA".
-RUIDO = (
-    "FUNDO DE INVESTIMENTO EM COTAS DE FUNDOS DE INVESTIMENTO",
-    "FUNDO INCENTIVADO DE INVESTIMENTO EM INFRAESTRUTURA",
-    "FUNDO DE INVESTIMENTO EM INFRAESTRUTURA",
-    "FUNDO DE INVESTIMENTO",
-    "RESPONSABILIDADE LIMITADA",
-    "RENDA FIXA CREDITO PRIVADO",
-    "CREDITO PRIVADO",
-    "INFRAESTRUTURA",
-    "MULTIMERCADO",
-    "RENDA FIXA",
-    "INCENTIVADO",
-    "FICFI", "FIC", "FIM", "FIRF", "FI", "LP", "RL",
-)
+COLUNAS = ("TICKER", "RAZAO_B3", "CNPJ", "NOME_CVM", "CONFERIDO_EM")
 
 
 # ---------------------------------------------------------------------------
-# A lista
+# A lista resolvida
 # ---------------------------------------------------------------------------
 def ler_lista(caminho: Path | str | None = None) -> pd.DataFrame:
     """Lê `fiinfra.csv`. Comentários (`#`) e linhas em branco são ignorados."""
     caminho = Path(caminho or LISTA)
+    vazia = pd.DataFrame(columns=list(COLUNAS), dtype="string")
     if not caminho.exists():
-        return pd.DataFrame(columns=list(COLUNAS), dtype="string")
+        return vazia
     linhas = [l for l in caminho.read_text(encoding="utf-8").splitlines()
               if l.strip() and not l.lstrip().startswith("#")]
-    if not linhas:
-        return pd.DataFrame(columns=list(COLUNAS), dtype="string")
-    dados = list(csv.DictReader(linhas, delimiter=";"))
-    df = pd.DataFrame(dados, dtype="string")
+    if len(linhas) < 2:
+        return vazia
+    df = pd.DataFrame(list(csv.DictReader(linhas, delimiter=";")), dtype="string")
     for c in COLUNAS:
         if c not in df.columns:
             df[c] = pd.NA
@@ -103,7 +86,7 @@ def ler_lista(caminho: Path | str | None = None) -> pd.DataFrame:
 
 
 def gravar_lista(df: pd.DataFrame, caminho: Path | str | None = None) -> None:
-    """Regrava o CSV preservando o cabeçalho explicativo do arquivo original."""
+    """Regrava o CSV preservando o cabeçalho explicativo do arquivo."""
     caminho = Path(caminho or LISTA)
     cabecalho = []
     if caminho.exists():
@@ -122,103 +105,121 @@ def _vazio_se_nulo(v) -> str:
     return "" if v is None or pd.isna(v) else str(v).strip()
 
 
-# ---------------------------------------------------------------------------
-# Casar código de negociação com CNPJ
-# ---------------------------------------------------------------------------
-def _normalizar(nome) -> str:
-    if nome is None or pd.isna(nome):
-        return ""
-    s = unicodedata.normalize("NFKD", str(nome)).encode("ascii", "ignore").decode()
-    s = re.sub(r"[^A-Za-z0-9 ]", " ", s).upper()
-    for termo in RUIDO:
-        s = re.sub(rf"\b{re.escape(termo)}\b", " ", s)
-    return re.sub(r"\s+", " ", s).strip()
+def sincronizar(lista: pd.DataFrame,
+                export: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
+    """Alinha a lista resolvida com a lista da B3, sem perder o já conferido.
 
+    Três casos, e cada um com uma decisão explícita:
 
-def nome_no_yahoo(ticker: str) -> str | None:
-    """Nome longo do fundo, como o Yahoo publica. `None` se ele não souber."""
-    try:
-        import yfinance as yf
-        info = yf.Ticker(f"{ticker}.SA").get_info() or {}
-    except Exception as exc:                                    # noqa: BLE001
-        log.warning("Yahoo não devolveu o cadastro de %s (%s).",
-                    ticker, str(exc)[:70])
-        return None
-    for campo in ("longName", "shortName", "displayName"):
-        valor = info.get(campo)
-        if valor and str(valor).strip():
-            return str(valor).strip()
-    return None
-
-
-def casar(nome: str, registro: pd.DataFrame) -> tuple[str | None, float, str]:
-    """(CNPJ, semelhança, razão social) do fundo do cadastro que casa com `nome`.
-
-    Devolve CNPJ `None` quando nenhum candidato passa nos dois cortes — é o
-    resultado que interessa quando o dado está ambíguo: melhor não publicar.
+    - código novo na B3 → entra sem CNPJ, para ser resolvido;
+    - código que sumiu da B3 → sai, porque deixou de negociar;
+    - razão social mudou na B3 → o CNPJ conferido é **apagado**. Pode ser só
+      reescrita do nome, mas pode ser incorporação ou troca de gestor, e manter
+      o CNPJ antigo publicaria o patrimônio de um fundo sob o código de outro.
+      Resolver de novo custa uma execução; errar aí não aparece na tela.
     """
-    alvo = _normalizar(nome)
-    if not alvo or registro.empty:
-        return None, 0.0, ""
-    chaves = registro["NOME"].map(_normalizar)
-    notas = chaves.map(lambda c: SequenceMatcher(None, alvo, c).ratio() if c else 0.0)
-    ordem = notas.sort_values(ascending=False)
-    melhor = ordem.index[0]
-    nota = float(ordem.iloc[0])
-    segunda = float(ordem.iloc[1]) if len(ordem) > 1 else 0.0
-    if nota < SEMELHANCA_MINIMA or (nota - segunda) < VANTAGEM_MINIMA:
-        return None, nota, str(registro.loc[melhor, "NOME"] or "")
-    return (str(registro.loc[melhor, "CNPJ"]), nota,
-            str(registro.loc[melhor, "NOME"] or ""))
+    avisos: list[str] = []
+    if export.empty:
+        return lista, ["A lista da B3 está vazia; mantive a lista atual."]
+
+    antes = {r.TICKER: r for r in lista.itertuples()} if not lista.empty else {}
+    linhas, novos, mudados = [], [], []
+    for r in export.itertuples():
+        velho = antes.get(r.TICKER)
+        item = {"TICKER": r.TICKER, "RAZAO_B3": r.RAZAO,
+                "CNPJ": pd.NA, "NOME_CVM": pd.NA, "CONFERIDO_EM": pd.NA}
+        if velho is None:
+            novos.append(r.TICKER)
+        elif casamento.normalizar(velho.RAZAO_B3) != casamento.normalizar(r.RAZAO):
+            mudados.append(r.TICKER)
+        else:
+            item.update({"CNPJ": velho.CNPJ, "NOME_CVM": velho.NOME_CVM,
+                         "CONFERIDO_EM": velho.CONFERIDO_EM})
+        linhas.append(item)
+
+    saiu = sorted(set(antes) - set(export["TICKER"]))
+    if novos:
+        avisos.append(f"{len(novos)} código(s) novos na B3: {', '.join(novos)}.")
+    if mudados:
+        avisos.append(f"{len(mudados)} tiveram a razão social alterada na B3 e "
+                      f"precisam ser resolvidos de novo: {', '.join(mudados)}.")
+    if saiu:
+        avisos.append(f"{len(saiu)} saíram da lista da B3 e do universo: "
+                      f"{', '.join(saiu)}.")
+    return pd.DataFrame(linhas, columns=list(COLUNAS), dtype="string"), avisos
 
 
-def resolver(lista: pd.DataFrame, registro: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
-    """Descobre o CNPJ dos códigos que ainda não têm um. Precisa do Yahoo."""
+# ---------------------------------------------------------------------------
+# Resolver o CNPJ
+# ---------------------------------------------------------------------------
+def resolver(lista: pd.DataFrame,
+             registro: pd.DataFrame) -> tuple[pd.DataFrame, list[str], str]:
+    """Descobre o CNPJ dos códigos que ainda não têm um.
+
+    Devolve `(lista, avisos, relatorio)`. O relatório é o que salva o dia quando
+    a máquina se recusa a escolher: traz os cinco fundos mais parecidos com CNPJ,
+    razão social e situação, prontos para colar. Recusar sem mostrar o que se viu
+    transferiria para a pessoa um garimpo em oitenta mil linhas de cadastro.
+    """
     lista = lista.copy()
     avisos: list[str] = []
+    blocos: list[str] = []
     pendentes = lista.index[lista["CNPJ"].isna()]
     if not len(pendentes):
-        return lista, avisos
+        return lista, avisos, ""
 
+    casador = casamento.Casador(registro)
     hoje = pd.Timestamp.today().strftime("%Y-%m-%d")
     for i in pendentes:
-        ticker = lista.at[i, "TICKER"]
-        nome = nome_no_yahoo(ticker)
-        if not nome:
-            avisos.append(f"{ticker}: o Yahoo não tem o nome do fundo; "
-                          f"não dá para descobrir o CNPJ sozinho.")
-            continue
-        cnpj, nota, candidato = casar(nome, registro)
+        ticker, razao = lista.at[i, "TICKER"], lista.at[i, "RAZAO_B3"]
+        cnpj, nota, candidato = casador.casar(razao)
         if cnpj is None:
             avisos.append(
-                f"{ticker} ({nome}): nenhum fundo do cadastro da CVM casa com "
-                f"segurança — o mais parecido foi \"{candidato}\" "
-                f"({nota:.0%}). Preencha o CNPJ à mão em fiinfra.csv se "
-                f"você conferir que é esse.")
+                f"{ticker}: nenhum fundo do cadastro da CVM casou com segurança "
+                f"(melhor: {nota:.0%}). Os candidatos estão em {RELATORIO.name}.")
+            blocos.append(_bloco_candidatos(casador, ticker, razao))
             continue
         lista.at[i, "CNPJ"] = cnpj
         lista.at[i, "NOME_CVM"] = candidato
         lista.at[i, "CONFERIDO_EM"] = hoje
-        log.info("FI-Infra %s -> %s (%s, semelhança %.0f%%).",
+        log.info("FI-Infra %s -> %s (%s, cobertura %.0f%%).",
                  ticker, cnpj, candidato, nota * 100)
-    return lista, avisos
+    return lista, avisos, "\n".join(blocos)
+
+
+def _bloco_candidatos(casador: casamento.Casador, ticker: str, razao: str) -> str:
+    linhas = [f"{ticker}",
+              f"  razão social na B3: {razao}",
+              f"  candidatos no cadastro da CVM — confira e cole o CNPJ certo na "
+              f"coluna CNPJ de {LISTA.name}:"]
+    for r in casador.candidatos(razao).itertuples():
+        situacao = str(getattr(r, "SITUACAO", "") or "")
+        linhas.append(f"    {r.NOTA:.0%}  {_formatar(r.CNPJ)}  {r.NOME}"
+                      + (f"  [{situacao}]" if situacao else ""))
+    return "\n".join(linhas) + "\n"
+
+
+def _formatar(cnpj: str) -> str:
+    s = str(cnpj).zfill(14)
+    return f"{s[:2]}.{s[2:5]}.{s[5:8]}/{s[8:12]}-{s[12:]}"
 
 
 # ---------------------------------------------------------------------------
 # Conferência
 # ---------------------------------------------------------------------------
-def conferir(lista: pd.DataFrame, registro: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
+def conferir(lista: pd.DataFrame,
+             registro: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
     """Deixa passar só as linhas que ainda batem com o cadastro da CVM."""
+    colunas = ["TICKER", "CNPJ", "NOME", "SITUACAO", "DT_FUNCIONAMENTO"]
     if lista.empty:
-        return lista, []
+        return pd.DataFrame(columns=colunas), []
     reg = registro.drop_duplicates(subset=["CNPJ"]).set_index("CNPJ")
     boas, avisos = [], []
-    hoje = pd.Timestamp.today().strftime("%Y-%m-%d")
 
     for r in lista.itertuples():
         ticker, cnpj = r.TICKER, r.CNPJ
         if cnpj is None or pd.isna(cnpj):
-            avisos.append(f"{ticker}: sem CNPJ na lista — ficou de fora.")
+            avisos.append(f"{ticker}: ainda sem CNPJ — ficou de fora.")
             continue
         if cnpj not in reg.index:
             avisos.append(f"{ticker}: o CNPJ {_formatar(cnpj)} não está no "
@@ -230,27 +231,19 @@ def conferir(lista: pd.DataFrame, registro: pd.DataFrame) -> tuple[pd.DataFrame,
             avisos.append(f"{ticker}: situação na CVM é \"{situacao or 'vazia'}\", "
                           f"não \"{C.SITUACAO_ATIVA}\" — ficou de fora.")
             continue
-        gravado = _normalizar(r.NOME_CVM)
-        atual = _normalizar(linha.get("NOME"))
+        gravado = casamento.normalizar(r.NOME_CVM)
+        atual = casamento.normalizar(linha.get("NOME"))
         if gravado and atual and gravado != atual:
             avisos.append(
                 f"{ticker}: a razão social mudou no cadastro da CVM "
                 f"(\"{r.NOME_CVM}\" -> \"{linha.get('NOME')}\") — ficou de fora "
                 f"até alguém conferir se ainda é o mesmo fundo.")
             continue
-        boas.append({"TICKER": ticker, "CNPJ": cnpj,
-                     "NOME": linha.get("NOME"),
+        boas.append({"TICKER": ticker, "CNPJ": cnpj, "NOME": linha.get("NOME"),
                      "SITUACAO": linha.get("SITUACAO"),
-                     "DT_FUNCIONAMENTO": linha.get("DT_FUNCIONAMENTO"),
-                     "CONFERIDO_EM": hoje})
+                     "DT_FUNCIONAMENTO": linha.get("DT_FUNCIONAMENTO")})
 
-    return pd.DataFrame(boas, columns=["TICKER", "CNPJ", "NOME", "SITUACAO",
-                                       "DT_FUNCIONAMENTO", "CONFERIDO_EM"]), avisos
-
-
-def _formatar(cnpj: str) -> str:
-    s = str(cnpj).zfill(14)
-    return f"{s[:2]}.{s[2:5]}.{s[5:8]}/{s[8:12]}-{s[12:]}"
+    return pd.DataFrame(boas, columns=colunas), avisos
 
 
 # ---------------------------------------------------------------------------
@@ -258,28 +251,39 @@ def _formatar(cnpj: str) -> str:
 # ---------------------------------------------------------------------------
 def coletar(*, usar_cache: bool = True, resolver_pendentes: bool = True,
             caminho: Path | str | None = None,
+            export: Path | str | None = None,
             competencias: int = 2) -> tuple[pd.DataFrame, list[str]]:
-    """Informe dos FI-Infra da lista, no mesmo formato de `cvm_fii.ler_informe`.
+    """Informe dos FI-Infra listados, no formato de `cvm_fii.ler_informe`.
 
-    Devolve `(informe, avisos)`. A lista vazia devolve tabela vazia sem erro —
-    o projeto tem que continuar rodando enquanto ninguém escolheu nenhum fundo.
+    Devolve `(informe, avisos)`. Lista vazia devolve tabela vazia sem erro — o
+    projeto tem que continuar rodando mesmo que a lista da B3 não esteja lá.
 
-    Duas competências bastam: o informe diário sai no dia seguinte ao pregão, e
-    o arquivo do mês anterior sempre existe. Cada competência é um zip de
-    dezenas de MB, então cada uma a mais custa minutos na primeira execução.
+    Duas competências do informe diário bastam: ele sai no dia seguinte ao
+    pregão, e o arquivo do mês anterior sempre existe. Cada competência a mais é
+    um zip de dezenas de MB.
     """
     caminho = Path(caminho or LISTA)
-    lista = ler_lista(caminho)
+    avisos: list[str] = []
+
+    lista, alertas = sincronizar(ler_lista(caminho),
+                                 b3_listados.ler_export(export or EXPORT_B3))
+    avisos += alertas
     if lista.empty:
-        log.info("Nenhum FI-Infra na lista (%s).", caminho.name)
-        return pd.DataFrame(), []
+        log.info("Nenhum FI-Infra na lista.")
+        gravar_lista(lista, caminho)
+        return pd.DataFrame(), avisos
 
     registro = cvm_fii.baixar_registro_classes(usar_cache=usar_cache)
-    avisos: list[str] = []
+    # Só fundos ativos entram como candidatos: casar contra os 44 mil cancelados
+    # só cria empate com fundos que não existem mais.
+    ativos = registro[registro["SITUACAO"].str.upper().str.strip().eq(
+        C.SITUACAO_ATIVA).fillna(False)].reset_index(drop=True)
+
     if resolver_pendentes and lista["CNPJ"].isna().any():
-        lista, novos = resolver(lista, registro)
+        lista, novos, relatorio = resolver(lista, ativos)
         avisos += novos
-        gravar_lista(lista, caminho)
+        _gravar_relatorio(relatorio)
+    gravar_lista(lista, caminho)
 
     conferidos, problemas = conferir(lista, registro)
     avisos += problemas
@@ -291,11 +295,12 @@ def coletar(*, usar_cache: bool = True, resolver_pendentes: bool = True,
                                         competencias=competencias,
                                         usar_cache=usar_cache)
     out = conferidos.merge(diario, on="CNPJ", how="left")
-    sem_dado = out["PL"].isna() if "PL" in out.columns else pd.Series(True, index=out.index)
-    for ticker in out.loc[sem_dado.fillna(True), "TICKER"]:
+    sem_dado = (out["PL"].isna() if "PL" in out.columns
+                else pd.Series(True, index=out.index)).fillna(True)
+    for ticker in out.loc[sem_dado, "TICKER"]:
         avisos.append(f"{ticker}: não apareceu no informe diário da CVM nas "
                       f"últimas {competencias} competências.")
-    out = out[~sem_dado.fillna(True)].copy()
+    out = out[~sem_dado].copy()
     if out.empty:
         return pd.DataFrame(), avisos
 
@@ -306,6 +311,7 @@ def coletar(*, usar_cache: bool = True, resolver_pendentes: bool = True,
     out["SEGMENTO"] = C.SEGMENTO_FIINFRA
     out["NEGOCIA_BOLSA"] = "S"        # é o que define a lista: fundo listado
     out["MERCADO"] = "BOLSA"
+    out["ORIGEM_TICKER"] = "b3"
     for coluna in ("ISIN", "MANDATO", "GESTAO", "ADMINISTRADOR", "PUBLICO_ALVO",
                    "EXCLUSIVO", "TIPO_CLASSE", "DT_ENTREGA", "ATIVO_TOTAL",
                    "RENT_EFETIVA_MES", "DY_MES_CVM", "PCT_IMOVEIS", "PCT_PAPEL",
@@ -314,3 +320,14 @@ def coletar(*, usar_cache: bool = True, resolver_pendentes: bool = True,
     log.info("FI-Infra: %d fundos conferidos, competência %s.",
              len(out), out["COMPETENCIA"].max())
     return out.reset_index(drop=True), avisos
+
+
+def _gravar_relatorio(relatorio: str) -> None:
+    if relatorio:
+        RELATORIO.write_text(
+            "Códigos de FI-Infra que a máquina não conseguiu casar sozinha.\n"
+            f"Confira e cole o CNPJ na coluna CNPJ de fiib3/{LISTA.name}.\n"
+            f"Gerado em {pd.Timestamp.now():%Y-%m-%d %H:%M}.\n\n" + relatorio,
+            encoding="utf-8")
+    elif RELATORIO.exists():
+        RELATORIO.write_text("Nenhum código pendente.\n", encoding="utf-8")

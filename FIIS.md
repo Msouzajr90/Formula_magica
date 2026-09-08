@@ -13,6 +13,11 @@ fiib3/
   cvm_fii.py           informe mensal da CVM e composição da carteira
   arquivo_informe.py   a ponte para a nuvem: grava e lê o informe_fii.json
   tickers_fii.py       CNPJ <-> código de negociação, pelo ISIN da CVM
+  b3_listados.py       a lista de fundos listados da B3 (Fiagro e FI-Infra)
+  casamento.py         casa razão social entre os cadastros da B3 e da CVM
+  fiinfra.py           FI-Infra: lista, conferência e informe diário
+  b3/                  os exports da B3, como vieram
+  fiinfra.csv          códigos de FI-Infra com o CNPJ já resolvido
   mercado.py           preço, liquidez e a série de rendimentos por cota
   indicadores.py       P/VP, DY, consistência e os filtros de universo
   score.py             score multifator
@@ -56,7 +61,8 @@ o Yahoo é consultado uma vez por fundo para trazer os rendimentos. Fica tudo em
 | Razão social, segmento, gestão | Informe mensal da CVM (geral) | idem |
 | Patrimônio, cotas e carteira de Fiagro | Informe mensal de Fiagro da CVM | um zip por competência |
 | Cota, patrimônio e cotistas de FI-Infra | Informe diário de fundos da CVM | diária |
-| Código de negociação | ISIN do informe da CVM; lista conferida contra o cadastro, no FI-Infra | — |
+| Código de negociação (FII) | ISIN do informe da CVM | — |
+| Código de negociação (Fiagro e FI-Infra) | Lista de fundos listados da B3, casada com o cadastro da CVM | quando você baixa a lista |
 | Preço e volume | Yahoo Finance | fechamento anterior |
 | Rendimentos por cota | Yahoo Finance | data de pagamento |
 
@@ -154,31 +160,76 @@ três: um Fiagro de terra aparece com `pctImoveis` alto na tela, mas segue no
 grupo de papel, porque o que decide o grupo é como o patrimônio é medido, não o
 que ele contém.
 
-### Por que o FI-Infra depende de uma lista
+### Como o FI-Infra chega à tela
 
-É o único ponto do projeto com um dado escrito à mão, e essa exceção precisa de
-justificativa. FII e Fiagro publicam ISIN no informe, e do ISIN sai o código de
+O FII e o Fiagro publicam ISIN no informe da CVM, e do ISIN sai o código de
 negociação. O FI-Infra não tem informe mensal — para a CVM ele é um fundo comum,
-e o informe diário não traz ISIN. O cadastro novo (`registro_fundo_classe.zip`,
-três CSVs, 136 mil linhas) também não: a única coluna parecida é `Codigo_CVM`,
-que é o número de registro na autarquia. **Não existe, no dado aberto, ponte
-entre o CNPJ e o código da B3.**
+e o que existe dele é o informe diário, que não traz ISIN. O cadastro novo
+(`registro_fundo_classe.zip`, três CSVs, 136 mil linhas) também não: a única
+coluna parecida é `Codigo_CVM`, que é o número de registro na autarquia. **A CVM
+não publica, em lugar nenhum, a ponte entre o CNPJ e o código da B3.**
 
-Lista mantida à mão é exatamente o que a auditoria deste projeto critica — número
-que ninguém revalida e que envelhece em silêncio. A saída foi fazer a lista ser
-conferida por máquina a cada execução (`fiib3/fiinfra.py`):
+Quem publica é a B3. A lista de fundos listados (`fiib3/b3/fiinfra.csv`, baixada
+do site) traz razão social e código dos 41 FI-Infra listados. O que falta ali é
+o CNPJ, que é a chave do informe diário — e ele sai de casar a razão social da
+B3 com a do cadastro da CVM.
 
-- o CNPJ de cada código é **descoberto**, não digitado: o nome longo do fundo no
-  Yahoo é normalizado e casado contra a razão social do cadastro da CVM, com
-  corte de semelhança e exigência de vantagem sobre o segundo colocado — dois
-  fundos de nome parecido não são desempatados por sorteio, ficam de fora;
-- a cada rodada, o CNPJ tem que continuar no cadastro, estar em funcionamento
-  normal e manter a mesma razão social;
-- falhou qualquer um desses, o fundo sai do universo com o motivo registrado.
+Esse casamento é o coração da coisa, e não é trivial: a B3 corta a razão social
+em 50 caracteres e abrevia o que sobra. O mesmo fundo aparece como
+
+```
+B3    SPARTA INFRA FIC FI INFRA RENDA FIXA CP
+CVM   SPARTA INFRA FI EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM
+      INFRAESTRUTURA RENDA FIXA
+```
+
+Caractere a caractere isso dá 77% de semelhança, abaixo de qualquer corte
+defensável. Em conjunto de palavras — com as abreviações desdobradas e cada
+palavra pesada pelo inverso da frequência com que aparece no cadastro — os dois
+nomes são quase idênticos. O `fiib3/casamento.py` documenta as três decisões e
+o que cada uma custou em acertos medidos.
+
+Dos 41 fundos listados, **28 casam sozinhos**. Os outros 13 são casos em que
+dois fundos do mesmo gestor têm nomes que só diferem por uma palavra —
+tipicamente um fundo e o FIC que investe nele, e só o FIC negocia. Aí a máquina
+**não escolhe**: escreve os cinco candidatos, com CNPJ formatado e situação
+cadastral, em `fiinfra_pendentes.txt`, e espera alguém confirmar. Confirmado uma
+vez, fica gravado.
+
+Três salvaguardas sustentam isso:
+
+- **Fundo master nunca é escolhido**, porque quem lista em bolsa é o fundo que
+  investe nele — mas ele continua competindo, para que o segundo colocado não
+  herde a vaga sem disputa. As duas metades da regra vieram de erros medidos.
+- **Reconferência a cada execução**: o código tem que continuar na lista da B3,
+  e o CNPJ tem que existir no cadastro, estar em funcionamento normal e manter a
+  mesma razão social. Razão social alterada na B3 zera o CNPJ para reconferir.
+- **Conferência independente pelo preço**: FI-Infra carrega debênture marcada a
+  mercado, então o preço anda colado no valor patrimonial. Um P/VP fora de
+  [0,7; 1,4] não é oportunidade — é sinal de que o VP/cota veio do fundo errado,
+  e o fundo sai da tela com isso escrito.
 
 O modo de falha possível é "faltou um fundo na tela", nunca "apareceu um fundo
-errado". Acrescentar um código: escreva o ticker em `fiib3/fiinfra.csv`, deixe o
-resto em branco e rode o `baixar_informe_fii.py`.
+errado". Para atualizar o universo, baixe a lista nova no site da B3 e
+substitua `fiib3/b3/fiinfra.csv`.
+
+### A lista da B3 também melhora o Fiagro
+
+O Fiagro tem ISIN, então em tese não precisaria dela. Medido na competência
+07/2026, contra os 49 Fiagro listados:
+
+| | |
+|---|---|
+| códigos em que ISIN e B3 concordam | 38 |
+| listados na B3 **sem** ISIN no informe (RURA11 entre eles) | 11 |
+| códigos derivados do ISIN que **não estão** listados na B3 | 9 |
+
+Sozinho, o ISIN perde onze fundos negociados e inventa nove que não negociam —
+cada um deles uma consulta perdida ao Yahoo e uma linha de "sem cotação"
+escondendo os casos em que a ausência significa alguma coisa. Com a lista da B3
+entrando por cima, 42 dos 49 listados ficam com código. Quando as duas fontes
+discordam vale a da B3: uma diz o que o mercado negocia hoje, a outra é uma
+convenção de numeração que ninguém garante estar atualizada.
 
 ## O score
 

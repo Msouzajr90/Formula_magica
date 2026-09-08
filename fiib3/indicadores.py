@@ -153,6 +153,26 @@ def filtrar(df: pd.DataFrame, p: ParamsFII) -> tuple[pd.DataFrame, pd.DataFrame]
     regra(df["IDADE_MESES"].fillna(999) < p.idade_minima_meses,
           f"menos de {p.idade_minima_meses} meses de funcionamento")
 
+    # O FI-Infra é o único veículo cuja identidade é *inferida*: o CNPJ sai de
+    # casar a razão social da B3 com a do cadastro da CVM, porque nenhum arquivo
+    # público liga as duas coisas (ver `fiib3/casamento.py`). Um casamento errado
+    # não deixa rastro no dado — ele publica o patrimônio de um fundo sob o
+    # código de outro, com aparência de normalidade.
+    #
+    # Esta regra é a conferência independente: FI-Infra carrega debênture
+    # marcada a mercado, então o preço da cota anda colado no valor patrimonial.
+    # Um P/VP fora de [0,7; 1,4] não é oportunidade, é sinal de que o VP/cota
+    # veio do fundo errado — foi assim que um casamento com o fundo master, cuja
+    # cota valia R$ 1,55 contra R$ 100 do fundo listado, apareceu. A faixa é
+    # larga de propósito: ela existe para pegar erro de ordem de grandeza, não
+    # para julgar preço.
+    tipo = df.get("TIPO_FUNDO", pd.Series(C.TIPO_FII, index=df.index)).astype("string")
+    pvp = pd.to_numeric(df.get("P_VP", pd.Series(float("nan"), index=df.index)),
+                        errors="coerce")
+    regra(tipo.eq(C.TIPO_FIINFRA) & pvp.notna() & ((pvp < 0.7) | (pvp > 1.4)),
+          "P/VP fora do que um fundo de debênture comporta — o CNPJ da lista de "
+          "FI-Infra provavelmente aponta para outro fundo")
+
     # O arquivo da CVM traz o ano inteiro e guardamos a última competência de
     # cada fundo. Um fundo que parou de entregar informe há meses provavelmente
     # foi liquidado ou incorporado — e seguiria no ranking com patrimônio velho,

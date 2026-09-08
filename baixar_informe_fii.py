@@ -149,9 +149,19 @@ def main() -> int:
     if not args.sem_fiagro:
         print("\nLendo o informe mensal de Fiagro...")
         try:
+            from fiib3 import b3_listados
             fiagro = cvm_fii.ler_informe_fiagro(usar_cache=not args.sem_cache)
             print(f"  {len(fiagro):,} fundos | competencia "
                   f"{fiagro['COMPETENCIA'].max() if len(fiagro) else '-'}")
+            # O ISIN sozinho perde onze Fiagro listados (RURA11 entre eles) e
+            # inventa nove codigos que nao negociam. A lista da B3 diz o que o
+            # mercado negocia de fato, e por isso ela ganha do ISIN.
+            fiagro, alertas = b3_listados.aplicar_tickers(
+                fiagro, b3_listados.ler_export(b3_listados.EXPORT_FIAGRO))
+            com_codigo = int(fiagro["TICKER"].notna().sum()) if len(fiagro) else 0
+            print(f"  {com_codigo} com codigo de negociacao")
+            for aviso in alertas:
+                print(f"  - {aviso}")
             informe = _juntar(informe, fiagro)
         except Exception as exc:                               # noqa: BLE001
             log.warning("Fiagro falhou (%s).", str(exc)[:120])

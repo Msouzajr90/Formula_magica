@@ -133,38 +133,59 @@ Ele despeja os nomes reais das colunas do CSV. O conserto é acrescentar o nome
 novo à lista daquele campo em `fiib3/cvm_fii.py` — o código procura por padrões,
 não por nome exato, então basta uma linha.
 
-### 1b. Acrescentar um FI-Infra à lista
+### 1b. Quando atualizar a lista da B3
 
-Este é o único ponto do projeto em que você digita um código de fundo, e vale
-saber por quê: FII e Fiagro têm ISIN no informe da CVM, e do ISIN sai o código
-de negociação (`BRMXRFCTF008` → `MXRF11`). O FI-Infra não tem informe mensal —
-para a CVM ele é um fundo comum, e o informe diário não traz ISIN. Procurei o
-vínculo nos três arquivos do cadastro novo (`registro_fundo_classe.zip`, 136 mil
-linhas): a única coluna parecida é `Codigo_CVM`, que é o número de registro na
-autarquia. Não existe, no dado aberto, ponte entre o CNPJ e o código da B3.
+Fiagro e FI-Infra dependem de um arquivo que **você baixa do site da B3**, e é
+bom saber por quê. O código de negociação de um FII sai do ISIN publicado pela
+CVM (`BRMXRFCTF008` → `MXRF11`). Para o FI-Infra não existe ISIN nenhum — ele
+não tem informe mensal, e nem o informe diário nem o cadastro novo trazem
+código de negociação. Para o Fiagro o ISIN existe mas erra: medido na
+competência 07/2026, ele perde onze fundos listados (RURA11 entre eles) e
+inventa nove códigos que não negociam.
 
-Então a lista fica em `fiib3/fiinfra.csv`, e **você escreve só o código**:
+Quem sabe o que negocia e com que código é a B3:
+
+    b3.com.br → Produtos e Serviços → Renda Variável → Fundos
+              → Fiagro                → botão de download → fiib3/b3/fiagro.csv
+              → Fundos de Infraestrutura → botão de download → fiib3/b3/fiinfra.csv
+
+Substitua os dois arquivos e rode o `baixar_informe_fii.py` normalmente. Ele
+sincroniza sozinho: código novo entra, código que saiu de negociação sai, e
+código cuja razão social mudou é reconferido do zero.
+
+**Não precisa fazer isso todo mês.** A lista só muda quando um fundo é listado
+ou sai da bolsa — na prática, algumas vezes por ano.
+
+### 1c. Confirmar um FI-Infra que ficou pendente
+
+A lista da B3 traz razão social e código, mas não o CNPJ, que é a chave do
+informe diário. O CNPJ sai de casar a razão social da B3 com a do cadastro da
+CVM — e a B3 corta a razão social em 50 caracteres, então isso é menos trivial
+do que parece. **Dos 41 fundos listados, 28 casam sozinhos.**
+
+Os outros ficam pendentes, e o motivo é sempre o mesmo: dois fundos do mesmo
+gestor com nomes que só diferem por uma palavra — tipicamente um fundo e o FIC
+que investe nele, e só o FIC negocia. Escolher errado publicaria o patrimônio de
+um sob o código do outro, então a máquina não escolhe. Ela escreve o
+`fiinfra_pendentes.txt` na raiz do projeto:
 
 ```
-TICKER;CNPJ;NOME_CVM;CONFERIDO_EM
-CDII11;;;
-JURO11;;;
-KDIF11;;;          ← linha nova, o resto em branco
+BODB11
+  razão social na B3: BOCAINA INFRA - FDO INV COTAS FDO INV INFRA RF CP
+  candidatos no cadastro da CVM — confira e cole o CNPJ certo:
+    100%  41.771.670/0001-99  BOCAINA INFRA FI EM COTAS DE FUNDOS INCENTIVADOS
+                              DE INVESTIMENTO EM INFRAESTRUTURA RENDA FIXA
+    100%  57.553.569/0001-00  BOCAINA INCENT FI EM COTAS DE FUNDOS INCENT DE
+                              INVEST EM INFRA RENDA FIXA
+    100%  64.026.723/0001-42  BOCAINA INFRA CDI FIC DE FUNDOS INCENTIVADOS ...
 ```
 
-Rode o `baixar_informe_fii.py`. Ele descobre o CNPJ sozinho: pega o nome longo
-do fundo no Yahoo, normaliza os dois lados e casa contra a razão social do
-cadastro da CVM, exigindo semelhança alta **e** vantagem clara sobre o segundo
-colocado. Deu certo, ele grava CNPJ, razão social e a data no CSV. Não deu, ele
-diz qual foi o candidato mais parecido e a que distância ficou — aí você confere
-e decide.
+Abra `fiib3/fiinfra.csv`, ache a linha do código e cole o CNPJ na coluna `CNPJ`.
+Na próxima execução ele é conferido contra o cadastro e entra. Feito uma vez,
+fica gravado.
 
-A partir daí a lista é **reconferida a cada execução**: o CNPJ tem que continuar
-no cadastro, em funcionamento normal, e com a mesma razão social. Se o fundo for
-incorporado ou trocar de nome, ele sai da tela com o motivo no log. A lista pode
-ficar desatualizada; o que ela não pode é publicar um fundo errado em silêncio.
-
-Não coloque FII nem Fiagro aqui — esses dois entram sozinhos.
+Se você não confirmar nenhum, nada quebra: os pendentes simplesmente não
+aparecem na tela, e o log diz quais são.
 
 ### 2. Subir o arquivo
 

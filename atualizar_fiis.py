@@ -10,6 +10,7 @@ Uso:
     python atualizar_fiis.py                  # dados reais
     python atualizar_fiis.py --demo           # sintéticos, para ver a tela
     python atualizar_fiis.py --liquidez 300000
+    python atualizar_fiis.py --cotistas 20     # inclui fundo recem-listado
 """
 from __future__ import annotations
 
@@ -25,6 +26,11 @@ from fiib3.config import ParamsFII
 
 SAIDA = Path(__file__).parent / "web" / "public" / "fiis.json"
 MESES_SERIE = 24          # série de rendimentos exportada por fundo
+# Teto da aba "Excluídos". Era 500, e 500 era pouco: com Fiagro e FI-Infra o
+# universo passou de 660 fundos com código e 533 exclusões, então 33 fundos —
+# o CRAA11 entre eles — sumiam da tela sem aparecer nem na lista de cortados,
+# que é justamente onde alguém vai procurar. Cada linha custa ~120 bytes.
+MAX_EXCLUIDOS = 3000
 
 
 def _num(x, casas: int = 8):
@@ -95,7 +101,7 @@ def montar_json(res: dict, p: ParamsFII) -> dict:
         })
 
     excluidos = []
-    for r in res["excluidos"].head(500).itertuples():
+    for r in res["excluidos"].head(MAX_EXCLUIDOS).itertuples():
         excluidos.append({
             "ticker": _texto(getattr(r, "TICKER", None)),
             "nome": _texto(getattr(r, "NOME", None)),
@@ -145,6 +151,10 @@ def main() -> int:
                     help="dados sintéticos, sem acessar a rede")
     ap.add_argument("--liquidez", type=float, default=500_000.0)
     ap.add_argument("--patrimonio", type=float, default=100_000_000.0)
+    ap.add_argument("--cotistas", type=int, default=500,
+                    help="numero minimo de cotistas (padrao: 500). Vale baixar "
+                         "para incluir fundo recem-listado: o PREE11, por "
+                         "exemplo, tem 28 cotistas no informe diario da CVM")
     ap.add_argument("--com-b3", action="store_true",
                     help="tambem consulta a API de fundos listados da B3; ela "
                          "mudou de contrato e hoje devolve lista vazia, e o ISIN "
@@ -160,7 +170,8 @@ def main() -> int:
     args = ap.parse_args()
 
     p = ParamsFII(liquidez_minima_diaria=args.liquidez,
-                  patrimonio_minimo=args.patrimonio)
+                  patrimonio_minimo=args.patrimonio,
+                  cotistas_minimo=args.cotistas)
 
     if args.demo:
         from fiib3 import demo

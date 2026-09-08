@@ -316,18 +316,29 @@
         11.033 no FII, 14.130 no Fiagro e 12.431 no FI-Infra. São regimes
         distintos, com condições próprias.</p>
       <div class="warn" style="margin-top:14px">
-        <b>Como o FI-Infra entra, e por que ele é o único que depende de uma
-        lista.</b> Todo o resto do site descobre o código de negociação a partir
-        do ISIN publicado pela CVM. O FI-Infra não tem informe mensal — aos
-        olhos da CVM ele é um fundo comum, e o que existe dele é o informe
-        diário, que não traz ISIN. Procuramos o vínculo nos três arquivos do
-        cadastro novo (136 mil linhas): não há ISIN nem código de negociação em
-        lugar nenhum. Então os códigos vêm de uma lista, e a lista é
-        <b>conferida por máquina a cada coleta</b>: o CNPJ tem que existir no
-        cadastro da CVM, estar em funcionamento normal e continuar com a mesma
-        razão social. Falhou qualquer um dos três, o fundo sai da tela com o
-        motivo registrado. O erro possível é faltar um fundo, nunca aparecer um
-        fundo errado.
+        <b>Como o Fiagro e o FI-Infra descobrem o próprio código.</b> Para o FII,
+        o código de negociação sai do ISIN publicado pela CVM
+        (<span class="tk">BRMXRFCTF008</span> → <span class="tk">MXRF11</span>).
+        Para o FI-Infra não existe ISIN nenhum: ele não tem informe mensal, e nem
+        o informe diário nem o cadastro novo — três arquivos, 136 mil linhas —
+        trazem código de negociação. Para o Fiagro o ISIN existe, mas erra: na
+        competência 07/2026 ele perdia onze fundos listados e inventava nove que
+        não negociam.
+        <p style="margin:10px 0 0">Quem sabe o que negocia é a B3, que publica a
+        lista dos fundos listados com razão social e código. O que falta ali é o
+        CNPJ, e ele sai de <b>casar a razão social da B3 com a do cadastro da
+        CVM</b> — comparação de palavras, cada uma pesada pelo inverso da
+        frequência com que aparece no cadastro, porque a B3 corta o nome em 50
+        caracteres e abrevia o que sobra.</p>
+        <p style="margin:10px 0 0">Quando dois fundos do mesmo gestor têm nomes
+        que só diferem por uma palavra — tipicamente um fundo e o fundo que
+        investe nele, e só um negocia — <b>a máquina não escolhe</b>: registra os
+        candidatos e espera confirmação humana. Fundo master nunca é escolhido.
+        E o preço confere o resultado: como um FI-Infra carrega debênture marcada
+        a mercado, o preço anda colado no valor patrimonial, e um P/VP fora de
+        0,7–1,4 tira o fundo da tela, porque é sinal de que o patrimônio veio do
+        fundo errado. O erro possível é faltar um fundo, nunca aparecer um errado.
+        </p>
       </div>
 
       <h2 style="margin-top:24px">O que este score não olha</h2>
@@ -368,9 +379,12 @@
           <tr><td class="l">Cota, patrimônio e cotistas do FI-Infra</td>
               <td class="l">Informe diário de fundos da CVM</td>
               <td class="l">diária</td></tr>
-          <tr><td class="l">Código de negociação</td>
-              <td class="l">ISIN do informe da CVM (FII e Fiagro); lista
-                conferida contra o cadastro da CVM (FI-Infra)</td>
+          <tr><td class="l">Código de negociação (FII)</td>
+              <td class="l">ISIN do informe da CVM</td>
+              <td class="l">—</td></tr>
+          <tr><td class="l">Código de negociação (Fiagro e FI-Infra)</td>
+              <td class="l">Lista de fundos listados da B3, casada com o
+                cadastro da CVM</td>
               <td class="l">—</td></tr>
           <tr><td class="l">Preço e volume</td><td class="l">Yahoo Finance</td>
               <td class="l">fechamento do pregão anterior</td></tr>
