@@ -450,6 +450,11 @@ function renderRanking() {
     th.removeAttribute('data-dir');
     if (th.dataset.c === estado.ordem) th.setAttribute('data-dir', estado.dir);
   });
+  // O mesmo número em cima e embaixo: em cima porque é lá que se descobre que
+  // a lista é maior do que a caixa mostra, embaixo porque é lá que ela acaba.
+  el('contagemRank').innerHTML = lista.length === comScore.length
+    ? `<b>${lista.length} fundos</b> na lista — role a tabela para ver todos.`
+    : `<b>${lista.length}</b> de ${comScore.length} fundos (há filtro ativo).`;
   el('rodapeRank').textContent =
     `${lista.length} de ${comScore.length} fundos. ` +
     (estado.porFamilia

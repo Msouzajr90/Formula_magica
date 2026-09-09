@@ -85,7 +85,16 @@
   .tag{font-size:10px;letter-spacing:.04em;text-transform:uppercase;background:var(--surface-2);
        border:1px solid var(--line-strong);border-radius:4px;padding:1px 4px;color:var(--ink-2)}
   .cap{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .tall{max-height:460px;overflow-y:auto}
+  /* Caixa de rolagem das tabelas longas. Eram 460px fixos, e 460px mostravam
+     SETE das 125 linhas do ranking: a barra de rolagem interna passava
+     despercebida e a lista parecia terminar ali. Agora a caixa usa a altura da
+     tela, e a borda de baixo marca onde ela termina. */
+  .tall{max-height:calc(100vh - 210px);min-height:420px;overflow-y:auto;
+        border-bottom:1px solid var(--line-strong)}
+  /* Contagem acima da tabela: o total só existia no rodapé, embaixo da caixa,
+     que é o lugar onde quem acha que a lista acabou não vai olhar. */
+  .contagem{font-size:12px;color:var(--ink-2);margin:2px 0 8px}
+  .contagem b{color:var(--ink)}
 
   /* ---------- gráficos ---------- */
   .chart{width:100%;display:block;overflow:visible}
