@@ -478,3 +478,253 @@ def test_pvp_absurdo_de_um_papel_nao_entra_na_soma():
     r = pvp.calcular(papeis, {"AAAA3": 12.0, "BBBB3": 22.40}, vpas)
     assert r.faltando == ["BBBB3"]
     assert r.pvp == pytest.approx(1.2)
+
+
+# ===========================================================================
+# Série histórica do spread — o que 21 anos de arquivo trouxeram
+# ===========================================================================
+from mercado import historico          # noqa: E402
+
+
+def _td(linhas):
+    """linhas: (familia, cupom, vencimento, data, taxa)."""
+    import pandas as pd
+    return pd.DataFrame({
+        "FAMILIA": [l[0] for l in linhas],
+        "CUPOM": [l[1] for l in linhas],
+        "VENCIMENTO": pd.to_datetime([l[2] for l in linhas]),
+        "DATA": pd.to_datetime([l[3] for l in linhas]),
+        "TAXA": [l[4] for l in linhas],
+    })
+
+
+def _us(linhas):
+    """linhas: (data, prazo, taxa)."""
+    import pandas as pd
+    return pd.DataFrame({
+        "DATA": pd.to_datetime([l[0] for l in linhas]),
+        "PRAZO": [l[1] for l in linhas],
+        "TAXA": [l[2] for l in linhas],
+    })
+
+
+def test_spread_no_tempo_tem_um_ponto_por_pregao():
+    td = _td([("pre", False, "2030-01-01", "2026-09-14", 14.0),
+              ("pre", False, "2033-01-01", "2026-09-14", 14.5),
+              ("pre", False, "2030-01-01", "2026-09-11", 13.8),
+              ("pre", False, "2033-01-01", "2026-09-11", 14.3)])
+    us = _us([("2026-09-14", 2.0, 4.8), ("2026-09-14", 5.0, 4.9),
+              ("2026-09-11", 2.0, 4.7), ("2026-09-11", 5.0, 4.8)])
+    s = historico.serie(td, us, _us([]))
+    assert s["datas"] == ["2026-09-11", "2026-09-14"]
+    assert len(s["nominal"]["5.0"]) == 2
+
+
+def test_sem_prefixado_longo_o_spread_de_10_anos_e_buraco():
+    """Caso real: em 2004 o prefixado mais longo do Tesouro Direto vencia em
+    3 anos; em 2009 e em 2023 ele não chegava a 10. A série de 10 anos tem
+    buracos verdadeiros, e buraco não pode virar zero nem repetição."""
+    td = _td([("pre", False, "2006-01-01", "2004-12-31", 17.5),
+              ("pre", False, "2008-01-01", "2004-12-31", 17.8)])
+    us = _us([("2004-12-31", 2.0, 3.1), ("2004-12-31", 5.0, 3.6),
+              ("2004-12-31", 10.0, 4.2)])
+    s = historico.serie(td, us, _us([]))
+    assert s["nominal"]["2.0"][0] is not None
+    assert s["nominal"]["5.0"][0] is None
+    assert s["nominal"]["10.0"][0] is None
+
+
+def test_ntnb_alcanca_20_anos_desde_o_comeco():
+    """A NTN-B de 2004 já ia a 40 anos — o lado real cobre o período inteiro,
+    diferente do prefixado."""
+    td = _td([("ipca", False, "2009-05-15", "2004-12-31", 9.0),
+              ("ipca", True, "2045-05-15", "2004-12-31", 8.2)])
+    tips = _us([("2004-12-31", 5.0, 1.2), ("2004-12-31", 10.0, 1.7),
+                ("2004-12-31", 20.0, 2.1)])
+    s = historico.serie(td, _us([]), tips)
+    assert s["real"]["20.0"][0] is not None
+    assert s["real"]["10.0"][0] is not None
+
+
+def test_feriado_brasileiro_usa_o_ultimo_pregao_americano():
+    """7 de setembro fecha o Brasil e não os EUA, e vice-versa. Casar por data
+    exata abriria buracos de calendário, não de mercado."""
+    td = _td([("pre", False, "2030-01-01", "2026-05-26", 14.0),
+              ("pre", False, "2033-01-01", "2026-05-26", 14.4)])
+    # 25/05 foi Memorial Day: o Treasury não publicou. Vale o de 22/05.
+    us = _us([("2026-05-22", 2.0, 4.5), ("2026-05-22", 5.0, 4.6)])
+    s = historico.serie(td, us, _us([]))
+    assert s["nominal"]["5.0"][0] is not None
+
+
+def test_serie_guarda_tambem_o_nivel_brasileiro():
+    """O spread sobe quando o Brasil piora ou quando os EUA melhoram. Sem o
+    nível de um dos lados o gráfico não distingue as duas coisas."""
+    td = _td([("pre", False, "2030-01-01", "2026-09-14", 14.0),
+              ("pre", False, "2033-01-01", "2026-09-14", 14.5)])
+    us = _us([("2026-09-14", 2.0, 4.8), ("2026-09-14", 5.0, 4.9)])
+    s = historico.serie(td, us, _us([]))
+    assert s["brasilPre"]["5.0"][0] == pytest.approx(14.16, abs=0.2)
+    assert s["nominal"]["5.0"][0] == pytest.approx(
+        s["brasilPre"]["5.0"][0] - 4.9, abs=0.01)
+
+
+def test_desde_corta_o_comeco_da_serie():
+    td = _td([("pre", False, "2030-01-01", "2020-01-02", 7.0),
+              ("pre", False, "2033-01-01", "2020-01-02", 7.4),
+              ("pre", False, "2030-01-01", "2026-09-14", 14.0),
+              ("pre", False, "2033-01-01", "2026-09-14", 14.5)])
+    us = _us([("2020-01-02", 5.0, 1.7), ("2026-09-14", 5.0, 4.9)])
+    s = historico.serie(td, us, _us([]), desde=date(2025, 1, 1))
+    assert s["datas"] == ["2026-09-14"]
+
+
+def test_indexacao_repete_a_regra_de_zero_cupom_e_prazo_minimo():
+    """O caminho rápido não pode divergir do `tesouro.curva`: mesmo vencimento
+    em duas versões fica com a zero-cupom, e NTN-B curta não entra."""
+    td = _td([("pre", True, "2033-01-01", "2026-09-14", 14.9),
+              ("pre", False, "2033-01-01", "2026-09-14", 14.5),
+              ("ipca", False, "2026-12-15", "2026-09-14", 13.3),
+              ("ipca", False, "2036-05-15", "2026-09-14", 7.5)])
+    por_dia = historico._indexar_tesouro(td)
+    pre = por_dia[date(2026, 9, 14)]["pre"]
+    assert len(pre) == 1 and pre[0][1] == 14.5
+    ipca = por_dia[date(2026, 9, 14)]["ipca"]
+    assert len(ipca) == 1 and ipca[0][1] == 7.5
+
+
+def test_resumo_diz_onde_cada_serie_comeca():
+    td = _td([("pre", False, "2030-01-01", "2026-09-14", 14.0),
+              ("pre", False, "2033-01-01", "2026-09-14", 14.5)])
+    us = _us([("2026-09-14", 2.0, 4.8), ("2026-09-14", 5.0, 4.9)])
+    r = historico.resumo(historico.serie(td, us, _us([])))
+    assert r["nominal5.0"]["n"] == 1
+    assert r["nominal5.0"]["inicio"] == "2026-09-14"
+    assert r["real10.0"]["n"] == 0 and r["real10.0"]["inicio"] is None
+
+
+# ===========================================================================
+# Ponte entre o cálculo de hoje e o histórico
+# ===========================================================================
+def test_vpa_na_data_consome_o_que_vpa_por_prefixo_produz():
+    """Regressão da execução real: o histórico saiu com 0 de 74 empresas em
+    todos os anos porque a fonte do nº de ações era `cvm.composicao_capital`,
+    que é indexado por CNPJ e não por código CVM — o código procurava uma
+    coluna inexistente e descartava cada ano em silêncio. Agora as duas pontas
+    usam a mesma conciliação, e este teste liga uma na outra."""
+    import pandas as pd
+
+    mapa = {"PETR": 9512, "VALE": 4170}
+    vpas_hoje = pvp.vpa_por_prefixo(
+        [{"cvm": 9512, "nome": "PETROBRAS", "pl": 400e9, "acoes": 13e9},
+         {"cvm": 4170, "nome": "VALE", "pl": 200e9, "acoes": None}],
+        mapa,
+        {"PETR": 13.1e9, "VALE": 4.26e9})          # implícitas, do valor de mercado
+    assert vpas_hoje["PETR"]["fonteAcoes"] == "cvm"
+    assert vpas_hoje["VALE"]["fonteAcoes"] == "mercado"
+
+    acoes_por_cvm = {mapa[p]: {"acoes": i["acoes"], "fonte": i["fonteAcoes"],
+                               "nome": i["nome"]}
+                     for p, i in vpas_hoje.items()}
+    painel = pd.DataFrame({
+        "CD_CVM": [9512, 4170],
+        "DT_REFER": pd.to_datetime(["2026-06-30", "2026-06-30"]),
+        "DT_RECEB": pd.to_datetime(["2026-08-14", "2026-08-14"]),
+        "PATRIMONIO": [400e9, 200e9],
+    })
+    v = pvp.vpa_na_data(painel, acoes_por_cvm, mapa, "2026-09-14")
+    assert set(v) == {"PETR", "VALE"}
+    assert v["PETR"]["vpa"] == pytest.approx(400e9 / 13e9)
+    assert v["VALE"]["fonteAcoes"] == "mercado"
+
+
+def test_unit_no_historico_tambem_exige_o_numero_da_cvm():
+    """A fonte tem que atravessar até o cálculo: uma unit com nº de ações
+    vindo do valor de mercado não pode entrar, porque o implícito não diz se
+    conta units ou ações."""
+    import pandas as pd
+
+    mapa = {"KLBN": 12653}
+    painel = pd.DataFrame({
+        "CD_CVM": [12653], "DT_REFER": pd.to_datetime(["2026-06-30"]),
+        "DT_RECEB": pd.to_datetime(["2026-08-14"]), "PATRIMONIO": [11.3e9]})
+    papeis = [{"ticker": "KLBN11", "tipo": "UNT N2", "part": 0.58, "qtd": 786_869_850}]
+
+    do_mercado = pvp.vpa_na_data(
+        painel, {12653: {"acoes": 6.135e9, "fonte": "mercado"}}, mapa, "2026-09-14")
+    assert pvp.calcular(papeis, {"KLBN11": 19.22}, do_mercado).faltando == ["KLBN11"]
+
+    da_cvm = pvp.vpa_na_data(
+        painel, {12653: {"acoes": 6.135e9, "fonte": "cvm"}}, mapa, "2026-09-14")
+    r = pvp.calcular(papeis, {"KLBN11": 19.22}, da_cvm)
+    assert r.faltando == [] and 2.0 < r.pvp < 2.2
+
+
+def test_empresa_sem_numero_de_acoes_nao_entra_no_historico():
+    import pandas as pd
+    painel = pd.DataFrame({
+        "CD_CVM": [1], "DT_REFER": pd.to_datetime(["2026-06-30"]),
+        "DT_RECEB": pd.to_datetime(["2026-08-14"]), "PATRIMONIO": [100e9]})
+    assert pvp.vpa_na_data(painel, {}, {"AAAA": 1}, "2026-09-14") == {}
+    assert pvp.vpa_na_data(painel, {1: {"acoes": 0, "fonte": "cvm"}},
+                           {"AAAA": 1}, "2026-09-14") == {}
+
+
+# ===========================================================================
+# Conferência da série histórica do P/VP
+# ===========================================================================
+def _arquivo_minimo(serie):
+    """mercado.json com o mínimo para o validador chegar na parte do P/VP."""
+    from datetime import date as _d
+    g = curvas.GRADE
+    hoje = _d.today().isoformat()
+    def cheia(nivel, ate):
+        return [nivel if p <= ate else None for p in g]
+    pre, ipca = cheia(14.0, 11), cheia(7.5, 20)
+    eua, tips = cheia(5.0, 20), cheia(2.5, 20)
+    return {
+        "meta": {"versao": 1, "demo": False, "avisos": []},
+        "juros": {"grade": g, "datas": {"hoje": hoje},
+                  "series": {"hoje": {
+                      "dataBR": hoje,
+                      "pre": {"grade": pre}, "ipca": {"grade": ipca},
+                      "eua": {"grade": eua}, "tips": {"grade": tips},
+                      "spreadNominal": curvas.diferenca(pre, eua),
+                      "spreadReal": curvas.diferenca(ipca, tips)}}},
+        "pvp": {"atual": {"valor": 1.6, "cobertura": 0.95}, "historico": serie},
+    }
+
+
+def _validar(tmp_path, dados):
+    import json as _json
+    import validar_mercado
+    p = tmp_path / "mercado.json"
+    p.write_text(_json.dumps(dados), encoding="utf-8")
+    return validar_mercado.conferir(p)
+
+
+def test_serie_de_pvp_saudavel_passa(tmp_path):
+    serie = [[f"2020-01-{d:02d}", round(1.5 + d * 0.001, 4)] for d in range(1, 32)]
+    assert _validar(tmp_path, _arquivo_minimo(serie)) == []
+
+
+def test_salto_diario_absurdo_no_pvp_e_recusado(tmp_path):
+    """Um balanço entrando na empresa errada, ou em escala errada, aparece
+    como degrau. O preço não dá 50% num dia; o denominador, sim."""
+    serie = [[f"2020-01-{d:02d}", 1.5] for d in range(1, 32)]
+    serie[20][1] = 2.4                      # +60% num dia
+    erros = _validar(tmp_path, _arquivo_minimo(serie))
+    assert any("salto" in e for e in erros)
+
+
+def test_pvp_fora_de_faixa_no_historico_e_recusado(tmp_path):
+    serie = [[f"2020-01-{d:02d}", 1.5] for d in range(1, 32)]
+    serie[5][1] = 12.0
+    erros = _validar(tmp_path, _arquivo_minimo(serie))
+    assert any("faixa" in e for e in erros)
+
+
+def test_serie_curta_nao_e_conferida(tmp_path):
+    """Com dois pontos — a série recém-nascida do robô — não há o que conferir."""
+    serie = [["2026-09-14", 1.62], ["2026-09-15", 1.62]]
+    assert _validar(tmp_path, _arquivo_minimo(serie)) == []

@@ -76,6 +76,92 @@ marca quais são.
 **Títulos quase vencidos ficam de fora** — prefixado a menos de 3 meses, NTN-B
 a menos de 1 ano. Ver "o que a primeira execução revelou".
 
+## O prêmio ao longo do tempo
+
+A aba mostrava a diferença de juros prazo a prazo num dia. A outra metade é a
+diferença num prazo fixo, dia a dia, desde dezembro de 2004 — `spread_historico.json`,
+gerado na mesma coleta, sem nada acumulado entre execuções. Ele é reescrito do
+zero todo dia, o que também quer dizer que se conserta sozinho: um erro
+corrigido no cálculo reescreve os 21 anos na execução seguinte.
+
+**As linhas não começam no mesmo ponto, e isso é dado.** Amostrando 45 datas ao
+longo dos 21 anos:
+
+| vértice | dias com dado | começa em |
+|---|---|---|
+| nominal 2 anos | 45 de 45 | 31/12/2004 |
+| nominal 5 anos | 42 de 45 | 15/03/2006 |
+| nominal 10 anos | **17 de 45** | 15/03/2010 |
+| real 5 / 10 / 20 anos | 45 de 45 | 31/12/2004 |
+
+O vértice de 10 anos só existe quando há um título prefixado que alcance esse
+prazo em oferta, e em boa parte do período não havia — em 2004 o mais longo
+vencia em três anos, em 2009 em sete, em 2023 em nove. **Por isso o seletor
+abre em 5 anos, não em 10:** a linha nominal de 10 anos é um tracejado cheio de
+falhas, e falha não é um bom padrão. Nesses dias a linha some, em vez de
+repetir o último valor — uma série de spread com o valor de ontem carregado
+para a frente parece estabilidade e é ausência de dado.
+
+Abaixo do gráfico do prêmio vem o **nível brasileiro** no mesmo período, em
+gráfico separado. O prêmio sobe quando o Brasil piora e também quando os
+Estados Unidos melhoram; sem o nível de um dos lados não dá para distinguir as
+duas coisas. Dois gráficos empilhados em vez de dois eixos no mesmo desenho —
+dois eixos sugerem uma relação que o dado não afirma.
+
+A série bate com a história conhecida: pré de 2 anos a 17,5% no fim de 2004,
+pico de 15,1% em setembro de 2015, mínima de 3,9% em setembro de 2020 (Selic a
+2%), e 13,9% hoje. O prêmio nominal de 2 anos vai de 14,4 p.p. em 2004 a 3,7 no
+fundo de 2020.
+
+## Histórico do P/VP — `gerar_pvp_historico.py`
+
+A série do P/VP é acumulada pelo robô, um ponto por dia, e por isso nasce
+vazia. Para reconstruir o passado existe o `gerar_pvp_historico.py`, que
+**roda no seu computador**: a CVM recusa conexões de fora do Brasil e os
+balanços antigos não podem ser baixados pelo GitHub Actions.
+
+No Windows, duplo clique em **`pvp_historico.bat`**: ele roda o diagnóstico,
+mostra a cobertura e pergunta antes de calcular. Pela linha de comando:
+
+```
+.venv\Scripts\python.exe gerar_pvp_historico.py --diagnostico --desde 2015
+.venv\Scripts\python.exe gerar_pvp_historico.py --desde 2015
+```
+
+**Não use `python` solto.** As dependências estão no `.venv` do projeto, e no
+Windows o `python` sem caminho cai no atalho da Microsoft Store — responde
+"Python was not found" e não é Python nenhum. Todos os `.bat` do projeto
+procuram o `.venv` primeiro pelo mesmo motivo.
+
+O diagnóstico existe porque a execução é longa — centenas de MB de DFP e ITR —
+e porque a cobertura ano a ano é a informação que decide se vale a pena. Ele
+imprime, para cada ano, quantas empresas do índice têm patrimônio e nº de ações
+e quanto do peso do índice isso cobre.
+
+O cálculo respeita a data de entrega: em 02/01/2022 o balanço de 31/12/2021
+ainda não era público e não entra no número daquele dia. É a mesma disciplina
+do `backtest_historico.py`.
+
+**O nº de ações vem da conciliação do cálculo diário, não da CVM ano a ano.**
+A primeira versão lia `cvm.composicao_capital` por ano e devolveu *zero de 74
+empresas em todos os anos* na primeira execução real — o arquivo da CVM é
+indexado por **CNPJ**, não por código CVM, e o código procurava uma coluna que
+nunca existiu, descartando cada ano em silêncio. A ponte CNPJ→CVM resolveria o
+sintoma, mas o `composicao_capital` é justamente a fonte cuja escala não dá
+para confirmar em parte das empresas (nula em 10 dos 76 papéis hoje, Vale e
+Itaú entre eles). Como o nº de ações fica constante no tempo de qualquer jeito,
+vale o número que o caminho diário já concilia — mesmo código, em produção.
+
+Duas aproximações declaradas: o **nº de ações fica constante no tempo** (ele
+muda com recompras e ofertas, devagar, e o histórico do Yahoo não distingue
+ação de unit nem classe de total — trocaria um erro pequeno e conhecido por um
+grande e invisível); e a **carteira do Ibovespa é a de hoje aplicada ao
+passado**, com o viés de sobrevivência que isso traz.
+
+O script recusa gravar uma série com menos de 100 pontos, e preserva os pontos
+que o robô já tinha coletado — esses foram calculados com o `fundamentos.json`
+do dia e valem mais que a reconstrução.
+
 ## Como o P/VP do Ibovespa é calculado
 
 Não existe série histórica gratuita e oficial. A B3 publica o indicador do dia
@@ -112,13 +198,27 @@ do Marco, e derrubou cinco suposições. Vale registrar porque a maioria volta.
    formulário da própria página ainda aponta para ele. Toda a curva mudou de
    fonte por causa disso.
 
-2. **O prefixo da B3 tem um dígito.** `magicb3.tickers` filtra prefixos por
+2. **O prefixo da B3 tem um dígito.** `magicb3.tickers` filtrava prefixos por
    `[A-Z]{4}` — quatro *letras*. O prefixo da B3 S.A. é `B3SA`. Ela pesa 3,3% do
    Ibovespa, tem R$ 18,8 bi de patrimônio na CVM (código 21610) e simplesmente
-   não aparecia. `mercado/empresas.py` usa `[A-Z][A-Z0-9]{3}`.
-   **O mesmo filtro está no caminho das ações, e lá a B3 S.A. também está
-   faltando — nem no ranking, nem nas excluídas.** Mexer nele muda o ranking de
-   Greenblatt, então ficou para uma decisão separada.
+   não aparecia — nem no ranking, nem nas excluídas. `mercado/empresas.py`
+   nasceu com `[A-Z][A-Z0-9]{3}`; o caminho das ações foi corrigido em
+   **15/09/2026**, com o ranking mudando como consequência aceita.
+
+   A conferência contra a API da B3 mostrou que o comentário que defendia a
+   regra estreita estava errado: ela não filtrava emissor sem ação negociada.
+   Das 3.189 companhias sem BDR que a API devolve, **3.111 passavam** por
+   `[A-Z]{4}`, incluindo 2.612 SPEs e securitizadoras sem segmento. Quem faz
+   esse corte é o passo seguinte do pipeline — só entra quem tem EBIT nos
+   arquivos da CVM — e depois o filtro de liquidez. A regra larga admite 70
+   prefixos a mais, dos quais 68 são SPEs sem DFP, que morrem ali. As duas
+   companhias reais são **B3SA** e **B100**.
+
+   O parquet em cache foi gravado com a regra antiga e não tem a B3 S.A., então
+   o nome do arquivo mudou para `b3_empresas_v2.parquet` — o cache velho se
+   aposenta sozinho. Ele ainda serve de recuo quando a B3 não responde, e nesse
+   caso o log avisa que a B3SA não está nele. `tests/test_prefixos_b3.py`
+   guarda a regra.
 
 3. **O nº de ações da CVM está nulo em 10 dos 76 papéis** — Vale e Itaú entre
    eles, juntos 19% do índice — e **mil vezes errado na Vivara** (235 bilhões de
@@ -197,14 +297,15 @@ sobrevivência que isso traz.
 
 **Próximos passos, em ordem de valor:**
 
-1. **Inflação implícita** — `(1 + pré) ÷ (1 + NTN-B) − 1` em cada vértice, com
+1. **Rodar o `gerar_pvp_historico.py`** uma vez, aqui. É o único passo que
+   depende de você, e é o que tira a série do P/VP de dois pontos.
+2. **Inflação implícita** — `(1 + pré) ÷ (1 + NTN-B) − 1` em cada vértice, com
    as duas curvas que já estão no arquivo. É o indicador que falta e sai quase
-   de graça.
-2. **Backfill do P/VP.** A série começa hoje. Reconstruir o passado exige o
-   patrimônio líquido de cada trimestre respeitando `Data_Entrega` e o preço na
-   data — a mesma disciplina *point-in-time* do `backtest_historico.py`.
-   `pvp.painel_patrimonio` e `pvp.patrimonio_vigente` já existem para isso.
+   de graça, inclusive na série histórica.
 3. **Units sem nº de ações na CVM.** BPAC11 e SANB11 somam 3,2% do índice e
    saem por falta de um número que existe no formulário de referência.
-4. **Fonte alternativa para a curva**, se o Tesouro mudar o CSV de lugar. O
+4. **Carteira histórica do Ibovespa**, para tirar o viés de sobrevivência da
+   série do P/VP. A B3 não publica em série; teria que ser acumulada daqui
+   para a frente, um arquivo por quadrimestre.
+5. **Fonte alternativa para a curva**, se o Tesouro mudar o CSV de lugar. O
    candidato é o DI futuro da B3.

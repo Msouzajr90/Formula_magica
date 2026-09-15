@@ -33,10 +33,43 @@ HEADERS = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
 
 SUFIXOS_CANDIDATOS = ("3", "4", "11", "5", "6")
 
+# Um código de negociação da B3 tem quatro caracteres alfanuméricos começando
+# por letra — não quatro LETRAS. A regra antiga era `[A-Z]{4}`, e o comentário
+# dela dizia estar cortando os emissores sem ação negociada. Não estava: das
+# 3.189 companhias que a API devolve (já sem BDR), 3.111 passavam por ela,
+# incluindo 2.612 SPEs e securitizadoras sem segmento. Quem de fato faz esse
+# corte é o passo seguinte do pipeline, que só mantém quem tem EBIT nos
+# arquivos da CVM, e depois o filtro de liquidez.
+#
+# O que `[A-Z]{4}` fazia mesmo era derrubar a B3 S.A. — prefixo B3SA, com um
+# dígito no meio —, que pesa 3,3% do Ibovespa e nunca entrou no ranking.
+# Ampliar a regra admite 70 prefixos a mais; 68 são SPEs sem DFP, que morrem
+# no filtro de EBIT. As duas companhias reais são B3SA e B100.
+PREFIXO_VALIDO = r"[A-Z][A-Z0-9]{3}"
+
+# O parquet gravado antes desta correção foi filtrado pela regra estreita e não
+# tem a B3 S.A. Trocar o nome do arquivo aposenta esse cache sozinho — sem isso
+# a correção só apareceria quando alguém apagasse o cache na mão.
+ARQUIVO_CACHE = "b3_empresas_v2.parquet"
+CACHES_ANTIGOS = ("b3_empresas.parquet",)
+
 
 def _cache(nome: str) -> Path:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     return CACHE_DIR / nome
+
+
+def _cache_de_emergencia() -> Path | None:
+    """Qualquer mapa em disco, para quando a B3 não responde.
+
+    Só é consultado no recuo. Um mapa velho é melhor que perder a rodada, mas
+    o da regra antiga não tem a B3 S.A. — daí o aviso separado lá embaixo.
+    """
+    for nome in (ARQUIVO_CACHE,) + CACHES_ANTIGOS:
+        arq = _cache(nome)
+        if arq.exists():
+            return arq
+    return None
 
 
 # A API da B3 responde em segundos na maior parte do tempo e simplesmente para
@@ -84,7 +117,7 @@ def _todas_as_paginas() -> list[dict]:
 
 def baixar_empresas_b3(usar_cache: bool = True) -> pd.DataFrame:
     """Companhias listadas: codeCVM, prefixo do ticker, razão social, segmento."""
-    arq = _cache("b3_empresas.parquet")
+    arq = _cache(ARQUIVO_CACHE)
     if usar_cache and arq.exists():
         return pd.read_parquet(arq)
 
@@ -94,10 +127,14 @@ def baixar_empresas_b3(usar_cache: bool = True) -> pd.DataFrame:
         # Recuo para o cache antigo. Um mapa de ontem é infinitamente melhor
         # que nenhum: os prefixos da B3 mudam devagar, e sem ele a coleta do
         # dia inteira é perdida por causa de uma indisponibilidade de terceiro.
-        if arq.exists():
+        antigo = _cache_de_emergencia()
+        if antigo is not None:
             log.warning("%s — usando o mapa em cache de %s.", exc,
-                        pd.Timestamp(arq.stat().st_mtime, unit="s").date())
-            return pd.read_parquet(arq)
+                        pd.Timestamp(antigo.stat().st_mtime, unit="s").date())
+            if antigo.name != ARQUIVO_CACHE:
+                log.warning("Esse cache é anterior à correção do filtro de "
+                            "prefixo: a B3 S.A. (B3SA) não está nele.")
+            return pd.read_parquet(antigo)
         raise RuntimeError(
             f"{exc}\nNão há cache anterior para usar no lugar. A B3 é a única "
             "fonte do mapa prefixo->CD_CVM; espere alguns minutos e rode de novo."
@@ -115,16 +152,17 @@ def baixar_empresas_b3(usar_cache: bool = True) -> pd.DataFrame:
     df = df.dropna(subset=["CD_CVM", "PREFIXO"])
     df["CD_CVM"] = df["CD_CVM"].astype(int)
 
-    # A API devolve todos os emissores registrados (~3.300), não apenas as
-    # companhias com ações negociadas (~400). Sem esta limpeza, o passo
-    # seguinte tentaria baixar milhares de tickers inexistentes do Yahoo.
+    # A API devolve todos os emissores registrados (~3.500), não apenas as
+    # companhias com ações negociadas (~500). O corte de verdade vem depois,
+    # no pipeline: só entra quem tem EBIT nos arquivos da CVM e passa no filtro
+    # de liquidez. Aqui ficam as duas exclusões que dependem da própria B3.
     if "typeBDR" in df.columns:                    # BDRs: lastro estrangeiro
         vazio = df["typeBDR"].isna() | (df["typeBDR"].astype(str).str.strip() == "")
         df = df[vazio]
     df["PREFIXO"] = df["PREFIXO"].astype(str).str.strip().str.upper()
-    df = df[df["PREFIXO"].str.fullmatch(r"[A-Z]{4}")]          # prefixo é sempre 4 letras
+    df = df[df["PREFIXO"].str.fullmatch(PREFIXO_VALIDO)]
     df = df.sort_values("CD_CVM").drop_duplicates(subset=["PREFIXO"], keep="first")
-    log.info("B3: %d emissores registrados -> %d companhias com ações", bruto, len(df))
+    log.info("B3: %d emissores registrados -> %d prefixos de negociação", bruto, len(df))
     cols = [c for c in ["CD_CVM", "PREFIXO", "DENOM_CIA", "NOME_PREGAO", "CNPJ", "SEGMENTO"]
             if c in df.columns]
     df = df[cols].drop_duplicates()

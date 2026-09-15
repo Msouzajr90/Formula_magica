@@ -122,6 +122,32 @@ def conferir(caminho: Path) -> list[str]:
     else:
         aviso.append("Sem P/VP no arquivo — a aba mostra o cartão de indisponível.")
 
+    # 7. Série histórica do P/VP
+    #
+    # O denominador só muda a cada balanço, então a série anda com o preço.
+    # Um salto diário grande demais não é mercado: é balanço entrando errado —
+    # trocado de empresa, em escala errada, ou antes da data de entrega. O teto
+    # é folgado de propósito: na reconstrução de 2015 a 2026 o maior salto real
+    # foi de 14,4%, em 12/03/2020, quando o Ibovespa caiu com circuit breaker.
+    serie = (dados.get("pvp") or {}).get("historico") or []
+    if len(serie) > 30:
+        vals = [float(x[1]) for x in serie if x[1] is not None]
+        fora = [v for v in vals if not (0.3 <= v <= 5.0)]
+        if fora:
+            erros.append(f"A série do P/VP tem {len(fora)} ponto(s) fora da "
+                         f"faixa 0,3–5,0 (ex.: {fora[0]}).")
+        saltos = [(serie[i][0], vals[i - 1], vals[i])
+                  for i in range(1, len(vals))
+                  if vals[i - 1] > 0 and abs(vals[i] / vals[i - 1] - 1) > 0.30]
+        if saltos:
+            d, a, b = saltos[0]
+            erros.append(f"A série do P/VP dá {len(saltos)} salto(s) diário(s) "
+                         f"acima de 30% (em {d}, de {a} para {b}). O preço não "
+                         "faz isso; um balanço entrando errado, sim.")
+        ordem = [x[0] for x in serie]
+        if ordem != sorted(ordem):
+            erros.append("A série do P/VP está fora de ordem no tempo.")
+
     for a in aviso:
         print("aviso:", a)
     return erros

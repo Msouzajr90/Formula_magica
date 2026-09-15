@@ -116,6 +116,46 @@
       <p class="note" style="margin:12px 0 0" id="notaSpread"></p>
     </div>
 
+    <div class="card" style="margin-bottom:18px" id="histSpread">
+      <h2>O prêmio ao longo do tempo</h2>
+      <p class="note">O mesmo número do gráfico acima, num prazo fixo, dia a dia
+         desde que o dado existe. O gráfico de cima compara países num dia; este
+         compara dias num prazo.</p>
+
+      <div class="ctls" style="display:flex;gap:18px;flex-wrap:wrap;margin:0 0 14px">
+        <label>Prazo:
+          <select id="ctlVertice">
+            <option value="2.0">2 anos</option>
+            <option value="5.0" selected>5 anos</option>
+            <option value="10.0">10 anos — nominal com falhas</option>
+            <option value="20.0">20 anos — só real</option>
+          </select>
+        </label>
+        <label>Período:
+          <select id="ctlSpreadAnos">
+            <option value="1">1 ano</option>
+            <option value="5">5 anos</option>
+            <option value="10">10 anos</option>
+            <option value="0" selected>Tudo</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="legend">
+        <span><i class="linha" style="background:var(--s1)"></i>Nominal: pré − Treasury</span>
+        <span><i class="linha" style="background:var(--s2)"></i>Real: NTN-B − TIPS</span>
+      </div>
+      <svg id="chHistSpread" class="chart"></svg>
+
+      <p class="note" style="margin:18px 0 6px"><b>E o nível brasileiro, no mesmo
+         período.</b> O prêmio sobe quando o Brasil piora e também quando os
+         Estados Unidos melhoram — sem o nível de um dos lados não dá para
+         distinguir as duas coisas. Dois gráficos empilhados em vez de dois eixos
+         no mesmo desenho: dois eixos sugerem uma relação que o dado não afirma.</p>
+      <svg id="chHistNivel" class="chart"></svg>
+      <p class="note muted" id="histStatus" style="margin:12px 0 0;font-size:12px"></p>
+    </div>
+
     <div class="card" style="margin-bottom:18px">
       <h2>As quatro curvas lado a lado</h2>
       <p class="note">O mesmo fechamento de hoje, nas duas moedas e nos dois
@@ -155,6 +195,16 @@
         <p class="note">Quantas vezes o patrimônio contábil o mercado paga pelas
            empresas do índice. Abaixo de 1, paga menos do que os balanços dizem
            que as empresas valem.</p>
+        <div class="ctls" style="display:flex;gap:18px;flex-wrap:wrap;margin:0 0 14px">
+          <label>Período:
+            <select id="ctlPvpAnos">
+              <option value="1">1 ano</option>
+              <option value="5">5 anos</option>
+              <option value="10">10 anos</option>
+              <option value="0" selected>Tudo</option>
+            </select>
+          </label>
+        </div>
         <div class="legend">
           <span><i class="linha" style="background:var(--s1)"></i>P/VP do índice</span>
           <span class="muted" id="pvpStatus"></span>
@@ -229,6 +279,18 @@
         dupla contagem. Bancos entram: para o ranking de Greenblatt eles são
         excluídos porque ROIC e EV não significam a mesma coisa num banco, mas o
         patrimônio líquido significa.</p>
+
+      <h3>A série do prêmio no tempo</h3>
+      <p>Sai das mesmas duas fontes, e é recalculada inteira todo dia — não há
+        nada acumulado entre execuções. Isso quer dizer que ela se conserta
+        sozinha: um erro corrigido no cálculo reescreve os 21 anos na coleta
+        seguinte, em vez de ficar preso num arquivo.</p>
+      <p>As linhas não começam todas no mesmo ponto, e isso é dado, não falha.
+        O prefixado do Tesouro Direto começa em dezembro de 2004 e nos primeiros
+        anos o papel mais longo vencia em três; o vértice de 10 anos só existe
+        quando há um título prefixado que alcance esse prazo em oferta, e houve
+        períodos — 2009, 2012, 2023 — em que não havia. Nesses dias a linha
+        nominal simplesmente some, em vez de repetir o último valor.</p>
 
       <h3>O que estes números não dizem</h3>
       <ul>

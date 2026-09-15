@@ -228,6 +228,44 @@ def calcular(papeis: list[dict], precos: dict[str, float],
                      faltando=faltando, detalhe=detalhe)
 
 
+def vpa_na_data(painel, acoes_por_cvm: dict, mapa_prefixo: dict[str, int],
+                quando, folga_dias: int = 90) -> dict[str, dict]:
+    """{prefixo -> {vpa, ...}} com o que se sabia em `quando`.
+
+    A versão de hoje lê o `fundamentos.json`, que só tem o balanço mais
+    recente. Esta lê o painel de todas as datas e escolhe o último balanço já
+    ENTREGUE à CVM naquele dia — a mesma disciplina do `backtest_historico.py`.
+
+    `acoes_por_cvm` é {código CVM -> {"acoes": n, "fonte": texto, "nome": …}},
+    vindo da mesma conciliação do cálculo diário. **A fonte tem que vir junto**:
+    a regra das units exige nº de ações da CVM, e sem carregar essa informação
+    até aqui uma unit entraria com o número implícito no valor de mercado — que
+    não diz se está contando units ou ações.
+
+    Segurar o número de ações constante no tempo é uma aproximação declarada:
+    ele muda com recompras e ofertas, devagar, e a alternativa (o histórico do
+    Yahoo) não distingue ação de unit nem classe de total — trocaria um erro
+    pequeno e conhecido por um grande e invisível.
+    """
+    saida = {}
+    for pref, cvm in mapa_prefixo.items():
+        info = acoes_por_cvm.get(cvm)
+        if not info:
+            continue
+        n = info.get("acoes")
+        if not _ok(n) or n <= 0:
+            continue
+        pl = patrimonio_vigente(painel, cvm, quando, folga_dias)
+        if pl is None or pl <= 0:
+            continue
+        saida[str(pref).upper()] = {
+            "vpa": pl / n, "pl": pl, "acoes": float(n),
+            "fonteAcoes": info.get("fonte") or "cvm",
+            "nome": info.get("nome"), "dtBalanco": None,
+        }
+    return saida
+
+
 # ---------------------------------------------------------------------------
 # Patrimônio líquido no tempo, para a série histórica
 # ---------------------------------------------------------------------------

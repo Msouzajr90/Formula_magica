@@ -25,6 +25,7 @@ SAIDA = RAIZ / "web" / "public" / "mercado.json"
 CARTEIRA = RAIZ / "web" / "public" / "ibov_carteira.json"
 HISTORICO_PVP = RAIZ / "web" / "public" / "pvp_historico.json"
 MAPA_CVM = RAIZ / "web" / "public" / "mapa_cvm.json"
+HISTORICO_SPREAD = RAIZ / "web" / "public" / "spread_historico.json"
 FUNDAMENTOS = RAIZ / "web" / "public" / "fundamentos.json"
 
 log = logging.getLogger("mercado")
@@ -33,21 +34,45 @@ log = logging.getLogger("mercado")
 # ---------------------------------------------------------------------------
 # Juros
 # ---------------------------------------------------------------------------
-def coletar_juros(sessao, hoje: date | None = None) -> dict:
-    from mercado import arquivo, tesouro, treasury
+def coletar_juros(sessao, hoje: date | None = None,
+                  com_historico: bool = True) -> dict:
+    """As quatro fotos da curva e, de quebra, a série do spread no tempo.
+
+    As duas coisas saem do mesmo download. O CSV do Tesouro tem 21 anos e os
+    do Treasury são um por ano — baixar os 22 anos custa algumas dezenas de
+    segundos a mais e dá a série histórica inteira, sem nada a acumular entre
+    execuções. Ela é reescrita do zero todo dia: um erro corrigido no cálculo
+    conserta o passado na execução seguinte.
+    """
+    from mercado import arquivo, historico, tesouro, treasury
 
     log.info("Baixando o CSV do Tesouro Transparente…")
     td = tesouro.ler_csv(tesouro.baixar_csv(sessao))
     log.info("Tesouro: %d linhas, de %s a %s", len(td),
              td["DATA"].min().date(), td["DATA"].max().date())
 
-    # Seis meses atrás pode cair no ano anterior; por isso dois anos.
     fim = hoje or date.today()
-    anos = sorted({fim.year, (fim - timedelta(days=200)).year})
-    log.info("Baixando as curvas do Treasury (%s)…", anos)
+    if com_historico:
+        anos = list(range(td["DATA"].min().year, fim.year + 1))
+    else:
+        # Seis meses atrás pode cair no ano anterior; por isso dois anos.
+        anos = sorted({fim.year, (fim - timedelta(days=200)).year})
+    log.info("Baixando as curvas do Treasury (%d anos: %s a %s)…",
+             len(anos), anos[0], anos[-1])
     us_nom = treasury.baixar(treasury.TIPO_NOMINAL, anos, sessao)
     us_real = treasury.baixar(treasury.TIPO_REAL, anos, sessao)
     log.info("Treasury: %d pontos nominais, %d reais", len(us_nom), len(us_real))
+
+    if com_historico:
+        s = historico.serie(td, us_nom, us_real)
+        HISTORICO_SPREAD.parent.mkdir(parents=True, exist_ok=True)
+        HISTORICO_SPREAD.write_text(
+            json.dumps(s, separators=(",", ":")), encoding="utf-8")
+        tam = HISTORICO_SPREAD.stat().st_size / 1024
+        log.info("spread_historico.json: %d pregões, %.0f KB", len(s["datas"]), tam)
+        for k, v in historico.resumo(s).items():
+            log.info("  %-12s %4d dias, %s a %s, último %s",
+                     k, v["n"], v["inicio"], v["fim"], v["ultimo"])
 
     return arquivo.montar_juros(td, us_nom, us_real, hoje)
 
@@ -202,6 +227,8 @@ def main(argv=None) -> int:
                     help="publica só o P/VP (mantém as curvas do arquivo atual)")
     ap.add_argument("--demo", action="store_true",
                     help="números sorteados, para ver a tela")
+    ap.add_argument("--sem-historico", action="store_true",
+                    help="não refaz a série do spread desde 2004 (coleta rápida)")
     ap.add_argument("--saida", default=str(SAIDA))
     args = ap.parse_args(argv)
 
@@ -230,7 +257,7 @@ def main(argv=None) -> int:
     juros = anterior.get("juros") or {}
     if not args.sem_juros:
         try:
-            juros = coletar_juros(sessao)
+            juros = coletar_juros(sessao, com_historico=not args.sem_historico)
         except Exception as exc:                               # noqa: BLE001
             log.error("Curvas de juros: FALHOU — %s", exc)
             avisos.append(f"As curvas de juros não puderam ser atualizadas: {exc}")

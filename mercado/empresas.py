@@ -6,19 +6,17 @@ carteira do Ibovespa só tem ticker. Sem este mapa não há P/VP.
 
 Por que não usar `magicb3.tickers.baixar_empresas_b3`
 ----------------------------------------------------
-Ele existe e faz quase isto, mas filtra os prefixos por `[A-Z]{4}` — quatro
-LETRAS. O prefixo da própria B3 é `B3SA`, com um dígito no meio, e por isso a
-B3 S.A. cai fora da lista. Ela pesa 3,3% do Ibovespa, tem R$ 18,8 bi de
-patrimônio no arquivo da CVM (código 21610) e simplesmente não aparecia.
+Ele existe e faz quase isto, mas depende de pandas, de parquet e do cache em
+disco do pipeline de ações — peso que esta aba não precisa carregar para
+montar um dicionário de 500 entradas. Aqui é requests e um `dict`.
 
-Aqui a regra é quatro caracteres alfanuméricos começando por letra, que é o
-padrão real dos códigos de negociação da B3. O resto — descartar BDR, manter o
-primeiro código CVM por prefixo — é igual, de propósito: as duas listas
-precisam concordar em tudo o mais.
-
-(O mesmo filtro de quatro letras está no caminho das ações, e lá também
-derruba a B3 S.A. Mexer nele muda o ranking de Greenblatt, então ficou para
-uma decisão separada; esta aba não depende disso.)
+As duas regras de filtragem, porém, são a mesma, e precisam continuar sendo:
+quatro caracteres alfanuméricos começando por letra (o padrão real dos códigos
+de negociação da B3) e fora os BDR. Quem usava `[A-Z]{4}` — quatro LETRAS —
+derrubava a B3 S.A., prefixo `B3SA`, 3,3% do Ibovespa. Esta aba nasceu com a
+regra certa; o caminho das ações foi corrigido em 15/09/2026, em
+`magicb3/tickers.py`, e os testes em `tests/test_prefixos_b3.py` existem para
+que ninguém reaperte a regra de novo.
 """
 from __future__ import annotations
 

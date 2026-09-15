@@ -134,6 +134,8 @@ validar_fiis.py           confere o fiis.json antes de publicar
 verificar_mercado.py      diagnóstico das fontes de juros e do Ibovespa
 atualizar_mercado.py      gera o web/public/mercado.json (ver MERCADO.md)
 validar_mercado.py        confere o mercado.json antes de publicar
+gerar_pvp_historico.py    roda no Brasil: reconstroi a serie do P/VP (ver MERCADO.md)
+pvp_historico.bat         duplo clique no Windows: diagnostico + serie do P/VP
 vercel.json               configuração do site estático
 web/public/               site publicado na Vercel (HTML + CSS + JS puros)
 .github/workflows/        robô que atualiza os dados sob demanda

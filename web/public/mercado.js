@@ -218,89 +218,161 @@ function linhas(svg, { grade, series, eixoY, eixoX = 'Prazo (anos)', casas = 2,
 }
 
 // ===========================================================================
-// Gráfico de série no tempo (P/VP)
+// Gráfico de séries no tempo
 // ===========================================================================
-function serieNoTempo(svg, pontos, { altura = 340, referencia = 1 } = {}) {
-  // Com menos de dois pontos não há linha para desenhar, e um quadro de 340px
-  // vazio com uma frase no meio parece defeito. A caixa encolhe para a frase.
-  const bastante = pontos.filter(p => p[1] != null && isFinite(p[1])).length >= 2;
-  const h = bastante ? altura : 88, w = moldura(svg, h);
-  const m = { t: 16, r: 20, b: 42, l: w < 620 ? 44 : 54 };
-  const iw = w - m.l - m.r, ih = h - m.t - m.b;
-  const bons = pontos.filter(p => p[1] != null && isFinite(p[1]));
-  if (bons.length < 2) {
+/**
+ * datas: ['2004-12-31', ...]  (ordenadas)
+ * series: [{ nome, rotulo, valores: [n|null], cor }]
+ * Mesma regra das curvas: null é buraco. Uma série de spread com o valor de
+ * ontem carregado para a frente parece estabilidade e é ausência de dado —
+ * o prefixado brasileiro de 10 anos simplesmente não existiu em vários
+ * períodos, e o gráfico tem que mostrar isso.
+ */
+function linhasNoTempo(svg, datas, series, { altura = 320, eixoY = '',
+                       referencia = null, zero = false, casas = 2,
+                       formato = null } = {}) {
+  const vivas = series.filter(s => s.valores.some(v => v != null && isFinite(v)));
+  if (!vivas.length || datas.length < 2) {
+    const h = moldura(svg, 88);
+    const w = svg.viewBox.baseVal.width || 640;
     const t = mk('text', { x: w / 2, y: h / 2 + 4, 'text-anchor': 'middle', 'font-size': 12.5 });
-    t.textContent = bons.length ? 'Um ponto só — a série começa a se formar agora.'
-                                : 'Sem série histórica ainda.';
+    t.textContent = datas.length === 1
+      ? 'Um ponto só — a série começa a se formar agora.'
+      : 'Sem série para este vértice.';
     svg.appendChild(t); return;
   }
 
-  const ts = bons.map(p => Date.parse(p[0]));
-  const vs = bons.map(p => p[1]);
-  const e = escala(referencia != null ? vs.concat([referencia]) : vs);
+  const h = altura, w = moldura(svg, h);
+  const estreito = w < 620;
+  const m = { t: 16, r: estreito ? 48 : 76, b: 40, l: estreito ? 44 : 54 };
+  const iw = w - m.l - m.r, ih = h - m.t - m.b;
+
+  const ts = datas.map(d => Date.parse(d));
+  const todos = vivas.flatMap(s => s.valores);
+  if (zero) todos.push(0);
+  if (referencia != null) todos.push(referencia);
+  const e = escala(todos);
   const t0 = ts[0], t1 = ts[ts.length - 1];
-  const px = (t) => m.l + ((t - t0) / (t1 - t0 || 1)) * iw;
+  const px = (x) => m.l + ((x - t0) / (t1 - t0 || 1)) * iw;
   const py = (v) => m.t + ih - ((v - e.min) / (e.max - e.min)) * ih;
+  const fmt = formato || ((v) => num(v, casas));
 
   for (let v = e.min; v <= e.max + 1e-9; v += e.passo) {
     const y = py(v);
     svg.appendChild(mk('line', { x1: m.l, x2: m.l + iw, y1: y, y2: y, class: 'gridline', 'stroke-width': 1 }));
-    const t = mk('text', { x: m.l - 9, y: y + 4, 'text-anchor': 'end', 'font-size': 11 });
-    t.textContent = num(v, 2); svg.appendChild(t);
+    const tx = mk('text', { x: m.l - 9, y: y + 4, 'text-anchor': 'end', 'font-size': 11 });
+    tx.textContent = num(v, e.passo < 1 ? 2 : (e.passo < 10 ? 1 : 0)); svg.appendChild(tx);
   }
-  for (let k = 0; k <= 4; k++) {
-    const t = t0 + (t1 - t0) * k / 4;
-    const tx = mk('text', { x: px(t), y: m.t + ih + 18, 'text-anchor': 'middle', 'font-size': 11 });
-    tx.textContent = new Date(t).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+  const marcos = estreito ? 3 : 5;
+  for (let k = 0; k <= marcos; k++) {
+    const x = t0 + (t1 - t0) * k / marcos;
+    const tx = mk('text', { x: px(x), y: m.t + ih + 18, 'text-anchor': 'middle', 'font-size': 11 });
+    const d = new Date(x);
+    tx.textContent = (t1 - t0) > 3 * 365 * 864e5
+      ? d.getFullYear() : d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
     svg.appendChild(tx);
+  }
+  if (zero && e.min < 0 && e.max > 0) {
+    svg.appendChild(mk('line', { x1: m.l, x2: m.l + iw, y1: py(0), y2: py(0),
+      stroke: css('--line-strong'), 'stroke-width': 1.2 }));
   }
   if (referencia != null && e.min < referencia && e.max > referencia) {
     svg.appendChild(mk('line', { x1: m.l, x2: m.l + iw, y1: py(referencia), y2: py(referencia),
       stroke: css('--line-strong'), 'stroke-width': 1, 'stroke-dasharray': '4 4' }));
-    // À esquerda, não à direita: a ponta direita do gráfico é onde está o
-    // valor de hoje, e o rótulo passava exatamente por cima dele.
-    const t = mk('text', { x: m.l + 5, y: py(referencia) - 5, 'font-size': 10.5 });
-    t.textContent = 'P/VP = 1 — o preço do patrimônio contábil'; svg.appendChild(t);
+    const tx = mk('text', { x: m.l + 5, y: py(referencia) - 5, 'font-size': 10.5 });
+    tx.textContent = 'P/VP = 1 — o preço do patrimônio contábil'; svg.appendChild(tx);
+  }
+  if (eixoY) {
+    const ry = mk('text', { x: 13, y: m.t + ih / 2, 'font-size': 11.5, 'text-anchor': 'middle',
+      transform: `rotate(-90 13 ${m.t + ih / 2})` });
+    ry.textContent = eixoY; svg.appendChild(ry);
   }
 
-  let d = '';
-  bons.forEach((p, i) => { d += (i ? 'L' : 'M') + px(ts[i]).toFixed(1) + ' ' + py(vs[i]).toFixed(1) + ' '; });
-  svg.appendChild(mk('path', { d, fill: 'none', stroke: css('--s1'), 'stroke-width': 2,
-    'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+  vivas.slice().reverse().forEach(s => {
+    let d = '', abriu = false;
+    for (let i = 0; i < datas.length; i++) {
+      const v = s.valores[i];
+      if (v == null || !isFinite(v)) { abriu = false; continue; }
+      d += (abriu ? 'L' : 'M') + px(ts[i]).toFixed(1) + ' ' + py(v).toFixed(1) + ' ';
+      abriu = true;
+    }
+    svg.appendChild(mk('path', { d, fill: 'none', stroke: s.cor, 'stroke-width': 2,
+      'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+  });
 
-  const fim = mk('circle', { cx: px(ts[ts.length - 1]), cy: py(vs[vs.length - 1]), r: 4.5,
-    fill: css('--s1'), stroke: css('--surface-1'), 'stroke-width': 2 });
-  svg.appendChild(fim);
+  const marcas = [];
+  vivas.forEach(s => {
+    let ult = -1;
+    for (let i = 0; i < datas.length; i++) if (s.valores[i] != null && isFinite(s.valores[i])) ult = i;
+    if (ult < 0) return;
+    marcas.push({ x: px(ts[ult]), y: py(s.valores[ult]), cor: s.cor,
+                  texto: s.rotulo || s.nome });
+  });
+  afastar(marcas);
+  marcas.forEach(x => {
+    const txt = mk('text', { x: Math.min(x.x + 7, m.l + iw + 5), y: x.y + 3.5,
+      'font-size': 11, fill: x.cor });
+    txt.textContent = x.texto; svg.appendChild(txt);
+  });
 
   const cursor = mk('line', { y1: m.t, y2: m.t + ih, stroke: css('--line-strong'),
     'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0 });
-  const bola = mk('circle', { r: 4.5, fill: css('--s1'), stroke: css('--surface-1'),
-    'stroke-width': 2, opacity: 0 });
-  svg.appendChild(cursor); svg.appendChild(bola);
+  svg.appendChild(cursor);
+  const bolas = vivas.map(s => {
+    const c = mk('circle', { r: 4, fill: s.cor, stroke: css('--surface-1'),
+      'stroke-width': 2, opacity: 0 });
+    svg.appendChild(c); return c;
+  });
   const area = mk('rect', { x: m.l, y: m.t, width: iw, height: ih, fill: 'transparent' });
   svg.appendChild(area);
   area.addEventListener('mousemove', (ev) => {
     const cx = ev.clientX - svg.getBoundingClientRect().left;
-    const escalaSvg = (svg.viewBox.baseVal.width || w) / svg.clientWidth;
-    const alvo = t0 + ((cx * escalaSvg - m.l) / iw) * (t1 - t0);
-    let i = 0, melhor = Infinity;
-    ts.forEach((t, k) => { const dd = Math.abs(t - alvo); if (dd < melhor) { melhor = dd; i = k; } });
-    cursor.setAttribute('x1', px(ts[i])); cursor.setAttribute('x2', px(ts[i]));
+    const fator = (svg.viewBox.baseVal.width || w) / svg.clientWidth;
+    const alvo = t0 + ((cx * fator - m.l) / iw) * (t1 - t0);
+    // busca binária: a série tem milhares de pontos e isto roda a cada pixel
+    let lo = 0, hi = ts.length - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (ts[mid] < alvo) lo = mid + 1; else hi = mid; }
+    if (lo > 0 && Math.abs(ts[lo - 1] - alvo) < Math.abs(ts[lo] - alvo)) lo--;
+
+    cursor.setAttribute('x1', px(ts[lo])); cursor.setAttribute('x2', px(ts[lo]));
     cursor.setAttribute('opacity', 1);
-    bola.setAttribute('cx', px(ts[i])); bola.setAttribute('cy', py(vs[i]));
-    bola.setAttribute('opacity', 1);
-    mostrarTip(ev, `<b>${dataBR(bons[i][0])}</b>
-      <div class="r"><span>P/VP do Ibovespa</span><span>${num(vs[i], 2)}</span></div>`);
+    let html = `<b>${dataBR(datas[lo])}</b>`;
+    vivas.forEach((s, k) => {
+      const v = s.valores[lo];
+      if (v == null || !isFinite(v)) { bolas[k].setAttribute('opacity', 0); return; }
+      bolas[k].setAttribute('cx', px(ts[lo]));
+      bolas[k].setAttribute('cy', py(v));
+      bolas[k].setAttribute('opacity', 1);
+      html += `<div class="r"><span>${esc(s.nome)}</span><span>${fmt(v)}</span></div>`;
+    });
+    mostrarTip(ev, html);
   });
   area.addEventListener('mouseleave', () => {
-    cursor.setAttribute('opacity', 0); bola.setAttribute('opacity', 0); esconderTip();
+    cursor.setAttribute('opacity', 0);
+    bolas.forEach(b => b.setAttribute('opacity', 0));
+    esconderTip();
   });
+}
+
+/** Corta as séries num período a partir do fim. `anos` 0 = tudo. */
+function recortar(datas, series, anos) {
+  if (!anos) return { datas, series };
+  const limite = Date.parse(datas[datas.length - 1]) - anos * 365.25 * 864e5;
+  let i = 0;
+  while (i < datas.length && Date.parse(datas[i]) < limite) i++;
+  return { datas: datas.slice(i), series: series.map(s => ({ ...s, valores: s.valores.slice(i) })) };
 }
 
 // ===========================================================================
 // Estado e render
 // ===========================================================================
 let D = null;
+let H = null;                    // spread_historico.json, carregado sob demanda
+// O vértice padrão é 5 anos, não 10. Na amostra de 21 anos o prefixado
+// brasileiro alcançava 10 anos em apenas 38% dos pregões — a linha nominal de
+// 10 anos é um tracejado cheio de falhas, e falha não é um bom padrão. Em 5
+// anos o dado existe em 93% do período.
+const estado = { pvpAnos: 0, spreadVertice: '5.0', spreadAnos: 0 };
 const FOTOS = ['hoje', 'semana', 'mes', 'semestre'];
 const CORES_FOTO = ['--t0', '--t1', '--t2', '--t3'];
 const ROTULO_CURTO = { hoje: 'hoje', semana: '1 sem', mes: '1 mês', semestre: '6 meses' };
@@ -490,6 +562,72 @@ function renderSpread() {
   el('tbSpread').querySelector('tbody').innerHTML = linhasTab.join('');
 }
 
+// O arquivo do histórico tem 21 anos de pregões e pesa algumas centenas de
+// KB. Carregar isso na abertura da página atrasaria a primeira aba, que não
+// precisa dele — então só busca quando a aba Brasil × EUA é aberta.
+let estadoHistorico = 'nao-pedido';   // nao-pedido | buscando | pronto | ausente
+function carregarHistorico() {
+  if (estadoHistorico !== 'nao-pedido') return;
+  estadoHistorico = 'buscando';
+  renderSpreadHistorico();
+  fetch('spread_historico.json?' + encodeURIComponent(D.meta.geradoEm || ''))
+    .then(r => r.ok ? r.json() : Promise.reject(new Error(String(r.status))))
+    .then(j => { H = j; estadoHistorico = 'pronto'; renderSpreadHistorico(); })
+    .catch(() => { H = null; estadoHistorico = 'ausente'; renderSpreadHistorico(); });
+}
+
+function renderSpreadHistorico() {
+  const caixa = el('histSpread');
+  if (!caixa) return;
+  if (!H) {
+    el('chHistSpread').textContent = '';
+    el('chHistNivel').textContent = '';
+    el('histStatus').textContent = {
+      'nao-pedido': '',
+      'buscando': 'Carregando 21 anos de pregões…',
+      'ausente': 'O arquivo spread_historico.json ainda não existe. Ele é gerado '
+               + 'junto com o mercado.json — rode a ação Atualizar mercado no GitHub.',
+    }[estadoHistorico] || '';
+    return;
+  }
+
+  const v = estado.spreadVertice;
+  const temNominal = (H.nominal || {})[v] !== undefined;
+  const series = [];
+  if (temNominal) series.push({ nome: `Nominal ${parseFloat(v)} anos (pré − Treasury)`,
+    rotulo: 'nominal', valores: H.nominal[v], cor: css('--s1') });
+  if ((H.real || {})[v] !== undefined) series.push({ nome: `Real ${parseFloat(v)} anos (NTN-B − TIPS)`,
+    rotulo: 'real', valores: H.real[v], cor: css('--s2') });
+
+  const r = recortar(H.datas, series, estado.spreadAnos);
+  linhasNoTempo(el('chHistSpread'), r.datas, r.series, {
+    altura: 320, zero: true, eixoY: 'Diferença (p.p.)',
+    formato: (x) => pp(x, 2),
+  });
+
+  // O nível brasileiro, no mesmo eixo de tempo e em gráfico separado. Dois
+  // eixos verticais no mesmo desenho é a maneira mais fácil de sugerir uma
+  // relação que os dados não têm; dois gráficos empilhados dizem a mesma
+  // coisa sem inventar nada.
+  const nivel = [];
+  if ((H.brasilPre || {})[v] !== undefined) nivel.push({ nome: `Pré ${parseFloat(v)} anos`,
+    rotulo: 'pré', valores: H.brasilPre[v], cor: css('--s1') });
+  if ((H.brasilNtnb || {})[v] !== undefined) nivel.push({ nome: `NTN-B ${parseFloat(v)} anos`,
+    rotulo: 'NTN-B', valores: H.brasilNtnb[v], cor: css('--s2') });
+  const rn = recortar(H.datas, nivel, estado.spreadAnos);
+  linhasNoTempo(el('chHistNivel'), rn.datas, rn.series, {
+    altura: 240, eixoY: 'Taxa brasileira (% a.a.)',
+    formato: (x) => taxa(x, 2),
+  });
+
+  const comDado = (series[0] ? series[0].valores : []).filter(x => x != null).length;
+  el('histStatus').textContent =
+    `${H.datas.length} pregões no arquivo, de ${dataBR(H.datas[0])} a ${dataBR(H.datas[H.datas.length - 1])}`
+    + (temNominal && comDado < H.datas.length
+       ? ` · a linha nominal tem ${H.datas.length - comDado} dias sem dado, em que não havia prefixado tão longo em oferta`
+       : '');
+}
+
 function renderPvp() {
   const bloco = D.pvp || {};
   const atual = bloco.atual;
@@ -501,10 +639,14 @@ function renderPvp() {
   el('pvpSemDados').classList.add('hidden');
   el('pvpConteudo').classList.remove('hidden');
 
-  const serieHist = (bloco.historico || []).slice();
-  serieNoTempo(el('chPvp'), serieHist);
-  el('pvpStatus').textContent = serieHist.length > 1
-    ? `${serieHist.length} pontos, de ${dataBR(serieHist[0][0])} a ${dataBR(serieHist.slice(-1)[0][0])}`
+  const hist = (bloco.historico || []);
+  const datas = hist.map(x => x[0]);
+  const base = [{ nome: 'P/VP do índice', rotulo: 'P/VP',
+                  valores: hist.map(x => x[1]), cor: css('--s1') }];
+  const r = recortar(datas, base, estado.pvpAnos);
+  linhasNoTempo(el('chPvp'), r.datas, r.series, { referencia: 1, altura: 340 });
+  el('pvpStatus').textContent = hist.length > 1
+    ? `${hist.length} pontos, de ${dataBR(datas[0])} a ${dataBR(datas[datas.length - 1])}`
     : 'a série começa a se formar a partir de agora';
 
   el('notaPvp').innerHTML =
@@ -534,6 +676,7 @@ function render() {
   renderTiles();
   renderJuros();
   renderSpread();
+  renderSpreadHistorico();
   renderPvp();
 }
 
@@ -542,6 +685,7 @@ function trocarAba(nome) {
     b.setAttribute('aria-selected', String(b.dataset.p === nome)));
   ['juros', 'spread', 'pvp', 'metodo'].forEach(p =>
     el('p-' + p).classList.toggle('hidden', p !== nome));
+  if (nome === 'spread') carregarHistorico();
   // Os gráficos das abas escondidas nascem com largura zero; redesenhar ao
   // abrir é o que evita o gráfico de 0 pixel que aparecia na primeira visita.
   render();
@@ -581,6 +725,16 @@ async function iniciar() {
 
   document.querySelectorAll('.tabs button').forEach(b =>
     b.addEventListener('click', () => trocarAba(b.dataset.p)));
+
+  el('ctlVertice').addEventListener('change', (e) => {
+    estado.spreadVertice = e.target.value; renderSpreadHistorico();
+  });
+  el('ctlSpreadAnos').addEventListener('change', (e) => {
+    estado.spreadAnos = +e.target.value; renderSpreadHistorico();
+  });
+  el('ctlPvpAnos').addEventListener('change', (e) => {
+    estado.pvpAnos = +e.target.value; renderPvp();
+  });
 
   let t = null;
   addEventListener('resize', () => { clearTimeout(t); t = setTimeout(render, 150); });
