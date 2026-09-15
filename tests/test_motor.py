@@ -923,3 +923,43 @@ def test_empresa_sem_numero_de_acoes_aparece_nas_excluidas(tmp_path):
     motivos = dict(zip(rej["TICKER"], rej["MOTIVO_EXCLUSAO"]))
     assert "VALE3.SA" in motivos, "a empresa nao pode desaparecer das duas listas"
     assert "valor de mercado" in motivos["VALE3.SA"], motivos["VALE3.SA"]
+
+
+# ---------------------------------------------------------------------------
+# Escala do numero de acoes pelo patrimonio (o caso VALE3)
+# ---------------------------------------------------------------------------
+def test_escala_da_vale_sai_do_patrimonio_quando_o_lpa_falha():
+    """A CVM publica o nº de acoes sem coluna de escala.
+
+    A inferencia principal usa lucro / lucro-por-acao. Quem nao publica o LPA
+    na conta esperada fica sem resposta e some do ranking — foi o caso da
+    VALE3. O patrimonio liquido e um segundo sinal, independente do LPA.
+    """
+    f = fundamentals.escala_por_patrimonio
+    # Vale: 4.540.000 (em milhares), preco 60, PL 208,7 bi
+    assert f(4_540_000, 60.0, 208.7e9) == pytest.approx(4.54e9)
+    # a mesma empresa ja informada em unidades continua dando o mesmo numero
+    assert f(4_540_000_000, 60.0, 208.7e9) == pytest.approx(4.54e9)
+
+
+def test_escala_prefere_nao_responder_a_responder_errado():
+    """Uma acao muito descontada enganaria a regra do P/VP sozinha.
+
+    Com P/VP real de 0,02, a hipotese certa (unidades) cai fora da faixa e a
+    errada — mil vezes maior — entraria no lugar. A trava do numero de acoes
+    recusa as duas, e a funcao devolve NaN para o Yahoo tentar.
+    """
+    f = fundamentals.escala_por_patrimonio
+    assert pd.isna(f(1_000_000_000, 0.02, 1.0e12))
+    for entrada in ((np.nan, 60.0, 2e11), (4_540_000, np.nan, 2e11),
+                    (4_540_000, 60.0, np.nan), (0, 60.0, 2e11),
+                    (4_540_000, 60.0, -1e9)):
+        assert pd.isna(f(*entrada)), entrada
+
+
+def test_escala_resolvida_nao_contradiz_o_lpa_quando_os_dois_respondem():
+    """Onde a inferencia pelo LPA funciona, ela continua mandando — o
+    patrimonio so entra para quem ficou sem resposta."""
+    f = fundamentals.escala_por_patrimonio
+    # empresa media: 500 milhoes de acoes, preco 20, PL 8 bi -> P/VP 1,25
+    assert f(500_000_000, 20.0, 8e9) == pytest.approx(5e8)

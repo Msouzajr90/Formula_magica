@@ -184,6 +184,47 @@ def _motivos_incalculavel(df: pd.DataFrame) -> dict[str, pd.Series]:
             for k, v in motivos.items()}
 
 
+# Faixa de Preço/Valor Patrimonial que uma empresa listada ocupa na prática.
+# Larga de propósito: não é para julgar se a ação está cara, é só para separar
+# duas hipóteses que diferem por mil vezes.
+PVP_MINIMO, PVP_MAXIMO = 0.05, 50.0
+# Quantidade de ações que uma companhia da B3 de fato tem. A segunda trava:
+# sozinho, o P/VP erraria por mil numa ação muito descontada — se o P/VP real
+# for 0,02, a hipótese "unidades" cai fora da faixa e a errada (mil vezes
+# maior) entraria no lugar. Com esta, a errada viraria 1 trilhão de ações e é
+# recusada também, e a função devolve NaN em vez de um número inventado.
+ACOES_MINIMO, ACOES_MAXIMO = 1e6, 3e10
+
+
+def escala_por_patrimonio(bruto, preco, patrimonio):
+    """Decide se o nº de ações da CVM está em unidades ou em milhares.
+
+    O arquivo de composição do capital da CVM não tem coluna de escala: umas
+    companhias informam em unidades, outras em milhares. A inferência principal
+    compara com as ações implícitas em `lucro ÷ lucro por ação` — mas quem não
+    publica o LPA na conta esperada fica sem resposta, e a empresa some do
+    ranking. Foi o caso da VALE3.
+
+    Aqui entra um segundo sinal, independente do LPA: o patrimônio líquido.
+    Das duas hipóteses, só uma produz um P/VP que existe no mundo real. Na
+    Vale, com PL de R$ 208,7 bi: em unidades o valor de mercado daria R$ 272
+    milhões (P/VP de 0,001, absurdo); em milhares dá R$ 272 bi (P/VP de 1,3).
+    Não é chute — é a única leitura compatível com o balanço.
+
+    Devolve o número de ações, ou NaN quando as duas hipóteses são plausíveis
+    (ou nenhuma), caso em que é melhor não ter número do que ter o errado.
+    """
+    vals = [pd.to_numeric(x, errors="coerce") for x in (bruto, preco, patrimonio)]
+    bruto, preco, patrimonio = vals
+    if any(v is None or pd.isna(v) for v in vals) or bruto <= 0 or preco <= 0 or patrimonio <= 0:
+        return np.nan
+    candidatos = [float(bruto), float(bruto) * 1000.0]
+    viaveis = [c for c in candidatos
+               if ACOES_MINIMO <= c <= ACOES_MAXIMO
+               and PVP_MINIMO <= (preco * c) / patrimonio <= PVP_MAXIMO]
+    return viaveis[0] if len(viaveis) == 1 else np.nan
+
+
 def aplicar_filtros(df: pd.DataFrame, params: C.Params) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Remove o que Greenblatt manda remover. Devolve (aprovados, rejeitados+motivo)."""
     df = df.copy()

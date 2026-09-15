@@ -100,9 +100,11 @@ def montar_universo(params: C.Params, *, anos: list[int] | None = None,
         progresso("Lendo composição do capital (nº de ações)...", 0.52)
         try:
             cap = cvm.composicao_capital(anos, usar_cache=usar_cache)
+            cols = ["CD_CVM", "ACOES"] + (["ACOES_BRUTO"] if "ACOES_BRUTO" in cap.columns else [])
             acoes_cvm = (cap.merge(ebit[["CNPJ_CIA", "CD_CVM"]].drop_duplicates(),
-                                   on="CNPJ_CIA", how="inner")[["CD_CVM", "ACOES"]]
-                         .rename(columns={"ACOES": "ACOES_CVM"}).dropna())
+                                   on="CNPJ_CIA", how="inner")[cols]
+                         .rename(columns={"ACOES": "ACOES_CVM"})
+                         .dropna(subset=["CD_CVM"]))
         except Exception as exc:                                # noqa: BLE001
             log.warning("composição do capital indisponível: %s", exc)
             acoes_cvm = pd.DataFrame()
@@ -162,6 +164,22 @@ def montar_universo(params: C.Params, *, anos: list[int] | None = None,
                                 on="CD_CVM", how="left")
     else:
         mercado["ACOES_CVM"] = np.nan
+
+    # Segunda chance antes de recorrer ao Yahoo: quando a CVM trouxe o número
+    # bruto mas a escala não pôde ser confirmada pelo lucro por ação, o
+    # patrimônio líquido decide. Custa nada e não gasta requisição.
+    if "ACOES_BRUTO" in mercado.columns and "PATRIMONIO" in bp.columns:
+        alvo = mercado["ACOES_CVM"].isna() & mercado["ACOES_BRUTO"].notna()
+        if alvo.any():
+            pl = bp.set_index("CD_CVM")["PATRIMONIO"]
+            resolvido = mercado.loc[alvo].apply(
+                lambda r: fundamentals.escala_por_patrimonio(
+                    r["ACOES_BRUTO"], r["PRECO"], pl.get(r["CD_CVM"], np.nan)), axis=1)
+            mercado.loc[alvo, "ACOES_CVM"] = resolvido
+            n = int(resolvido.notna().sum())
+            if n:
+                log.info("escala do nº de ações resolvida pelo patrimônio em "
+                         "%d empresas (a CVM não traz essa coluna)", n)
 
     faltando = mercado.loc[mercado["ACOES_CVM"].isna(), "TICKER"].tolist()
     n_yahoo = pd.Series(dtype=float)
