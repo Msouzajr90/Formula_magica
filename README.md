@@ -30,6 +30,18 @@ mesma divisão Brasil/nuvem das ações — `baixar_informe_fii.py` no seu PC,
 o robô lendo o arquivo. Documentada em **`FIIS.md`** e em
 **`COMO_ATUALIZAR_FIIS.md`**.
 
+E uma terceira, de **indicadores de mercado**: o P/VP do Ibovespa calculado das
+empresas do índice, as curvas de juros prefixada e de NTN-B em quatro datas
+(hoje, uma semana, um mês e seis meses atrás) e a diferença de juros entre
+Brasil e Estados Unidos, nominal e real. Essa roda inteira na nuvem — nenhuma
+das fontes recusa conexão de fora do Brasil — e a única dependência local é o
+`fundamentos.json`, que já existe para a aba de ações. Documentada em
+**`MERCADO.md`**.
+
+Nenhum número dela é de tempo real, e não é escolha: ANBIMA, B3 e Tesouro
+publicam no fechamento, e o acesso gratuito aos arquivos da ANBIMA saiu do ar.
+A aba mostra a data do fechamento ao lado de cada número.
+
 ## Começar (Windows)
 
 Dê **duplo clique em `iniciar.bat`**. Na primeira vez ele instala tudo, roda a
@@ -119,10 +131,14 @@ baixar_informe_fii.py     roda no Brasil: gera o web/public/informe_fii.json
 verificar_fiis.py         diagnóstico das fontes de FII
 atualizar_fiis.py         gera o web/public/fiis.json (ver FIIS.md)
 validar_fiis.py           confere o fiis.json antes de publicar
+verificar_mercado.py      diagnóstico das fontes de juros e do Ibovespa
+atualizar_mercado.py      gera o web/public/mercado.json (ver MERCADO.md)
+validar_mercado.py        confere o mercado.json antes de publicar
 vercel.json               configuração do site estático
 web/public/               site publicado na Vercel (HTML + CSS + JS puros)
 .github/workflows/        robô que atualiza os dados sob demanda
 fiib3/                    fundos imobiliários — ver FIIS.md
+mercado/                  curvas de juros e P/VP do índice — ver MERCADO.md
 magicb3/
   config.py               parâmetros e códigos de conta da CVM
   cvm.py                  download e normalização de DFP/ITR, EBIT LTM

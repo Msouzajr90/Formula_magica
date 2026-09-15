@@ -180,3 +180,37 @@ th.ord:hover{color:var(--ink)}
 th.ord[data-dir]::after{content:' ▾';font-size:9px}
 th.ord[data-dir=asc]::after{content:' ▴'}
 .vazio{padding:34px 12px;text-align:center;color:var(--ink-3)}
+
+/* ---------- itens só da tela de indicadores de mercado ---------- */
+/* As quatro fotos da curva (hoje, 1 semana, 1 mês, 6 meses) são uma ordem no
+   tempo, não quatro categorias: trocar a ordem mudaria o sentido. Por isso uma
+   rampa de um matiz só, do mais escuro (hoje) ao mais claro (6 meses), em vez
+   de quatro cores diferentes — o leitor vê a sequência na própria cor.
+   Os quatro passos de cada modo foram validados: luminosidade monotônica,
+   degrau mínimo entre vizinhos e a ponta clara ainda visível sobre o fundo. */
+:root{
+  --t0:#11477e; --t1:#2a78d6; --t2:#5b98dd; --t3:#8ab4e6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --t0:#a8cdf7; --t1:#5f9ff0; --t2:#3773c0; --t3:#28527f;
+  }
+}
+.legend i.linha{width:16px;height:3px;border-radius:2px}
+/* Marca o vértice que veio de título com cupom: a taxa ali é TIR do fluxo
+   inteiro, não taxa à vista do prazo. Diferença pequena, mas é diferença. */
+.legend i.vazado{background:none!important;border:2px solid currentColor;
+                 width:9px;height:9px;border-radius:50%}
+.faixa{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;
+       margin:0 0 18px}
+.faixa .tile .v{font-size:20px}
+/* Variação de taxa NÃO é vermelho e verde. Juro subindo é ruim para quem tem
+   título e bom para quem vai comprar; pintar de vermelho embute um julgamento
+   que a tela não tem como fazer. A seta e o sinal dizem a direção, e o resto
+   fica com a cor de texto. */
+.delta{font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.metodo h3{font-size:14px;margin:22px 0 6px}
+.metodo h3:first-child{margin-top:0}
+.metodo p{color:var(--ink-2);margin:0 0 10px;max-width:74ch;font-size:13px}
+.metodo ul{color:var(--ink-2);margin:0 0 10px;padding-left:20px;font-size:13px;max-width:74ch}
+.metodo li{margin-bottom:5px}

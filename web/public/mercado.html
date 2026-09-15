@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Indicadores de mercado — Fórmula Mágica B3</title>
+<meta name="description" content="P/VP do Ibovespa, curvas de juros prefixada e de NTN-B e a diferença de juros entre Brasil e Estados Unidos.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='54'>📉</text></svg>">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="nav">
+  <a href="index.html">Ações</a>
+  <a href="fiis.html">Fundos imobiliários</a>
+  <a href="mercado.html" aria-current="page">Indicadores de mercado</a>
+</nav>
+
+<header>
+  <h1>Indicadores de mercado</h1>
+  <p class="sub">O preço do patrimônio no Ibovespa, a curva de juros em duas moedas —
+     nominal e real — e o quanto o Brasil paga a mais que os Estados Unidos.
+     É o pano de fundo contra o qual as duas outras abas fazem sentido.</p>
+  <div class="stamp">
+    <span><span class="dot"></span>Fechamento de <b id="stamp">—</b></span>
+    <span id="stampGerado"></span>
+  </div>
+</header>
+
+<div class="warn hidden" id="dadosDemo"
+     style="border-left-color:var(--bad);background:color-mix(in srgb, var(--bad) 8%, transparent)">
+  <b>⚠ Estes números são sorteados.</b> O arquivo está em modo demonstração —
+  as curvas e o P/VP foram gerados aleatoriamente e não vieram do Tesouro, do
+  Treasury nem da B3. Servem só para ver a tela. Rode a ação
+  <code>Atualizar mercado</code> no GitHub para substituir por dados de verdade.
+</div>
+
+<div id="avisos"></div>
+<div id="loading" class="load">Carregando indicadores…</div>
+<div id="erro" class="load hidden"></div>
+
+<main id="app" class="hidden">
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true"  data-p="juros">Curva de juros</button>
+    <button role="tab" aria-selected="false" data-p="spread">Brasil × EUA</button>
+    <button role="tab" aria-selected="false" data-p="pvp">P/VP do Ibovespa</button>
+    <button role="tab" aria-selected="false" data-p="metodo">Método e limites</button>
+  </div>
+
+  <!-- ============ CURVA DE JUROS ============ -->
+  <section id="p-juros">
+
+    <div class="warn">
+      <b>Nenhum destes números é de tempo real.</b> Nenhuma fonte oficial
+      gratuita publica curva de juros em tempo real: todas divulgam no
+      fechamento. O Tesouro publica de manhã o fechamento do dia anterior, e é
+      esse que está aqui — a data ao lado de cada gráfico diz exatamente qual.
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <h2>Curva prefixada</h2>
+      <p class="note">Quanto o governo paga, em reais e por ano, para tomar
+         emprestado por cada prazo. Subindo da esquerda para a direita, o mercado
+         cobra mais para emprestar por mais tempo; quando a ponta curta passa a
+         longa, costuma ser aposta em juro caindo.</p>
+      <div class="legend" id="legJuros"></div>
+      <svg id="chPre" class="chart"></svg>
+      <p class="note" id="notaPre" style="margin:12px 0 0"></p>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <h2>Curva de NTN-B — juro real</h2>
+      <p class="note">O mesmo, já descontada a inflação: é o que sobra de ganho
+         de poder de compra. É contra esta curva que uma ação precisa se defender —
+         se a NTN-B longa paga 7% acima do IPCA sem risco, a bolsa precisa
+         prometer bem mais que isso para valer o trabalho.</p>
+      <div class="legend" id="legJuros2"></div>
+      <svg id="chIpca" class="chart"></svg>
+      <p class="note" id="notaIpca" style="margin:12px 0 0"></p>
+    </div>
+
+    <div class="card">
+      <h2>Os títulos por trás das curvas</h2>
+      <p class="note">Cada linha é um título de verdade com uma taxa de verdade.
+         Entre eles a curva é interpolada; depois do último, não existe —
+         e o gráfico termina ali em vez de continuar com uma reta inventada.</p>
+      <div class="scroll tall">
+        <table id="tbVertices"><thead><tr>
+          <th class="l">Título</th><th class="l">Vencimento</th><th>Prazo</th>
+          <th>Hoje</th><th>1 semana</th><th>1 mês</th><th>6 meses</th><th>Δ 6 meses</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BRASIL x EUA ============ -->
+  <section id="p-spread" class="hidden">
+
+    <div class="faixa" id="faixaSpread"></div>
+
+    <div class="card" style="margin-bottom:18px">
+      <h2>Prêmio do Brasil sobre os Estados Unidos, prazo a prazo</h2>
+      <p class="note">A diferença em cada vencimento, em pontos percentuais.
+         Em cima, a comparação nominal — prefixado brasileiro contra Treasury.
+         Embaixo, a real — NTN-B contra TIPS, que tira a inflação esperada dos
+         dois lados e deixa mais perto do prêmio de risco puro.</p>
+      <div class="legend">
+        <span><i class="linha" style="background:var(--s1)"></i>Nominal: pré − Treasury</span>
+        <span><i class="linha" style="background:var(--s2)"></i>Real: NTN-B − TIPS</span>
+      </div>
+      <svg id="chSpread" class="chart"></svg>
+      <p class="note" style="margin:12px 0 0" id="notaSpread"></p>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <h2>As quatro curvas lado a lado</h2>
+      <p class="note">O mesmo fechamento de hoje, nas duas moedas e nos dois
+         países. A distância vertical entre as linhas de mesma natureza é o
+         spread do gráfico acima.</p>
+      <div class="legend" id="legPaises"></div>
+      <svg id="chPaises" class="chart"></svg>
+    </div>
+
+    <div class="card">
+      <h2>Vértices em destaque</h2>
+      <p class="note">Onde o mercado costuma olhar. Todas as taxas em base
+         efetiva ao ano — inclusive as americanas, convertidas da capitalização
+         semestral em que o Treasury publica.</p>
+      <div class="scroll">
+        <table id="tbSpread"><thead><tr>
+          <th class="l">Vértice</th><th>Brasil</th><th>EUA</th><th>Diferença</th>
+          <th>1 semana</th><th>1 mês</th><th>6 meses</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ P/VP DO IBOVESPA ============ -->
+  <section id="p-pvp" class="hidden">
+
+    <div id="pvpSemDados" class="card hidden">
+      <h2>P/VP indisponível</h2>
+      <p class="note">O cálculo depende do <code>fundamentos.json</code> (patrimônio
+        líquido da CVM) e da carteira teórica do Ibovespa na B3. Um dos dois não
+        estava disponível na última coleta — o motivo está no aviso no topo da página.</p>
+    </div>
+
+    <div id="pvpConteudo">
+      <div class="card" style="margin-bottom:18px">
+        <h2>P/VP do Ibovespa</h2>
+        <p class="note">Quantas vezes o patrimônio contábil o mercado paga pelas
+           empresas do índice. Abaixo de 1, paga menos do que os balanços dizem
+           que as empresas valem.</p>
+        <div class="legend">
+          <span><i class="linha" style="background:var(--s1)"></i>P/VP do índice</span>
+          <span class="muted" id="pvpStatus"></span>
+        </div>
+        <svg id="chPvp" class="chart"></svg>
+        <p class="note" id="notaPvp" style="margin:12px 0 0"></p>
+      </div>
+
+      <div class="card">
+        <h2>Empresa por empresa</h2>
+        <p class="note">O P/VP de cada papel do índice e o peso com que entra na
+           conta. O índice não é a média destes números: é a soma dos valores de
+           mercado dividida pela soma dos patrimônios.</p>
+        <div class="contagem" id="contagemPvp"></div>
+        <div class="scroll tall">
+          <table id="tbPvp"><thead><tr>
+            <th class="l">Papel</th><th class="l">Empresa</th><th>Peso no índice</th>
+            <th>Preço</th><th>VPA</th><th>P/VP</th><th class="l">Balanço de</th><th class="l">Nº de ações</th>
+          </tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MÉTODO ============ -->
+  <section id="p-metodo" class="hidden">
+    <div class="card metodo">
+      <h3>De onde vem cada número</h3>
+      <ul>
+        <li><b>Curvas brasileiras</b> — Tesouro Transparente, arquivo de taxas dos
+          títulos ofertados pelo Tesouro Direto, atualizado todo dia útil de manhã
+          com o fechamento do dia anterior. A taxa de cada título é a média entre
+          compra e venda; quando o Tesouro não recompra o papel, só a de compra.</li>
+        <li><b>Curvas americanas</b> — <i>daily par yield curve</i> do Tesouro dos
+          Estados Unidos, nominal e de TIPS.</li>
+        <li><b>Carteira do Ibovespa</b> — carteira teórica do dia, da B3, com a
+          quantidade já ajustada pelo free float.</li>
+        <li><b>Patrimônio líquido</b> — DFP e ITR da CVM, pelo mesmo
+          <code>fundamentos.json</code> que alimenta a aba de ações.</li>
+      </ul>
+
+      <h3>Por que não é tempo real</h3>
+      <p>Porque não existe. ANBIMA, B3 e Tesouro publicam no fechamento; a ANBIMA
+        divulga uma prévia por volta das 13h e a final por volta das 19h30, e o
+        acesso gratuito aos arquivos dela saiu do ar. Uma tela que se dissesse
+        "tempo real" com dado de fechamento estaria mentindo sobre a única coisa
+        que o usuário não tem como conferir.</p>
+
+      <h3>A conversão que quase todo mundo esquece</h3>
+      <p>O Treasury publica juro com capitalização semestral; a taxa brasileira é
+        efetiva ao ano. Subtrair uma da outra direto infla o spread em cerca de
+        6 pontos-base no vértice de 10 anos. Aqui a americana é convertida antes —
+        <code>(1 + y/2)² − 1</code> — e todas as taxas da tela estão na mesma base.</p>
+
+      <h3>Onde as curvas terminam, e por quê</h3>
+      <p>O título prefixado brasileiro mais longo vence em 2037: cerca de onze
+        anos. Não existe prefixado de vinte anos, no varejo ou no atacado. A curva
+        prefixada do gráfico termina onde termina o último título observado, e o
+        espaço à direita fica vazio de propósito — esticar a última taxa desenharia
+        uma reta com cara de dado. A de NTN-B alcança 2060 e cobre os vinte anos.</p>
+
+      <h3>Como o P/VP do índice é calculado</h3>
+      <p>Soma dos valores de mercado dividida pela soma dos patrimônios, com a
+        quantidade teórica de cada papel no índice como peso:</p>
+      <p style="font-family:var(--mono);font-size:12.5px">
+        P/VP = Σ (qtd × preço) ÷ Σ (qtd × VPA),&nbsp;&nbsp;
+        VPA = patrimônio líquido ÷ ações da companhia</p>
+      <p>Somar numerador e denominador separadamente é o que faz disto o P/VP
+        <i>do índice</i>, e não a média dos P/VP das empresas — que seria dominada
+        pelas pequenas e caras. Empresas com duas classes em bolsa (ON e PN) entram
+        como dois papéis, cada um com a sua quantidade, contra o mesmo VPA; não há
+        dupla contagem. Bancos entram: para o ranking de Greenblatt eles são
+        excluídos porque ROIC e EV não significam a mesma coisa num banco, mas o
+        patrimônio líquido significa.</p>
+
+      <h3>O que estes números não dizem</h3>
+      <ul>
+        <li>O patrimônio líquido é contábil — custo histórico corrigido, não valor
+          de reposição nem preço de venda dos ativos hoje. Em setor de ativo leve o
+          denominador é quase ficção.</li>
+        <li>A composição setorial do índice muda com o tempo. Comparar o P/VP de
+          hoje com o de dez anos atrás compara também dois índices diferentes.</li>
+        <li>A série histórica do P/VP usa a carteira atual do Ibovespa aplicada ao
+          passado: empresas que saíram do índice não aparecem. É viés de
+          sobrevivência, e ele empurra a série para cima.</li>
+        <li>As taxas brasileiras são as do Tesouro Direto, do varejo, não as
+          indicativas do mercado secundário da ANBIMA. Ficam alguns pontos-base
+          distantes.</li>
+        <li>Um vértice marcado como vindo de título com cupom traz a TIR do fluxo
+          inteiro, não a taxa à vista daquele prazo. Onde havia título sem cupom,
+          é o sem cupom que está no gráfico.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <p><b>Ferramenta de estudo. Não é recomendação de investimento.</b>
+       Rentabilidade passada não garante rentabilidade futura.</p>
+    <p>Tesouro Transparente (Secretaria do Tesouro Nacional), U.S. Department of
+       the Treasury, B3 e CVM. Os dados são coletados no fechamento — a data no
+       topo da página diz quando.</p>
+  </footer>
+</main>
+</div>
+
+<div class="tip" id="tip"></div>
+<script src="mercado.js"></script>
+</body>
+</html>
