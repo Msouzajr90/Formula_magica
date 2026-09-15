@@ -186,7 +186,16 @@ def montar_universo(params: C.Params, *, anos: list[int] | None = None,
             "último costuma ser limite de requisições. Tente de novo mais tarde.")
     mercado = mercado.merge(empresas[["CD_CVM", "SETOR", "SEGMENTO"]].drop_duplicates("CD_CVM"),
                             on="CD_CVM", how="left")
-    mercado = mercado.dropna(subset=["CD_CVM", "VALOR_MERCADO"])
+    # Só CD_CVM é eliminatório: sem ele não há como cruzar com o balanço.
+    # Valor de mercado ausente NÃO some daqui — quem não tem número de ações
+    # segue adiante e é barrado no filtro, que diz o motivo em texto. Antes
+    # essas empresas evaporavam entre a coleta e o ranking: não estavam na
+    # lista nem entre as excluídas, e a VALE3 sumiu assim, sem deixar rastro.
+    mercado = mercado.dropna(subset=["CD_CVM"])
+    sem_mercado = int(mercado["VALOR_MERCADO"].isna().sum())
+    if sem_mercado:
+        log.warning("%d empresas sem nº de ações seguem para o filtro, que vai "
+                    "nomeá-las como 'sem valor de mercado'.", sem_mercado)
 
     progresso("Calculando ROIC e Earnings Yield...", 0.88)
     return fundamentals.montar_indicadores(ebit, bp, mercado, params)

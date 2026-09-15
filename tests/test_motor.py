@@ -901,3 +901,25 @@ def test_motivo_de_exclusao_nomeia_o_ingrediente_que_faltou():
     motivos = dict(zip(rej["TICKER"], rej["MOTIVO_EXCLUSAO"]))
     assert motivos["SEMLU4.SA"] == "sem lucro líquido"
     assert motivos["SEMVM4.SA"] == "sem valor de mercado (nº de ações)"
+
+
+def test_empresa_sem_numero_de_acoes_aparece_nas_excluidas(tmp_path):
+    """A VALE3 sumiu sem deixar rastro: nem no ranking, nem nas excluidas.
+
+    Ela cai antes dos filtros, num dropna silencioso por valor de mercado
+    ausente. Quem some assim e indistinguivel de quem nunca existiu — e o
+    usuario nao tem como saber que faltou o numero de acoes.
+    """
+    base = dict(SEGMENTO="Novo Mercado", LIQUIDEZ_MEDIA=1e8, SETOR="Extração Mineral",
+                TIPO="operacional", CAPITAL_TANGIVEL=1e11, DENOM_CIA="Vale")
+    df = pd.DataFrame([
+        {**base, "CD_CVM": 4170, "TICKER": "VALE3.SA", "EBIT_LTM": 3.4e10,
+         "EV": np.nan, "VALOR_MERCADO": np.nan, "ROIC": 0.34, "EY": np.nan},
+        {**base, "CD_CVM": 9512, "TICKER": "OUTRA3.SA", "EBIT_LTM": 1e9,
+         "EV": 5e9, "VALOR_MERCADO": 4e9, "ROIC": 0.30, "EY": 0.20},
+    ])
+    aprov, rej = fundamentals.aplicar_filtros(df, C.Params())
+    assert list(aprov["TICKER"]) == ["OUTRA3.SA"]
+    motivos = dict(zip(rej["TICKER"], rej["MOTIVO_EXCLUSAO"]))
+    assert "VALE3.SA" in motivos, "a empresa nao pode desaparecer das duas listas"
+    assert "valor de mercado" in motivos["VALE3.SA"], motivos["VALE3.SA"]
