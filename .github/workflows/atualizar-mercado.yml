@@ -1,0 +1,88 @@
+name: Atualizar mercado
+on:
+  workflow_dispatch:
+  schedule:
+    # 00h10 UTC = 21h10 em Brasilia, de segunda a sexta (por isso 2-6 em UTC:
+    # a segunda-feira brasileira cai na terca-feira UTC). Meia hora depois dos
+    # FIIs, para os tres robos nao brigarem pelo push.
+    - cron: "10 0 * * 2-6"
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar o repositorio
+        uses: actions/checkout@v4
+      - name: Instalar o Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+      - name: Recuperar o que ja foi baixado
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.magicb3_cache
+          key: magicb3-mercado-${{ github.run_id }}
+          restore-keys: magicb3-
+
+      - name: Verificar as fontes de dados
+        # Nao derruba o robo: serve para o log dizer QUAL fonte caiu quando
+        # o arquivo sair com aviso. Este e o passo que responde a pergunta
+        # "o Tesouro tambem recusa conexao de fora do Brasil?" — se recusar,
+        # aparece aqui e o P/VP e as curvas passam a precisar de coleta local.
+        continue-on-error: true
+        run: python verificar_mercado.py
+
+      - name: Rodar os testes
+        run: python -m pytest tests -q
+
+      - name: Gerar o mercado.json
+        run: python atualizar_mercado.py
+
+      - name: Conferir os numeros
+        run: python validar_mercado.py
+
+      - name: Publicar
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          test -f web/public/mercado.json || (echo "Arquivo nao foi gerado." && exit 1)
+          mkdir -p /tmp/gerado
+          cp web/public/mercado.json /tmp/gerado/
+          # O historico do P/VP e o unico arquivo que o robo ACUMULA: cada
+          # execucao acrescenta um ponto. Nao pode ser perdido num reset.
+          cp web/public/pvp_historico.json /tmp/gerado/ 2>/dev/null || true
+          cp web/public/ibov_carteira.json /tmp/gerado/ 2>/dev/null || true
+          for tentativa in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p web/public
+            cp /tmp/gerado/mercado.json web/public/mercado.json
+            for extra in pvp_historico.json ibov_carteira.json; do
+              [ -f "/tmp/gerado/$extra" ] && cp "/tmp/gerado/$extra" "web/public/$extra"
+            done
+            git add web/public/mercado.json web/public/pvp_historico.json web/public/ibov_carteira.json
+            if git diff --staged --quiet; then
+              echo "Nada mudou."
+              exit 0
+            fi
+            git commit -m "Atualizacao automatica dos indicadores de mercado"
+            if git push; then
+              echo "Publicado na tentativa $tentativa."
+              exit 0
+            fi
+            echo "Alguem publicou antes; refazendo em cima do main atual."
+            sleep 5
+          done
+          echo "Nao consegui publicar depois de 5 tentativas."
+          exit 1
+
+      - name: Guardar o progresso mesmo se falhar
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.magicb3_cache
+          key: magicb3-mercado-${{ github.run_id }}
