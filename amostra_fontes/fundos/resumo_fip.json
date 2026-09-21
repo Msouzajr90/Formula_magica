@@ -1,0 +1,108 @@
+{
+ "gerado_em": "2026-09-21 12:09",
+ "fip": {
+  "quadrimestral": [
+   "inf_quadrimestral_fip_2024.csv",
+   "inf_quadrimestral_fip_2025.csv",
+   "inf_quadrimestral_fip_2026.csv"
+  ],
+  "trimestral": [
+   "inf_trimestral_fip_2010.csv",
+   "inf_trimestral_fip_2011.csv",
+   "inf_trimestral_fip_2012.csv",
+   "inf_trimestral_fip_2013.csv",
+   "inf_trimestral_fip_2014.csv",
+   "inf_trimestral_fip_2015.csv",
+   "inf_trimestral_fip_2016.csv",
+   "inf_trimestral_fip_2017.csv",
+   "inf_trimestral_fip_2018.csv",
+   "inf_trimestral_fip_2019.csv",
+   "inf_trimestral_fip_2020.csv",
+   "inf_trimestral_fip_2021.csv",
+   "inf_trimestral_fip_2022.csv",
+   "inf_trimestral_fip_2023.csv"
+  ],
+  "cadastro": [],
+  "raiz FIP": [],
+  "medidas": {
+   "inf_quadrimestral_fip_2026.csv": {
+    "CNPJ_FUNDO_CLASSE": 100.0,
+    "DENOM_SOCIAL": 100.0,
+    "DT_COMPTC": 100.0,
+    "VL_PATRIM_LIQ": 98.8,
+    "VL_PATRIM_COTA": 0.0,
+    "NR_COTST": 0.0,
+    "PUBLICO_ALVO": 100.0,
+    "VL_CAP_COMPROM": 88.1,
+    "VL_CAP_INTEGR": 96.0,
+    "NR_COTST_SUBSCR_PF": 48.8,
+    "NR_COTST_SUBSCR_PJ_NAO_FINANC": 21.6,
+    "NR_COTST_SUBSCR_BANCO": 2.1,
+    "NR_COTST_SUBSCR_CORRETORA_DISTRIB": 0.6,
+    "NR_COTST_SUBSCR_PJ_FINANC": 2.7,
+    "NR_COTST_SUBSCR_INVNR": 34.3,
+    "NR_COTST_SUBSCR_EAPC": 0.3,
+    "NR_COTST_SUBSCR_EFPC": 2.9,
+    "NR_COTST_SUBSCR_RPPS": 0.9,
+    "NR_COTST_SUBSCR_SEGUR": 0.5,
+    "NR_COTST_SUBSCR_CAPITALIZ": 0.2,
+    "NR_COTST_SUBSCR_FII": 0.4,
+    "NR_COTST_SUBSCR_FI": 60.9,
+    "NR_COTST_SUBSCR_DISTRIB": 9.6,
+    "NR_COTST_SUBSCR_OUTRO": 14.8,
+    "NR_TOTAL_COTST_SUBSCR": 95.4,
+    "CLASSE_COTA": 99.1,
+    "NR_COTST_SUBSCR_CLASSE": 93.0,
+    "VL_QUOTA_CLASSE": 94.5
+   }
+  }
+ },
+ "fiagro_por_competencia": {
+  "202608": {
+   "fundos": 9,
+   "prazo": {
+    "0 ANO/ANOS": 9
+   }
+  },
+  "202607": {
+   "fundos": 289,
+   "prazo": {
+    "0 ANO/ANOS": 119,
+    "0 DIA/DIAS": 51,
+    "1000 ANO/ANOS": 40
+   }
+  },
+  "202606": {
+   "fundos": 283,
+   "prazo": {
+    "0 ANO/ANOS": 117,
+    "0 DIA/DIAS": 49,
+    "1000 ANO/ANOS": 39
+   }
+  },
+  "202605": {
+   "fundos": 261,
+   "prazo": {
+    "0 ANO/ANOS": 108,
+    "0 DIA/DIAS": 47,
+    "1000 ANO/ANOS": 35
+   }
+  },
+  "202604": {
+   "fundos": 248,
+   "prazo": {
+    "0 ANO/ANOS": 102,
+    "0 DIA/DIAS": 46,
+    "1000 ANO/ANOS": 35
+   }
+  },
+  "202603": {
+   "fundos": 240,
+   "prazo": {
+    "0 ANO/ANOS": 99,
+    "0 DIA/DIAS": 44,
+    "1000 ANO/ANOS": 35
+   }
+  }
+ }
+}

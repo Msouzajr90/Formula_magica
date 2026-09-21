@@ -1,0 +1,1883 @@
+{
+ "gerado_em": "2026-09-21 12:02",
+ "ano": 2026,
+ "fii": {
+  "fundos": 1375,
+  "prazo_duracao": {
+   "INDETERMINADO": 1117,
+   "DETERMINADO": 257,
+   "": 1
+  },
+  "determinado_com_data": 257,
+  "determinado_total": 257,
+  "vencimentos_por_ano": {
+   "2021": 1,
+   "2023": 6,
+   "2024": 1,
+   "2025": 3,
+   "2026": 17,
+   "2027": 18,
+   "2028": 18,
+   "2029": 26,
+   "2030": 58,
+   "2031": 50,
+   "2032": 26,
+   "2033": 16,
+   "2034": 1,
+   "2035": 3,
+   "2036": 3,
+   "2038": 1,
+   "2039": 1,
+   "2041": 1,
+   "2043": 1,
+   "2045": 1,
+   "2063": 1,
+   "2064": 2,
+   "2099": 1,
+   "3035": 1
+  },
+  "bolsa": 683,
+  "cetip": 180,
+  "mbo": 297,
+  "universo": {
+   "total": 1375,
+   "nao exclusivo": 1298,
+   "+ geral ou qualificado": 882,
+   "+ 100 cotistas ou mais": 509,
+   "... destes, prazo DETERMINADO": 131
+  },
+  "referencias": {
+   "TG REAL ESTATE FII (TGRE11)": {
+    "cnpj": "44.625.562/0001-04",
+    "nome": "FUNDO DE INVESTIMENTO IMOBILIARIO TG REAL ESTATE",
+    "data_ref": "2026-07-01",
+    "versao": "2",
+    "prazo": "Indeterminado",
+    "data_prazo": "<NA>",
+    "inicio": "2022-01-26",
+    "publico": "INVESTIDORES EM GERAL",
+    "exclusivo": "N",
+    "bolsa": "S",
+    "mbo": "S",
+    "cetip": "N",
+    "mercado": "S",
+    "cotistas": "32893",
+    "cotistas_pf": "<NA>",
+    "pl": "1233604624.97",
+    "vp_cota": "8.62135150744598",
+    "cotas": "143087151",
+    "rentab": "-0.008889",
+    "dy": "0.007982",
+    "amortizacao": "0",
+    "taxa_adm": "0.000201"
+   },
+   "RIZA VISEU FII": {
+    "cnpj": "59.987.139/0001-13",
+    "nome": "RIZA VISEU FUNDO DE INVESTIMENTO IMOBILIÁRIO",
+    "data_ref": "2026-07-01",
+    "versao": "1",
+    "prazo": "Indeterminado",
+    "data_prazo": "2032-05-12",
+    "inicio": "2025-05-12",
+    "publico": "INVESTIDOR QUALIFICADO",
+    "exclusivo": "N",
+    "bolsa": "S",
+    "mbo": "S",
+    "cetip": "N",
+    "mercado": "S",
+    "cotistas": "1385",
+    "cotistas_pf": "<NA>",
+    "pl": "548999537.28",
+    "vp_cota": "1291.24408127553",
+    "cotas": "425171",
+    "rentab": "-0.001183",
+    "dy": "0.01883",
+    "amortizacao": "0",
+    "taxa_adm": "0.001396"
+   },
+   "LCP PREFIXADO FEEDER FII": {
+    "cnpj": "61.922.643/0001-87",
+    "nome": "LCP PREFIXADO FEEDER FUNDO DE INVESTIMENTO IMOBILIÁRIO",
+    "data_ref": "2026-07-01",
+    "versao": "1",
+    "prazo": "Determinado",
+    "data_prazo": "2030-09-01",
+    "inicio": "2025-09-01",
+    "publico": "INVESTIDORES EM GERAL",
+    "exclusivo": "N",
+    "bolsa": "N",
+    "mbo": "N",
+    "cetip": "N",
+    "mercado": "N",
+    "cotistas": "12974",
+    "cotistas_pf": "<NA>",
+    "pl": "569847249.54",
+    "vp_cota": "101.306177696",
+    "cotas": "5625000",
+    "rentab": "0.013787",
+    "dy": "0.012741",
+    "amortizacao": "0",
+    "taxa_adm": "2.3E-05"
+   },
+   "LCP PREFIXADO MASTER FII": {
+    "cnpj": "61.918.522/0001-61",
+    "nome": "LCP PREFIXADO MASTER FUNDO DE INVESTIMENTO IMOBILIÁRIO",
+    "data_ref": "2026-07-01",
+    "versao": "1",
+    "prazo": "Determinado",
+    "data_prazo": "2030-09-02",
+    "inicio": "2025-09-02",
+    "publico": "INVESTIDOR PROFISSIONAL",
+    "exclusivo": "N",
+    "bolsa": "N",
+    "mbo": "N",
+    "cetip": "N",
+    "mercado": "N",
+    "cotistas": "22",
+    "cotistas_pf": "<NA>",
+    "pl": "712133559.62",
+    "vp_cota": "94.9511412826667",
+    "cotas": "7500000",
+    "rentab": "0.011669",
+    "dy": "0.010171",
+    "amortizacao": "0",
+    "taxa_adm": "0.001364"
+   }
+  }
+ },
+ "fiagro": {
+  "prazo_duracao": {
+   "0 ANO/ANOS": 9
+  },
+  "perfil": {
+   "linhas": 9,
+   "colunas": [
+    "CNPJ_Classe",
+    "Nome_Classe",
+    "Data_Referencia",
+    "Data_Entrega",
+    "Versao",
+    "Classe_Unica",
+    "CNPJ_Administrador",
+    "Nome_Administrador",
+    "Data_Registro",
+    "Publico_Alvo",
+    "Codigo_ISIN",
+    "Cotistas_Vinculo_Familiar",
+    "Regra_Anexo",
+    "Classificacao_Autorregulada",
+    "Prazo_Duracao",
+    "Encerramento_Exercicio_Social",
+    "Mercado_Negociacao",
+    "Entidade_Administradora",
+    "Email_Administrador",
+    "Servico_Atendimento_Cotista",
+    "Site",
+    "Nome_Gestor",
+    "CNPJ_Gestor",
+    "Numero_Cotistas",
+    "Numero_Cotistas_Pessoa_Natural",
+    "Numero_Cotistas_Pessoa_Juridica_Nao_Financeira",
+    "Numero_Cotistas_Pessoa_Juridica_Financeira",
+    "Numero_Cotistas_Investidor_Nao_Residente",
+    "Numero_Cotistas_Entidade_Previdencia_Complementar_Exceto_RPPS",
+    "Numero_Cotistas_Entidade_RPPS",
+    "Numero_Cotistas_Sociedade_Seguradora_Resseguradora",
+    "Numero_Cotistas_Fundos_Investimento",
+    "Numero_Cotistas_Distribuidos_Conta_Ordem",
+    "Numero_Cotistas_Outros_Tipos",
+    "Valor_Ativo",
+    "Patrimonio_Liquido",
+    "Cotas_Emitidas",
+    "Valor_Patrimonial_Cotas",
+    "Percentual_Despesas_Taxa_Administracao",
+    "Percentual_Despesas_Taxa_Gestao",
+    "Percentual_Despesas_Taxa_Distribuicao",
+    "Rentabilidade_Efetiva_Mes",
+    "Rentabilidade_Patrimonial_Mes",
+    "Dividend_Yield_Mes",
+    "Percentual_Amortizacao_Cotas_Mes",
+    "Total_Necessidades_Liquidez",
+    "Fundos_Renda_Fixa",
+    "Titulos_Renda_Fixa",
+    "Total_Investido",
+    "Imoveis_Rurais",
+    "Participacoes_Societarias",
+    "Ativos_Financeiros_Lato_Sensu",
+    "Ativos_Financeiros",
+    "Ativos_Financeiros_Emissao_IF",
+    "LCA",
+    "LCI",
+    "Outros_Ativos_Emissao_IF",
+    "Outros_Ativos_Financeiros",
+    "Valores_Mobiliarios",
+    "Titulos_Participacoes_Societarias",
+    "Acoes_Certificados_Deposito",
+    "Outros_Titulos_Participacao",
+    "Titulos_Divida_Corporativa",
+    "Debentures",
+    "Debentures_Conversiveis",
+    "Debentures_Nao_Conversiveis",
+    "Notas_Comerciais",
+    "Notas_Comerciais_Curto_Prazo",
+    "Notas_Comerciais_Longo_Prazo",
+    "Outros_Titulos_Divida_Corporativa",
+    "Valor_Titulos_Credito",
+    "CPR",
+    "CPR_Financeira",
+    "CPR_Fisica",
+    "CDCA",
+    "CDA_WA",
+    "Outros_Titulos_Credito_Agronegocio",
+    "Titulos_Credito_Liquidacao_Financeira",
+    "Devedor_Pessoa_Juridica_Liquidacao_Financeira",
+    "Devedor_Pessoa_Natural_Liquidacao_Financeira",
+    "Titulos_Credito_Liquidacao_Fisica",
+    "Devedor_Pessoa_Juridica_Liquidacao_Fisica",
+    "Devedor_Pessoa_Natural_Liquidacao_Fisica",
+    "Demais_Direitos_Creditorios",
+    "Direitos_Creditorios_Agronegocio",
+    "Direitos_Creditorios_Imoveis_Rurais",
+    "Titulos_Securitizacao",
+    "CRA",
+    "CRI",
+    "Outros_Titulos_Securitizacao",
+    "Cotas_Fundos_Investimento",
+    "FIF",
+    "FIDC",
+    "FII",
+    "FIP",
+    "FIIM",
+    "FIAGRO",
+    "Creditos_Carbono_Agronegocio",
+    "Creditos_Descarbonizacao",
+    "Valores_Receber",
+    "Total_Ativos_Prazo_Vencimento",
+    "A_Vencer",
+    "A_Vencer_Ate30Dias",
+    "A_Vencer_31a60Dias",
+    "A_Vencer_61a90Dias",
+    "A_Vencer_91a120Dias",
+    "A_Vencer_121a180Dias",
+    "A_Vencer_181a360Dias",
+    "A_Vencer_361a720Dias",
+    "A_Vencer_721a1080Dias",
+    "A_Vencer_Acima1080_Dias",
+    "Vencidos",
+    "Vencidos_Ate30Dias",
+    "Vencidos_31a60Dias",
+    "Vencidos_61a90Dias",
+    "Vencidos_91a120Dias",
+    "Vencidos_121a180Dias",
+    "Vencidos_181a360Dias",
+    "Vencidos_361a720Dias",
+    "Vencidos_721a1080Dias",
+    "Vencidos_Acima1080Dias",
+    "Rendimentos_Distribuir",
+    "Taxa_Administracao_Pagar",
+    "Taxa_Gestao_Pagar",
+    "Taxa_Performance_Pagar",
+    "Taxa_Distribuicao_Pagar",
+    "Obrigacoes_Aquisicao_Ativos",
+    "Adiantamento_Venda_Ativos",
+    "Adiantamento_Valores_Receber",
+    "Instrumentos_Financeiros_Derivativos",
+    "Provisoes_Contigencias",
+    "Outros_Valores_Pagar",
+    "Total_Passivo",
+    "_data",
+    "_versao"
+   ],
+   "campos": {
+    "CNPJ_Classe": {
+     "pct": 100.0,
+     "valores": {
+      "48050467000172": 1,
+      "49683264000186": 1,
+      "52670402000105": 1,
+      "59809018000181": 1,
+      "61349077000166": 1,
+      "61885936000131": 1,
+      "62028859000166": 1,
+      "62333770000103": 1
+     }
+    },
+    "Nome_Classe": {
+     "pct": 100.0,
+     "valores": {
+      "CAMPO ARADO FUNDO DE INVESTIMENTO EM CADEIAS AGROINDUSTRIAIS": 1,
+      "FIDC VERDE I FIAGRO": 1,
+      "ASSET BANK AGRONEGÓCIOS FIAGRO DIREITOS CREDITÓRIOS RL": 1,
+      "FIDC BRANCA LION BANK": 1,
+      "2J&M AGRO FIDC - FIAGRO": 1,
+      "SANCTU FIAGRO RESPONSABILIDADE LIMITADA": 1,
+      "FIP GRANFARM": 1,
+      "FIDC GRANFARM": 1
+     }
+    },
+    "Data_Referencia": {
+     "pct": 100.0,
+     "valores": {
+      "2026-08-01": 9
+     }
+    },
+    "Data_Entrega": {
+     "pct": 100.0,
+     "valores": {
+      "2026-09-01": 6,
+      "2026-09-04": 3
+     }
+    },
+    "Versao": {
+     "pct": 100.0,
+     "valores": {
+      "1": 9
+     }
+    },
+    "Classe_Unica": {
+     "pct": 100.0,
+     "valores": {
+      "N": 6,
+      "S": 3
+     }
+    },
+    "CNPJ_Administrador": {
+     "pct": 100.0,
+     "valores": {
+      "40434681000110": 8,
+      "48967968000118": 1
+     }
+    },
+    "Nome_Administrador": {
+     "pct": 100.0,
+     "valores": {
+      "AZUMI DISTRIBUIDORA DE TÍTULOS E VALORES MOBILIÁRIOS LTDA.": 8,
+      "VERT DISTRIBUIDORA DE TÍTULOS E VALORES MOBILIÁRIOS LTDA.": 1
+     }
+    },
+    "Data_Registro": {
+     "pct": 100.0,
+     "valores": {
+      "2023-12-01": 2,
+      "2025-09-22": 1,
+      "2025-11-26": 1,
+      "2025-10-08": 1,
+      "2025-09-16": 1,
+      "2025-09-19": 1,
+      "2025-09-26": 1,
+      "2025-09-30": 1
+     }
+    },
+    "Publico_Alvo": {
+     "pct": 100.0,
+     "valores": {
+      "INVESTIDOR PROFISSIONAL": 4,
+      "INVESTIDOR QUALIFICADO": 4,
+      "INVESTIDORES EM GERAL": 1
+     }
+    },
+    "Codigo_ISIN": {
+     "pct": 0.0,
+     "exemplos": []
+    },
+    "Cotistas_Vinculo_Familiar": {
+     "pct": 100.0,
+     "valores": {
+      "N": 9
+     }
+    },
+    "Regra_Anexo": {
+     "pct": 0.0,
+     "exemplos": []
+    },
+    "Classificacao_Autorregulada": {
+     "pct": 0.0,
+     "exemplos": []
+    },
+    "Prazo_Duracao": {
+     "pct": 100.0,
+     "valores": {
+      "0 ANO/ANOS": 9
+     }
+    },
+    "Encerramento_Exercicio_Social": {
+     "pct": 100.0,
+     "valores": {
+      "31/12": 2,
+      "31/08": 2,
+      "28/02": 1,
+      "30/06": 1,
+      "31/03": 1,
+      "30/09": 1,
+      "30/05": 1
+     }
+    },
+    "Mercado_Negociacao": {
+     "pct": 100.0,
+     "valores": {
+      "BALCAO NAO ORGANIZADO": 5,
+      "BALCAO": 4
+     }
+    },
+    "Entidade_Administradora": {
+     "pct": 33.3,
+     "valores": {
+      "B3": 3
+     }
+    },
+    "Email_Administrador": {
+     "pct": 100.0,
+     "valores": {
+      "atendimento@azumidtvm.com.br": 8,
+      "contato@vert-capital.com": 1
+     }
+    },
+    "Servico_Atendimento_Cotista": {
+     "pct": 100.0,
+     "valores": {
+      "(11) 2626-9780": 8,
+      "(11) 3385-1800": 1
+     }
+    },
+    "Site": {
+     "pct": 100.0,
+     "valores": {
+      "https://azumidtvm.com.br/": 8,
+      "https://www.vert-capital.com/institucional/vert-dtvm": 1
+     }
+    },
+    "Nome_Gestor": {
+     "pct": 100.0,
+     "valores": {
+      "ASSET WEALTH MANAGEMENT LTDA": 7,
+      "ASSET BANK - ASSET MANAGEMENT LTDA": 1,
+      "VERT GESTORA DE RECURSOS FINANCEIROS LTDA.": 1
+     }
+    },
+    "CNPJ_Gestor": {
+     "pct": 100.0,
+     "valores": {
+      "42221617000187": 8,
+      "31636333000135": 1
+     }
+    },
+    "Numero_Cotistas": {
+     "pct": 100.0,
+     "valores": {
+      "1": 4,
+      "115": 1,
+      "2": 1,
+      "17": 1,
+      "0": 1,
+      "10": 1
+     }
+    },
+    "Numero_Cotistas_Pessoa_Natural": {
+     "pct": 100.0,
+     "valores": {
+      "0": 7,
+      "90": 1,
+      "5": 1
+     }
+    },
+    "Numero_Cotistas_Pessoa_Juridica_Nao_Financeira": {
+     "pct": 100.0,
+     "valores": {
+      "0": 7,
+      "5": 1,
+      "1": 1
+     }
+    },
+    "Numero_Cotistas_Pessoa_Juridica_Financeira": {
+     "pct": 100.0,
+     "valores": {
+      "0": 9
+     }
+    },
+    "Numero_Cotistas_Investidor_Nao_Residente": {
+     "pct": 100.0,
+     "valores": {
+      "0": 9
+     }
+    },
+    "Numero_Cotistas_Entidade_Previdencia_Complementar_Exceto_RPPS": {
+     "pct": 100.0,
+     "valores": {
+      "0": 9
+     }
+    },
+    "Numero_Cotistas_Entidade_RPPS": {
+     "pct": 100.0,
+     "valores": {
+      "0": 9
+     }
+    },
+    "Numero_Cotistas_Sociedade_Seguradora_Resseguradora": {
+     "pct": 100.0,
+     "valores": {
+      "0": 9
+     }
+    },
+    "Numero_Cotistas_Fundos_Investimento": {
+     "pct": 100.0,
+     "valores": {
+      "1": 5,
+      "20": 1,
+      "11": 1,
+      "0": 1,
+      "10": 1
+     }
+    },
+    "Numero_Cotistas_Distribuidos_Conta_Ordem": {
+     "pct": 100.0,
+     "valores": {
+      "0": 8,
+      "1": 1
+     }
+    },
+    "Numero_Cotistas_Outros_Tipos": {
+     "pct": 100.0,
+     "valores": {
+      "0": 9
+     }
+    },
+    "Valor_Ativo": {
+     "pct": 100.0,
+     "valores": {
+      "107210885.67": 1,
+      "8928987.60": 1,
+      "21539987.79": 1,
+      "19116065.25": 1,
+      "7027416.36": 1,
+      "0.00": 1,
+      "1000565.94": 1,
+      "12253486.52": 1
+     }
+    },
+    "Patrimonio_Liquido": {
+     "pct": 100.0,
+     "valores": {
+      "106618425.08": 1,
+      "7465582.58": 1,
+      "20838913.06": 1,
+      "18967936.29": 1,
+      "6976148.24": 1,
+      "0.00": 1,
+      "998765.94": 1,
+      "12213847.45": 1
+     }
+    },
+    "Cotas_Emitidas": {
+     "pct": 100.0,
+     "valores": {
+      "83088": 1,
+      "81396": 1,
+      "147885": 1,
+      "14866": 1,
+      "10352": 1,
+      "0": 1,
+      "1196": 1,
+      "11112": 1
+     }
+    },
+    "Valor_Patrimonial_Cotas": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 2,
+      "66274.46": 1,
+      "91.72": 1,
+      "800.05": 1,
+      "14395.13": 1,
+      "673.89": 1,
+      "835.09": 1,
+      "14075.85": 1
+     }
+    },
+    "Percentual_Despesas_Taxa_Administracao": {
+     "pct": 100.0,
+     "valores": {
+      "0.0400": 2,
+      "0.0100": 2,
+      "0.0600": 2,
+      "0.0000": 2,
+      "0.0900": 1
+     }
+    },
+    "Percentual_Despesas_Taxa_Gestao": {
+     "pct": 100.0,
+     "valores": {
+      "0.0000": 2,
+      "0.8300": 1,
+      "0.0300": 1,
+      "0.0500": 1,
+      "0.3500": 1,
+      "0.3600": 1,
+      "0.0900": 1,
+      "0.0400": 1
+     }
+    },
+    "Percentual_Despesas_Taxa_Distribuicao": {
+     "pct": 100.0,
+     "valores": {
+      "0.0000": 7,
+      "0.2300": 1,
+      "0.5900": 1
+     }
+    },
+    "Rentabilidade_Efetiva_Mes": {
+     "pct": 100.0,
+     "valores": {
+      "-10.95": 1,
+      "-5.16": 1,
+      "2.62": 1,
+      "2.91": 1,
+      "1.37": 1,
+      "0.00": 1,
+      "-0.45": 1,
+      "-0.76": 1
+     }
+    },
+    "Rentabilidade_Patrimonial_Mes": {
+     "pct": 100.0,
+     "valores": {
+      "-10.95": 1,
+      "-5.16": 1,
+      "0.84": 1,
+      "2.91": 1,
+      "1.37": 1,
+      "0.00": 1,
+      "-0.45": 1,
+      "-0.76": 1
+     }
+    },
+    "Dividend_Yield_Mes": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 8,
+      "1.78": 1
+     }
+    },
+    "Percentual_Amortizacao_Cotas_Mes": {
+     "pct": 100.0,
+     "valores": {
+      "0.0000": 9
+     }
+    },
+    "Total_Necessidades_Liquidez": {
+     "pct": 100.0,
+     "valores": {
+      "41611.24": 1,
+      "352415.06": 1,
+      "33787.81": 1,
+      "655090.77": 1,
+      "50113.97": 1,
+      "0.00": 1,
+      "33.41": 1,
+      "80188.83": 1
+     }
+    },
+    "Fundos_Renda_Fixa": {
+     "pct": 100.0,
+     "valores": {
+      "41611.24": 1,
+      "352415.06": 1,
+      "33787.81": 1,
+      "655090.77": 1,
+      "50113.97": 1,
+      "0.00": 1,
+      "33.41": 1,
+      "80188.83": 1
+     }
+    },
+    "Titulos_Renda_Fixa": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Total_Investido": {
+     "pct": 100.0,
+     "valores": {
+      "106770369.86": 1,
+      "7894568.09": 1,
+      "21329380.04": 1,
+      "18260874.31": 1,
+      "6926597.42": 1,
+      "0.00": 1,
+      "1000000.00": 1,
+      "12111495.46": 1
+     }
+    },
+    "Imoveis_Rurais": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 5,
+      "7192093.37": 1,
+      "130000.00": 1,
+      "1471764.04": 1,
+      "3500000.00": 1
+     }
+    },
+    "Participacoes_Societarias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 8,
+      "1000000.00": 1
+     }
+    },
+    "Ativos_Financeiros_Lato_Sensu": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 6,
+      "3000000.00": 1,
+      "3738517.00": 1,
+      "1901798.60": 1
+     }
+    },
+    "Ativos_Financeiros": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 8,
+      "3738517.00": 1
+     }
+    },
+    "Ativos_Financeiros_Emissao_IF": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "LCA": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "LCI": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Outros_Ativos_Emissao_IF": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Outros_Ativos_Financeiros": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 8,
+      "3738517.00": 1
+     }
+    },
+    "Valores_Mobiliarios": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Titulos_Participacoes_Societarias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Acoes_Certificados_Deposito": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Outros_Titulos_Participacao": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Titulos_Divida_Corporativa": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Debentures": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Debentures_Conversiveis": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Debentures_Nao_Conversiveis": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Notas_Comerciais": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Notas_Comerciais_Curto_Prazo": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Notas_Comerciais_Longo_Prazo": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Outros_Titulos_Divida_Corporativa": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Valor_Titulos_Credito": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 7,
+      "3000000.00": 1,
+      "1901798.60": 1
+     }
+    },
+    "CPR": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 7,
+      "3000000.00": 1,
+      "1901798.60": 1
+     }
+    },
+    "CPR_Financeira": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 7,
+      "3000000.00": 1,
+      "1901798.60": 1
+     }
+    },
+    "CPR_Fisica": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "CDCA": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "CDA_WA": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Outros_Titulos_Credito_Agronegocio": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Titulos_Credito_Liquidacao_Financeira": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Devedor_Pessoa_Juridica_Liquidacao_Financeira": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Devedor_Pessoa_Natural_Liquidacao_Financeira": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Titulos_Credito_Liquidacao_Fisica": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Devedor_Pessoa_Juridica_Liquidacao_Fisica": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Devedor_Pessoa_Natural_Liquidacao_Fisica": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Demais_Direitos_Creditorios": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 3,
+      "85810772.77": 1,
+      "4026051.09": 1,
+      "9374900.68": 1,
+      "13474038.65": 1,
+      "6926597.42": 1,
+      "11496376.09": 1
+     }
+    },
+    "Direitos_Creditorios_Agronegocio": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 3,
+      "85810772.77": 1,
+      "4026051.09": 1,
+      "9374900.68": 1,
+      "13474038.65": 1,
+      "6926597.42": 1,
+      "11496376.09": 1
+     }
+    },
+    "Direitos_Creditorios_Imoveis_Rurais": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Titulos_Securitizacao": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "CRA": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "CRI": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Outros_Titulos_Securitizacao": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Cotas_Fundos_Investimento": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 5,
+      "10767503.72": 1,
+      "8580916.72": 1,
+      "4786835.66": 1,
+      "615119.37": 1
+     }
+    },
+    "FIF": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "FIDC": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 5,
+      "10767503.72": 1,
+      "8580916.72": 1,
+      "4786835.66": 1,
+      "615119.37": 1
+     }
+    },
+    "FII": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "FIP": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "FIIM": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "FIAGRO": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Creditos_Carbono_Agronegocio": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Creditos_Descarbonizacao": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Valores_Receber": {
+     "pct": 100.0,
+     "valores": {
+      "398904.57": 1,
+      "682004.45": 1,
+      "176819.94": 1,
+      "200100.17": 1,
+      "50704.97": 1,
+      "0.00": 1,
+      "532.53": 1,
+      "61802.23": 1
+     }
+    },
+    "Total_Ativos_Prazo_Vencimento": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 3,
+      "85880158.69": 1,
+      "4394775.57": 1,
+      "9523775.08": 1,
+      "13474038.65": 1,
+      "6926597.42": 1,
+      "11496376.09": 1
+     }
+    },
+    "A_Vencer": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 3,
+      "79977407.70": 1,
+      "2108925.25": 1,
+      "8764837.53": 1,
+      "12528299.45": 1,
+      "6926597.42": 1,
+      "10456376.09": 1
+     }
+    },
+    "A_Vencer_Ate30Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 3,
+      "48608382.48": 1,
+      "598633.18": 1,
+      "7173632.14": 1,
+      "6529975.89": 1,
+      "742111.72": 1,
+      "3142704.86": 1
+     }
+    },
+    "A_Vencer_31a60Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 5,
+      "5819184.86": 1,
+      "55605.43": 1,
+      "4987664.53": 1,
+      "3123962.22": 1
+     }
+    },
+    "A_Vencer_61a90Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 4,
+      "2334331.31": 1,
+      "1510292.07": 1,
+      "54071.42": 1,
+      "1010659.03": 1,
+      "1979094.67": 1
+     }
+    },
+    "A_Vencer_91a120Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 5,
+      "117362.76": 1,
+      "52537.93": 1,
+      "6184485.70": 1,
+      "2210614.34": 1
+     }
+    },
+    "A_Vencer_121a180Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 7,
+      "2749585.53": 1,
+      "100117.26": 1
+     }
+    },
+    "A_Vencer_181a360Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 7,
+      "4088004.04": 1,
+      "773540.04": 1
+     }
+    },
+    "A_Vencer_361a720Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 7,
+      "5743163.87": 1,
+      "319585.43": 1
+     }
+    },
+    "A_Vencer_721a1080Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 7,
+      "4684445.08": 1,
+      "235747.88": 1
+     }
+    },
+    "A_Vencer_Acima1080_Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 8,
+      "5832947.77": 1
+     }
+    },
+    "Vencidos": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 4,
+      "5902750.99": 1,
+      "2285850.32": 1,
+      "758937.55": 1,
+      "945739.20": 1,
+      "1040000.00": 1
+     }
+    },
+    "Vencidos_Ate30Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 4,
+      "128307.08": 1,
+      "420750.95": 1,
+      "57333.24": 1,
+      "945739.20": 1,
+      "1040000.00": 1
+     }
+    },
+    "Vencidos_31a60Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 6,
+      "82107.08": 1,
+      "70207.44": 1,
+      "57333.24": 1
+     }
+    },
+    "Vencidos_61a90Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 8,
+      "374745.64": 1
+     }
+    },
+    "Vencidos_91a120Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Vencidos_121a180Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 7,
+      "1426167.45": 1,
+      "495396.67": 1
+     }
+    },
+    "Vencidos_181a360Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 7,
+      "5317591.19": 1,
+      "368724.48": 1
+     }
+    },
+    "Vencidos_361a720Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 8,
+      "148874.40": 1
+     }
+    },
+    "Vencidos_721a1080Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Vencidos_Acima1080Dias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Rendimentos_Distribuir": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Taxa_Administracao_Pagar": {
+     "pct": 100.0,
+     "valores": {
+      "4427.23": 2,
+      "0.00": 2,
+      "900.00": 2,
+      "2158.00": 1,
+      "1106.81": 1,
+      "958.82": 1
+     }
+    },
+    "Taxa_Gestao_Pagar": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 2,
+      "900.00": 2,
+      "47900.02": 1,
+      "2503.30": 1,
+      "4400.60": 1,
+      "27040.47": 1,
+      "25630.65": 1
+     }
+    },
+    "Taxa_Performance_Pagar": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 8,
+      "12727.90": 1
+     }
+    },
+    "Taxa_Distribuicao_Pagar": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Obrigacoes_Aquisicao_Ativos": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 8,
+      "3463713.64": 1
+     }
+    },
+    "Adiantamento_Venda_Ativos": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Adiantamento_Valores_Receber": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Instrumentos_Financeiros_Derivativos": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Provisoes_Contigencias": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 9
+     }
+    },
+    "Outros_Valores_Pagar": {
+     "pct": 100.0,
+     "valores": {
+      "0.00": 3,
+      "542402.57": 1,
+      "1459794.91": 1,
+      "695715.31": 1,
+      "116661.26": 1,
+      "21210.24": 1,
+      "25111.17": 1
+     }
+    },
+    "Total_Passivo": {
+     "pct": 100.0,
+     "valores": {
+      "592460.59": 1,
+      "1463405.02": 1,
+      "701074.73": 1,
+      "148128.96": 1,
+      "51268.12": 1,
+      "0.00": 1,
+      "1800.00": 1,
+      "39639.07": 1
+     }
+    },
+    "_data": {
+     "pct": 100.0,
+     "valores": {
+      "2026-08-01 00:00:00": 9
+     }
+    },
+    "_versao": {
+     "pct": 100.0,
+     "valores": {
+      "1": 9
+     }
+    }
+   }
+  }
+ },
+ "fip": {
+  "diretorio": "https://dados.cvm.gov.br/dados/FIP/DOC/INF_TRIMESTRAL/DADOS/",
+  "tabelas": {
+   "inf_trimestral_fip_2023.csv": {
+    "linhas": 7847,
+    "colunas": [
+     "CNPJ_FUNDO",
+     "DENOM_SOCIAL",
+     "DT_COMPTC",
+     "VL_PATRIM_LIQ",
+     "QT_COTA",
+     "VL_PATRIM_COTA",
+     "NR_COTST",
+     "ENTID_INVEST",
+     "PUBLICO_ALVO",
+     "VL_CAP_COMPROM",
+     "QT_COTA_SUBSCR",
+     "VL_CAP_SUBSCR",
+     "QT_COTA_INTEGR",
+     "VL_CAP_INTEGR",
+     "VL_INVEST_FIP_COTA",
+     "NR_COTST_SUBSCR_PF",
+     "PR_COTA_SUBSCR_PF",
+     "NR_COTST_SUBSCR_PJ_NAO_FINANC",
+     "PR_COTA_SUBSCR_PJ_NAO_FINANC",
+     "NR_COTST_SUBSCR_BANCO",
+     "PR_COTA_SUBSCR_BANCO",
+     "NR_COTST_SUBSCR_CORRETORA_DISTRIB",
+     "PR_COTA_SUBSCR_CORRETORA_DISTRIB",
+     "NR_COTST_SUBSCR_PJ_FINANC",
+     "PR_COTA_SUBSCR_PJ_FINANC",
+     "NR_COTST_SUBSCR_INVNR",
+     "PR_COTA_SUBSCR_INVNR",
+     "NR_COTST_SUBSCR_EAPC",
+     "PR_COTA_SUBSCR_EAPC",
+     "NR_COTST_SUBSCR_EFPC",
+     "PR_COTA_SUBSCR_EFPC",
+     "NR_COTST_SUBSCR_RPPS",
+     "PR_COTA_SUBSCR_RPPS",
+     "NR_COTST_SUBSCR_SEGUR",
+     "PR_COTA_SUBSCR_SEGUR",
+     "NR_COTST_SUBSCR_CAPITALIZ",
+     "PR_COTA_SUBSCR_CAPITALIZ",
+     "NR_COTST_SUBSCR_FII",
+     "PR_COTA_SUBSCR_FII",
+     "NR_COTST_SUBSCR_FI",
+     "PR_COTA_SUBSCR_FI",
+     "NR_COTST_SUBSCR_DISTRIB",
+     "PR_COTA_SUBSCR_DISTRIB",
+     "NR_COTST_SUBSCR_OUTRO",
+     "PR_COTA_SUBSCR_OUTRO",
+     "NR_TOTAL_COTST_SUBSCR",
+     "PR_TOTAL_COTA_SUBSCR",
+     "CLASSE_COTA",
+     "NR_COTST_SUBSCR_CLASSE",
+     "QT_COTA_SUBSCR_CLASSE",
+     "QT_COTA_INTEGR_CLASSE",
+     "VL_QUOTA_CLASSE",
+     "DIREITO_POLIT_CLASSE",
+     "DIREITO_ECON_CLASSE"
+    ],
+    "campos": {
+     "CNPJ_FUNDO": {
+      "pct": 100.0,
+      "exemplos": [
+       "01.909.558/0001-57",
+       "01.909.558/0001-57"
+      ]
+     },
+     "DENOM_SOCIAL": {
+      "pct": 100.0,
+      "exemplos": [
+       "INVESTIDORES INSTITUCIONAIS FUNDO DE INVESTIMENTO EM PARTICIPAÇÕES MULTIESTRATÉGIA",
+       "INVESTIDORES INSTITUCIONAIS FUNDO DE INVESTIMENTO EM PARTICIPAÇÕES MULTIESTRATÉGIA"
+      ]
+     },
+     "DT_COMPTC": {
+      "pct": 100.0,
+      "valores": {
+       "2023-12-31": 2068,
+       "2023-09-30": 1990,
+       "2023-06-30": 1920,
+       "2023-03-31": 1859,
+       "2023-01-31": 6,
+       "2023-04-30": 2,
+       "2023-07-31": 1,
+       "2023-10-31": 1
+      }
+     },
+     "VL_PATRIM_LIQ": {
+      "pct": 100.0,
+      "exemplos": [
+       "4603790.170000000000",
+       "4683887.460000000000"
+      ]
+     },
+     "QT_COTA": {
+      "pct": 0.0,
+      "exemplos": []
+     },
+     "VL_PATRIM_COTA": {
+      "pct": 0.0,
+      "exemplos": []
+     },
+     "NR_COTST": {
+      "pct": 0.0,
+      "exemplos": []
+     },
+     "ENTID_INVEST": {
+      "pct": 100.0,
+      "valores": {
+       "S": 6373,
+       "N": 1474
+      }
+     },
+     "PUBLICO_ALVO": {
+      "pct": 100.0,
+      "valores": {
+       "Investidores profissionais": 4525,
+       "Investidores qualificados": 3322
+      }
+     },
+     "VL_CAP_COMPROM": {
+      "pct": 100.0,
+      "exemplos": [
+       "403051116.57000000",
+       "403051116.57000000"
+      ]
+     },
+     "QT_COTA_SUBSCR": {
+      "pct": 100.0,
+      "exemplos": [
+       "728975.89894200",
+       "728975.89894200"
+      ]
+     },
+     "VL_CAP_SUBSCR": {
+      "pct": 100.0,
+      "exemplos": [
+       "403051116.57000000",
+       "403051116.57000000"
+      ]
+     },
+     "QT_COTA_INTEGR": {
+      "pct": 100.0,
+      "exemplos": [
+       "728975.89894200",
+       "728975.89894200"
+      ]
+     },
+     "VL_CAP_INTEGR": {
+      "pct": 100.0,
+      "exemplos": [
+       "403051116.57000000",
+       "403051116.57000000"
+      ]
+     },
+     "VL_INVEST_FIP_COTA": {
+      "pct": 100.0,
+      "exemplos": [
+       "0.00000000",
+       "0.00000000"
+      ]
+     },
+     "NR_COTST_SUBSCR_PF": {
+      "pct": 100.0,
+      "exemplos": [
+       "0.00000000",
+       "0.00000000"
+      ]
+     },
+     "PR_COTA_SUBSCR_PF": {
+      "pct": 100.0,
+      "exemplos": [
+       "0.00000000",
+       "0.00000000"
+      ]
+     },
+     "NR_COTST_SUBSCR_PJ_NAO_FINANC": {
+      "pct": 100.0,
+      "exemplos": [
+       "2.00000000",
+       "2.00000000"
+      ]
+     },
+     "PR_COTA_SUBSCR_PJ_NAO_FINANC": {
+      "pct": 100.0,
+      "exemplos": [
+       "1.33000000",
+       "1.33000000"
+      ]
+     },
+     "NR_COTST_SUBSCR_BANCO": {
+      "pct": 100.0,
+      "valores": {
+       "0.00000000": 7649,
+       "1.00000000": 167,
+       "2.00000000": 20,
+       "3.00000000": 6,
+       "4.00000000": 4,
+       "6.00000000": 1
+      }
+     },
+     "PR_COTA_SUBSCR_BANCO": {
+      "pct": 100.0,
+      "exemplos": [
+       "0.00000000",
+       "0.00000000"
+      ]
+     },
+     "NR_COTST_SUBSCR_CORRETORA_DISTRIB": {
+      "pct": 100.0,
+      "valores": {
+       "0.00000000": 7774,
+       "1.00000000": 50,
+       "4.00000000": 14,
+       "2.00000000": 7,
+       "3.00000000": 2
+      }
+     },
+     "PR_COTA_SUBSCR_CORRETORA_DISTRIB": {
+      "pct": 100.0,
+      "exemplos": [
+       "0.00000000",
+       "0.00000000"
+      ]
+     },
+     "NR_COTST_SUBSCR_PJ_FINANC": {
+      "pct": 100.0,
+      "valores": {
+       "0.00000000": 7555,
+       "1.00000000": 214,
+       "2.00000000": 47,
+       "3.00000000": 17,
+       "4.00000000": 8,
+       "55.00000000": 2,
+       "28.00000000": 1,
+       "10.00000000": 1
+      }
+     },
+     "PR_COTA_SUBSCR_PJ_FINANC": {
+      "pct": 100.0,
+      "exemplos": [
+       "0.00000000",
+       "0.00000000"
+      ]
+     },
+     "NR_COTST_SUBSCR_INVNR": {
+      "pct": 100.0,
+      "valores": {
+       "0.00000000": 5101,
+       "1.00000000": 780,
+       "3.00000000": 747,
+       "4.00000000": 366,
+       "2.00000000": 325,
+       "6.00000000": 166,
+       "5.00000000": 144,
+       "7.00000000": 70
+      }
+     },
+     "PR_COTA_SUBSCR_INVNR": {
+      "pct": 100.0,
+      "exemplos": [
+       "0.00000000",
+       "0.00000000"
+      ]
+     },
+     "NR_COTST_SUBSCR_EAPC": {
+      "pct": 100.0,
+      "valores": {
+       "0.00000000": 7809,
+       "1.00000000": 30,
+       "3.00000000": 6,
+       "5.00000000": 2
+      }
+     },
+     "PR_COTA_SUBSCR_EAPC": {
+      "pct": 100.0,
+      "exemplos": [
+       "0.00000000",
+       "0.00000000"
+      ]
+     },
+     "NR_COTST_SUBSCR_EFPC": {
+      "pct": 100.0,
+      "exemplos": [
+       "11.00000000",
+       "14.00000000"
+      ]
+     },
+     "PR_COTA_SUBSCR_EFPC": {
+      "pct": 100.0,
+      "exemplos": [
+       "90.97000000",
+       "90.97000000"
+      ]
+     },
+     "NR_COTST_SUBSCR_RPPS": {
+      "pct": 100.0,
+      "valores": {
+       "0.00000000": 7733,
+       "1.00000000": 25,
+       "2.00000000": 22,
+       "5.00000000": 8,
+       "7.00000000": 7,
+       "27.00000000": 7,
+       "18.00000000": 6,
+       "11.00000000": 5
+      }
+     },
+     "PR_COTA_SUBSCR_RPPS": {
+      "pct": 100.0,
+      "exemplos": [
+       "0.00000000",
+       "0.00000000"
+      ]
+     },
+     "NR_COTST_SUBSCR_SEGUR": {
+      "pct": 100.0,
+      "valores": {
+       "0.00000000": 7755,
+       "1.00000000": 79,
+       "2.00000000": 10,
+       "4.00000000": 2,
+       "6.00000000": 1
+      }
+     },
+     "PR_COTA_SUBSCR_SEGUR": {
+      "pct": 100.0,
+      "exemplos": [
+       "0.00000000",
+       "0.00000000"
+      ]
+     },
+     "NR_COTST_SUBSCR_CAPITALIZ": {
+      "pct": 100.0,
+      "valores": {
+       "0.00000000": 7841,
+       "1.00000000": 6
+      }
+     },
+     "PR_COTA_SUBSCR_CAPITALIZ": {
+      "pct": 100.0,
+      "valores": {
+       "0.00000000": 7841,
+       "100.00000000": 2,
+       "8.66000000": 2,
+       "8.48000000": 2
+      }
+     },
+     "NR_COTST_SUBSCR_FII": {
+      "pct": 100.0,
+      "valores": {
+       "0.00000000": 7815,
+       "1.00000000": 22,
+       "11.00000000": 4,
+       "5.00000000": 2,
+       "6.00000000": 2,
+       "2.00000000": 1,
+       "7.00000000": 1
+      }
+     },
+     "PR_COTA_SUBSCR_FII": {
+      "pct": 100.0,
+      "valores": {
+       "0.00000000": 7814,
+       "100.00000000": 9,
+       "0.01000000": 4,
+       "82.41000000": 4,
+       "0.02000000": 3,
+       "20.00000000": 2,
+       "57.55000000": 2,
+       "8.33000000": 2
+      }
+     },
+     "NR_COTST_SUBSCR_FI": {
+      "pct": 100.0,
+      "exemplos": [
+       "2.00000000",
+       "2.00000000"
+      ]
+     },
+     "PR_COTA_SUBSCR_FI": {
+      "pct": 100.0,
+      "exemplos": [
+       "7.70000000",
+       "7.70000000"
+      ]
+     },
+     "NR_COTST_SUBSCR_DISTRIB": {
+      "pct": 100.0,
+      "exemplos": [
+       "0.00000000",
+       "0.00000000"
+      ]
+     },
+     "PR_COTA_SUBSCR_DISTRIB": {
+      "pct": 100.0,
+      "exemplos": [
+       "0.00000000",
+       "0.00000000"
+      ]
+     },
+     "NR_COTST_SUBSCR_OUTRO": {
+      "pct": 100.0,
+      "exemplos": [
+       "0.00000000",
+       "0.00000000"
+      ]
+     },
+     "PR_COTA_SUBSCR_OUTRO": {
+      "pct": 100.0,
+      "exemplos": [
+       "0.00000000",
+       "0.00000000"
+      ]
+     },
+     "NR_TOTAL_COTST_SUBSCR": {
+      "pct": 100.0,
+      "exemplos": [
+       "15.00000000",
+       "18.00000000"
+      ]
+     },
+     "PR_TOTAL_COTA_SUBSCR": {
+      "pct": 100.0,
+      "exemplos": [
+       "100.00000000",
+       "100.00000000"
+      ]
+     },
+     "CLASSE_COTA": {
+      "pct": 100.0,
+      "exemplos": [
+       "1",
+       "1"
+      ]
+     },
+     "NR_COTST_SUBSCR_CLASSE": {
+      "pct": 100.0,
+      "exemplos": [
+       "15.00000000",
+       "18.00000000"
+      ]
+     },
+     "QT_COTA_SUBSCR_CLASSE": {
+      "pct": 100.0,
+      "exemplos": [
+       "728975.89894199",
+       "728975.89894199"
+      ]
+     },
+     "QT_COTA_INTEGR_CLASSE": {
+      "pct": 100.0,
+      "exemplos": [
+       "728975.89894199",
+       "728975.89894199"
+      ]
+     },
+     "VL_QUOTA_CLASSE": {
+      "pct": 100.0,
+      "exemplos": [
+       "6.31542164",
+       "6.42529810"
+      ]
+     },
+     "DIREITO_POLIT_CLASSE": {
+      "pct": 100.0,
+      "valores": {
+       "N": 7713,
+       "S": 133
+      }
+     },
+     "DIREITO_ECON_CLASSE": {
+      "pct": 100.0,
+      "valores": {
+       "N": 7621,
+       "S": 225
+      }
+     }
+    },
+    "procurados": {
+     "cnpj": "CNPJ_FUNDO",
+     "nome": null,
+     "data_ref": null,
+     "versao": null,
+     "prazo": null,
+     "data_prazo": null,
+     "inicio": null,
+     "publico": "PUBLICO_ALVO",
+     "exclusivo": null,
+     "bolsa": null,
+     "mbo": null,
+     "cetip": null,
+     "mercado": null,
+     "cotistas": null,
+     "cotistas_pf": null,
+     "pl": null,
+     "vp_cota": null,
+     "cotas": null,
+     "rentab": null,
+     "dy": null,
+     "amortizacao": null,
+     "taxa_adm": null
+    }
+   }
+  },
+  "arquivos_no_indice": [
+   "inf_trimestral_fip_2010.csv",
+   "inf_trimestral_fip_2011.csv",
+   "inf_trimestral_fip_2012.csv",
+   "inf_trimestral_fip_2013.csv",
+   "inf_trimestral_fip_2014.csv",
+   "inf_trimestral_fip_2015.csv",
+   "inf_trimestral_fip_2016.csv",
+   "inf_trimestral_fip_2017.csv",
+   "inf_trimestral_fip_2018.csv",
+   "inf_trimestral_fip_2019.csv",
+   "inf_trimestral_fip_2020.csv",
+   "inf_trimestral_fip_2021.csv",
+   "inf_trimestral_fip_2022.csv",
+   "inf_trimestral_fip_2023.csv"
+  ],
+  "cadastro_no_indice": []
+ }
+}

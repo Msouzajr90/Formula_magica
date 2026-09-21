@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fundos fechados</title>
+<meta name="description" content="FII, Fiagro e FIP de condomínio fechado: prazo, vencimento, cotistas, rentabilidade e amortização, do informe da CVM.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='54'>🔒</text></svg>">
+<link rel="stylesheet" href="estilo.css">
+<style>
+  .filtros{display:grid;gap:14px 22px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+           background:var(--surface-1);border:1px solid var(--line);
+           border-radius:var(--radius);padding:16px 18px;margin-bottom:22px}
+  .filtros .grupo{display:flex;flex-direction:column;gap:6px}
+  .filtros label.tit{font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+                     color:var(--ink-3)}
+  .opts{display:flex;flex-wrap:wrap;gap:8px}
+  .opt{border:1px solid var(--line-strong);background:var(--surface-0);color:var(--ink-2);
+       border-radius:999px;padding:4px 11px;font-size:12px;cursor:pointer}
+  .opt[aria-pressed="true"]{background:var(--s1);border-color:var(--s1);color:#fff}
+  .tagt{font-size:10px;font-weight:600;letter-spacing:.04em;border-radius:4px;
+        padding:2px 6px;border:1px solid var(--line-strong);color:var(--ink-2)}
+  .tagt.fii{border-color:var(--s1);color:var(--s1)}
+  .tagt.fiagro{border-color:var(--s3);color:var(--s3)}
+  .tagt.fip{border-color:var(--s2);color:var(--s2)}
+  .aten{display:inline-block;font-size:10px;border-radius:4px;padding:2px 6px;
+        margin:0 4px 3px 0;background:var(--surface-2);color:var(--ink-2);
+        border:1px solid var(--line)}
+  .aten.ruim{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;
+       white-space:nowrap}
+  .up{color:var(--good)} .down{color:var(--bad)}
+  .semdado{color:var(--ink-3)}
+  tr.aberta td{border-bottom:0}
+  tr.det td{background:var(--surface-2);font-size:12px;color:var(--ink-2)}
+  tr.det dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+            gap:10px 22px;margin:4px 0}
+  tr.det dt{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3)}
+  tr.det dd{margin:1px 0 0}
+  /* Nome de fundo e longo e quase sempre termina em "RESPONSABILIDADE
+     LIMITADA", que nao informa nada e empurrava as colunas numericas para fora
+     da tela. O nome completo fica no title e no detalhe. */
+  td.nome{max-width:330px}
+  td.nome b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* As marcas de atencao ficavam numa coluna a direita, fora da tela sem
+     rolagem horizontal — justamente o que precisa ser visto sem procurar. */
+  td.nome .avisos{margin-top:3px}
+  tbody tr.linha{cursor:pointer}
+  tbody tr.linha:hover td{background:var(--surface-2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="nav">
+  <a href="index.html">Ações</a>
+  <a href="fiis.html">Fundos imobiliários</a>
+  <a href="fundos.html" aria-current="page">Fundos fechados</a>
+  <a href="mercado.html">Indicadores de mercado</a>
+</nav>
+
+<header>
+  <h1>Fundos fechados</h1>
+  <p class="sub">FII, Fiagro e FIP de condomínio fechado — os que se compram em
+     oferta pública ou no secundário de balcão da corretora. Não têm preço de
+     tela: o que está aqui é o fundamento do fundo, direto do informe da CVM.</p>
+  <div class="stamp">
+    <span><span class="dot"></span>Competência <b id="stamp">—</b></span>
+    <span id="stampFonte"></span>
+  </div>
+</header>
+
+<div id="loading" class="load">Carregando dados…</div>
+<div id="erro" class="load hidden"></div>
+
+<main id="app" class="hidden">
+
+  <div class="warn" id="oQueFalta" style="margin-bottom:22px">
+    <b>O que esta tela não mostra.</b> O <b>deságio</b> do mercado secundário
+    não existe em dado aberto — ele é preço da plataforma da corretora, e você
+    confere lá na hora de comprar. Aqui o valor da cota é o <b>patrimonial</b>,
+    apurado pelo administrador, então <b>P/VP é 1 por construção</b> e não há
+    liquidez para medir. <span id="faltaPorFonte"></span>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="filtros">
+    <div class="grupo" style="grid-column:1/-1">
+      <label class="tit" for="busca">Buscar</label>
+      <input class="busca" id="busca" type="search" style="margin:0"
+             placeholder="nome do fundo, CNPJ ou administrador — ex.: LCP, Kijani, 61.922.643">
+    </div>
+
+    <div class="grupo">
+      <label class="tit">Tipo</label>
+      <div class="opts" id="fTipo">
+        <button class="opt" data-v="FII" aria-pressed="true">FII</button>
+        <button class="opt" data-v="Fiagro" aria-pressed="true">Fiagro</button>
+        <button class="opt" data-v="FIP" aria-pressed="true">FIP</button>
+      </div>
+    </div>
+
+    <div class="grupo">
+      <label class="tit">Prazo</label>
+      <div class="opts" id="fPrazo">
+        <button class="opt" data-v="todos" aria-pressed="true">Todos</button>
+        <button class="opt" data-v="Determinado">Determinado</button>
+        <button class="opt" data-v="Indeterminado">Indeterminado</button>
+        <button class="opt" data-v="Sem dado">Sem dado</button>
+      </div>
+    </div>
+
+    <div class="grupo">
+      <label class="tit" for="fAnos">Vence em até <b id="lblAnos">qualquer prazo</b></label>
+      <input type="range" id="fAnos" min="0" max="31" value="31" step="1">
+    </div>
+
+    <div class="grupo">
+      <label class="tit" for="fCot">Cotistas: <b id="lblCot">100+</b></label>
+      <input type="range" id="fCot" min="0" max="20" value="0" step="1">
+    </div>
+
+    <div class="grupo">
+      <label class="tit">Registro</label>
+      <div class="opts" id="fReg">
+        <button class="opt" data-v="cetip">Só CETIP</button>
+        <button class="opt" data-v="forabolsa">Fora de bolsa</button>
+        <button class="opt" data-v="amortizando">Amortizando</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="contagem" id="contagem"></div>
+    <div class="scroll tall">
+      <table id="tb"><thead><tr>
+        <th class="l ord" data-c="nome">Fundo</th>
+        <th class="l">Tipo</th>
+        <th class="l ord" data-c="prazoOrd">Prazo</th>
+        <th class="ord" data-c="anosRest">Anos rest.</th>
+        <th class="ord" data-c="inicio">Início</th>
+        <th class="ord" data-c="cotistas">Cotistas</th>
+        <th class="ord" data-c="cotistasVar12">12m</th>
+        <th class="ord" data-c="pl">Patrimônio</th>
+        <th class="ord" data-c="vpCota">VP/cota</th>
+        <th class="ord" data-c="rent12">Rent. 12m</th>
+        <th class="ord" data-c="dy12">DY 12m</th>
+        <th class="ord" data-c="amort12">Amort. 12m</th>
+        <th class="ord" data-c="taxaAdm">Taxa adm.</th>
+      </tr></thead><tbody id="tbody"></tbody></table>
+    </div>
+    <p class="note" style="margin:14px 0 0" id="rodape"></p>
+  </div>
+
+  <div class="card" style="margin-top:22px">
+    <h2 style="margin-top:0;font-size:15px">Como ler esta tela</h2>
+    <p class="note"><b>Prazo</b> vem da <b>data de vencimento</b> do informe, e
+    não do rótulo — há fundo declarado "Indeterminado" que traz data de
+    vencimento, e nesses casos a data manda e a linha fica marcada
+    <span class="aten">rótulo conflita</span>.</p>
+    <p class="note"><b>Rent. 12m</b> é a composição dos retornos mensais
+    declarados. Mês com retorno acima de 100% é descartado do acumulado em vez
+    de truncado — a linha fica marcada
+    <span class="aten">mês fora do acumulado</span> e o detalhe mostra a
+    variação do VP/cota no período, que está em reais e serve de contraprova.</p>
+    <p class="note"><b>Amort. 12m</b> é quanto das cotas foi amortizado na
+    janela. Fundo fechado de prazo determinado devolve capital ao longo da vida,
+    então amortização alta não é perda — é o fundo pagando o principal.</p>
+    <p class="note" id="notaAvisos"></p>
+  </div>
+
+</main>
+
+<footer class="note" style="margin:34px 0 60px;color:var(--ink-3)">
+  Fonte: dados.cvm.gov.br — informe mensal de FII e Fiagro, informe
+  quadrimestral de FIP. Triagem, não recomendação.
+</footer>
+
+</div>
+<script src="fundos.js"></script>
+</body>
+</html>

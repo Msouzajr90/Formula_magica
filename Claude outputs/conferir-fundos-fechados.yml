@@ -1,0 +1,90 @@
+name: Conferir fundos fechados
+
+# Este robo NAO gera nada, e a diferenca e proposital.
+#
+# Nas abas de acoes e de FII o robo faz trabalho de verdade: junta o informe da
+# CVM com preco e provento do Yahoo, e so entao existe o arquivo do site. Aqui
+# nao ha etapa de mercado — fundo fechado de balcao nao tem preco —, entao
+# `baixar_fechados.py` ja produz o arquivo final no PC do Marco. Um robo que
+# "atualizasse" isso na nuvem nao teria o que fazer, e nem conseguiria: a CVM
+# recusa conexoes de servidores no exterior.
+#
+# O que a automacao tem a oferecer aqui e impedir que arquivo quebrado ou velho
+# chegue ao ar em silencio. Ele roda em tres momentos:
+#
+#   push    -> quando o arquivo ou o codigo da aba mudam, antes da Vercel publicar
+#   semanal -> para o arquivo nao envelhecer sem ninguem notar
+#   manual  -> quando voce quiser conferir
+on:
+  push:
+    paths:
+      - "web/public/fundos_fechados.json"
+      - "web/public/fundos.js"
+      - "web/public/fundos.html"
+      - "fechados/**"
+      - "validar_fechados.py"
+      - "tests/test_fechados.py"
+  schedule:
+    # Segunda-feira, 12h UTC (9h em Brasilia). O informe mensal sai ate o 15o
+    # dia util do mes seguinte, entao uma conferencia por semana e suficiente
+    # para avisar que o arquivo passou do prazo.
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
+
+jobs:
+  conferir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar o repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar o Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Rodar os testes da aba
+        # Nenhum deles acessa a rede: os casos sinteticos reproduzem armadilhas
+        # dos arquivos reais e os demais leem as amostras versionadas.
+        run: python -m pytest tests/test_fechados.py -q
+
+      - name: Conferir que o arquivo existe
+        run: |
+          if [ ! -f web/public/fundos_fechados.json ]; then
+            echo "web/public/fundos_fechados.json nao existe."
+            echo ""
+            echo "Esse arquivo e gerado por 'python baixar_fechados.py', que"
+            echo "precisa rodar num computador no Brasil — a CVM recusa"
+            echo "conexoes vindas do exterior, e este robo roda nos EUA."
+            echo "No Windows, de duplo clique em baixar_fechados.bat."
+            exit 1
+          fi
+
+      - name: Conferir o conteudo
+        run: python validar_fechados.py
+
+      - name: Resumo
+        if: always()
+        run: |
+          python - <<'FIM' >> $GITHUB_STEP_SUMMARY
+          import json, pathlib
+          p = pathlib.Path("web/public/fundos_fechados.json")
+          if not p.exists():
+              print("## Fundos fechados\n\nArquivo ausente."); raise SystemExit
+          d = json.loads(p.read_text(encoding="utf-8"))
+          m = d["meta"]
+          print("## Fundos fechados\n")
+          print(f"- **{m['nFundos']:,} fundos** — " +
+                ", ".join(f"{v} {k}" for k, v in (m.get("porTipo") or {}).items()))
+          print(f"- competencia **{m.get('competencia')}**, gerado em {m.get('geradoEm')}")
+          print(f"- {m.get('comPrazoDeterminado', 0)} com prazo determinado")
+          avisos = m.get("avisos") or []
+          if avisos:
+              print("\n### Avisos da coleta\n")
+              for a in avisos:
+                  print(f"- {a}")
+          FIM
