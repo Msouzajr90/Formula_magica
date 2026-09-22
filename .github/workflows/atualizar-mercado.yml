@@ -56,15 +56,22 @@ jobs:
           # execucao acrescenta um ponto. Nao pode ser perdido num reset.
           cp web/public/pvp_historico.json /tmp/gerado/ 2>/dev/null || true
           cp web/public/ibov_carteira.json /tmp/gerado/ 2>/dev/null || true
+          # O spread_historico.json e refeito do zero toda execucao, mas
+          # precisa ser publicado: sem ele a aba Brasil x EUA nao tem grafico
+          # nenhum. Ficou de fora desta lista quando o robo foi escrito, e o
+          # resultado foi uma aba mostrando "o arquivo ainda nao existe" por
+          # uma semana inteira enquanto o robo o gerava e jogava fora.
+          cp web/public/spread_historico.json /tmp/gerado/ 2>/dev/null || true
           for tentativa in 1 2 3 4 5; do
             git fetch origin main
             git reset --hard origin/main
             mkdir -p web/public
             cp /tmp/gerado/mercado.json web/public/mercado.json
-            for extra in pvp_historico.json ibov_carteira.json; do
+            for extra in pvp_historico.json ibov_carteira.json spread_historico.json; do
               [ -f "/tmp/gerado/$extra" ] && cp "/tmp/gerado/$extra" "web/public/$extra"
             done
-            git add web/public/mercado.json web/public/pvp_historico.json web/public/ibov_carteira.json
+            git add web/public/mercado.json web/public/pvp_historico.json \
+                    web/public/ibov_carteira.json web/public/spread_historico.json
             if git diff --staged --quiet; then
               echo "Nada mudou."
               exit 0
