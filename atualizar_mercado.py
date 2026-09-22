@@ -44,7 +44,7 @@ def coletar_juros(sessao, hoje: date | None = None,
     execuções. Ela é reescrita do zero todo dia: um erro corrigido no cálculo
     conserta o passado na execução seguinte.
     """
-    from mercado import arquivo, historico, tesouro, treasury
+    from mercado import arquivo, bcb, historico, tesouro, treasury
 
     log.info("Baixando o CSV do Tesouro Transparente…")
     td = tesouro.ler_csv(tesouro.baixar_csv(sessao))
@@ -64,7 +64,23 @@ def coletar_juros(sessao, hoje: date | None = None,
     log.info("Treasury: %d pontos nominais, %d reais", len(us_nom), len(us_real))
 
     if com_historico:
-        s = historico.serie(td, us_nom, us_real)
+        # Dólar, meta Selic e Focus. Cada um numa tentativa própria: são três
+        # gráficos independentes, e o Banco Central fora do ar não pode
+        # derrubar a série de juros, que é a parte principal do arquivo.
+        inicio = td["DATA"].min().date()
+        dolar = selic = focus = None
+        try:
+            dolar = bcb.serie_sgs(bcb.DOLAR, inicio, fim, sessao)
+            selic = bcb.serie_sgs(bcb.SELIC_META, inicio, fim, sessao)
+        except Exception as exc:                               # noqa: BLE001
+            log.error("SGS do Banco Central: FALHOU — %s", exc)
+        try:
+            focus = bcb.focus_ipca_12m(inicio, sessao)
+        except Exception as exc:                               # noqa: BLE001
+            log.error("Focus (Olinda): FALHOU — %s", exc)
+
+        s = historico.serie(td, us_nom, us_real,
+                            dolar=dolar, selic=selic, focus=focus)
         HISTORICO_SPREAD.parent.mkdir(parents=True, exist_ok=True)
         HISTORICO_SPREAD.write_text(
             json.dumps(s, separators=(",", ":")), encoding="utf-8")

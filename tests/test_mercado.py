@@ -728,3 +728,99 @@ def test_serie_curta_nao_e_conferida(tmp_path):
     """Com dois pontos — a série recém-nascida do robô — não há o que conferir."""
     serie = [["2026-09-14", 1.62], ["2026-09-15", 1.62]]
     assert _validar(tmp_path, _arquivo_minimo(serie)) == []
+
+
+# ===========================================================================
+# Conferência do spread_historico.json
+# ===========================================================================
+def _historico_minimo(**troca):
+    """Arquivo do histórico com o mínimo para o validador ter o que olhar."""
+    from datetime import date as _d, timedelta as _td
+    dias = [( _d(2005, 1, 3) + _td(days=k)).isoformat() for k in range(1200)]
+    n = len(dias)
+    base = {
+        "datas": dias,
+        "real": {"10.0": [5.0] * n},
+        "brasilNtnb": {"10.0": [7.5] * n},
+        "euaReal": {"10.0": [2.5] * n},
+        "dolar": [3.0] * n,
+        "selicMeta": [12.0] * n,
+        "focusIpca12m": [4.5] * n,
+        "juroRealExAnte": [7.0] * n,
+        "ciclosSelic": [],
+    }
+    base.update(troca)
+    return base
+
+
+def _validar_hist(tmp_path, dados):
+    import json as _json
+    import validar_mercado
+    p = tmp_path / "spread_historico.json"
+    p.write_text(_json.dumps(dados), encoding="utf-8")
+    aviso = []
+    return validar_mercado.conferir_historico(p, aviso), aviso
+
+
+def test_historico_saudavel_passa(tmp_path):
+    erros, _ = _validar_hist(tmp_path, _historico_minimo())
+    assert erros == []
+
+
+def test_historico_ausente_vira_aviso_nao_erro(tmp_path):
+    """Sem o arquivo a aba fica sem gráfico, mas o mercado.json continua
+    publicável — são dois arquivos independentes."""
+    import validar_mercado
+    aviso = []
+    erros = validar_mercado.conferir_historico(tmp_path / "nao_existe.json", aviso)
+    assert erros == []
+    assert any("não existe" in a for a in aviso)
+
+
+def test_dolar_em_centavos_e_pego(tmp_path):
+    """Se alguém trocar a série 1 pela 10813 (centavos) ou dividir errado, o
+    número sai cem vezes maior e ninguém nota olhando o gráfico."""
+    n = 1200
+    erros, _ = _validar_hist(tmp_path, _historico_minimo(dolar=[510.0] * n))
+    assert any("dólar" in e and "faixa" in e for e in erros)
+
+
+def test_selic_com_salto_impossivel_e_recusada(tmp_path):
+    """O maior passo que o Copom já deu foi 1,5 p.p."""
+    n = 1200
+    meta = [12.0] * n
+    meta[600] = 2.0                          # −10 p.p. de um dia para o outro
+    erros, _ = _validar_hist(tmp_path, _historico_minimo(selicMeta=meta))
+    assert any("salto" in e for e in erros)
+
+
+def test_serie_com_tamanho_errado_e_recusada(tmp_path):
+    """Uma série mais curta que as datas desalinha TODO o gráfico, e o
+    desenho continua parecendo certo."""
+    erros, _ = _validar_hist(tmp_path, _historico_minimo(dolar=[3.0] * 900))
+    assert any("valores para" in e for e in erros)
+
+
+def test_ciclos_com_buraco_entre_si_sao_recusados(tmp_path):
+    ciclos = [{"de": "2005-01-03", "ate": "2006-01-03", "sentido": "alta",
+               "inicio": 10, "fim": 14},
+              {"de": "2007-01-03", "ate": "2008-01-03", "sentido": "queda",
+               "inicio": 14, "fim": 10}]
+    erros, _ = _validar_hist(tmp_path, _historico_minimo(ciclosSelic=ciclos))
+    assert any("buraco" in e for e in erros)
+
+
+def test_serie_do_bcb_faltando_vira_aviso(tmp_path):
+    """O Banco Central fora do ar não pode derrubar a publicação dos juros."""
+    d = _historico_minimo()
+    del d["dolar"]
+    erros, aviso = _validar_hist(tmp_path, d)
+    assert erros == []
+    assert any("dólar" in a for a in aviso)
+
+
+def test_datas_fora_de_ordem_sao_recusadas(tmp_path):
+    d = _historico_minimo()
+    d["datas"][500], d["datas"][501] = d["datas"][501], d["datas"][500]
+    erros, _ = _validar_hist(tmp_path, d)
+    assert any("fora de ordem" in e for e in erros)

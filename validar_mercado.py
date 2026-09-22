@@ -29,6 +29,21 @@ FAIXAS = {
 IDADE_MAXIMA_DIAS = 8
 COBERTURA_MINIMA = 0.70
 
+# Faixas do `spread_historico.json`. Os limites vêm do que as séries de
+# verdade fizeram em 21 anos, com folga larga dos dois lados — é para pegar
+# escala, sinal e unidade trocados, não variação de mercado.
+#
+#   dólar            1,5345 (jul/2011) a 6,2086 (jan/2025)
+#   meta Selic       2,00 (ago/2020) a 19,75 (mai/2005)
+#   Focus IPCA 12m   2,84 a 7,13
+#   juro real 1 ano  cerca de −2 (2021) a +15 (2005)
+FAIXAS_HISTORICO = {
+    "dolar":          (0.8, 15.0, "dólar (R$/US$)"),
+    "selicMeta":      (0.5, 50.0, "meta Selic"),
+    "focusIpca12m":   (0.0, 30.0, "expectativa de IPCA 12m do Focus"),
+    "juroRealExAnte": (-10.0, 25.0, "juro real ex-ante de 1 ano"),
+}
+
 
 def conferir(caminho: Path) -> list[str]:
     erros: list[str] = []
@@ -148,8 +163,88 @@ def conferir(caminho: Path) -> list[str]:
         if ordem != sorted(ordem):
             erros.append("A série do P/VP está fora de ordem no tempo.")
 
+    # 8. O arquivo do histórico, se existir
+    erros += conferir_historico(caminho.parent / "spread_historico.json", aviso)
+
     for a in aviso:
         print("aviso:", a)
+    return erros
+
+
+def conferir_historico(caminho: Path, aviso: list[str]) -> list[str]:
+    """Confere o `spread_historico.json` — a série que a aba Brasil × EUA lê.
+
+    Ele ficou sem conferência nenhuma até ganhar dólar, Selic e juro real
+    ex-ante. Três séries a mais são três jeitos a mais de publicar um número
+    errado sem ninguém perceber, porque este arquivo não aparece em cartão
+    nenhum: ele só vira linha num gráfico, e linha errada parece linha.
+    """
+    erros: list[str] = []
+    if not caminho.exists():
+        aviso.append(f"{caminho.name} não existe — a aba Brasil × EUA fica sem "
+                     "gráfico. Ele é gerado junto com o mercado.json.")
+        return erros
+
+    try:
+        h = json.loads(caminho.read_text(encoding="utf-8"))
+    except Exception as exc:                                   # noqa: BLE001
+        return [f"{caminho.name} está ilegível: {exc}"]
+
+    if h.get("demo"):
+        erros.append(f"{caminho.name} é o fixture de tela, com as curvas "
+                     "inventadas (tests/fixture_spread.py). Apague e rode o "
+                     "atualizar_mercado.py.")
+
+    datas = h.get("datas") or []
+    if len(datas) < 1000:
+        erros.append(f"{caminho.name} tem só {len(datas)} pregões. A série "
+                     "começa em dez/2004 e deveria ter milhares.")
+        return erros
+    if datas != sorted(datas):
+        erros.append(f"{caminho.name}: as datas estão fora de ordem.")
+
+    for chave, (minimo, maximo, nome) in FAIXAS_HISTORICO.items():
+        vals = h.get(chave)
+        if vals is None:
+            aviso.append(f"Sem {nome} no {caminho.name} — o gráfico que depende "
+                         "dela some da tela. A coleta do Banco Central falhou?")
+            continue
+        if len(vals) != len(datas):
+            erros.append(f"{nome}: {len(vals)} valores para {len(datas)} datas.")
+            continue
+        vivos = [v for v in vals if v is not None]
+        if not vivos:
+            erros.append(f"A série de {nome} saiu inteira vazia.")
+            continue
+        fora = [v for v in vivos if not (minimo <= v <= maximo)]
+        if fora:
+            erros.append(f"{nome}: {len(fora)} ponto(s) fora da faixa "
+                         f"{minimo}–{maximo} (ex.: {fora[0]}). Escala, sinal "
+                         "ou unidade trocados.")
+
+    # A meta Selic é degrau: ela não pode variar todo dia, e um salto de mais
+    # de 3 p.p. de um pregão para o outro nunca aconteceu — o maior foi de
+    # 1,5 p.p., em outubro de 2021.
+    meta = [v for v in (h.get("selicMeta") or []) if v is not None]
+    saltos = [abs(b - a) for a, b in zip(meta, meta[1:]) if abs(b - a) > 3.0]
+    if saltos:
+        erros.append(f"A meta Selic dá {len(saltos)} salto(s) de mais de 3 p.p. "
+                     f"entre pregões (o maior, {max(saltos):.2f}). O Copom nunca "
+                     "fez isso; é dado de outra série entrando no lugar.")
+
+    ciclos = h.get("ciclosSelic")
+    if ciclos is not None:
+        if not ciclos:
+            aviso.append("Nenhum ciclo de Selic identificado — o gráfico sai sem "
+                         "as faixas de fundo.")
+        for a, b in zip(ciclos, ciclos[1:]):
+            if a["ate"] != b["de"]:
+                erros.append(f"Os ciclos da Selic têm buraco ou sobreposição "
+                             f"entre {a['ate']} e {b['de']}.")
+                break
+
+    print(f"{caminho.name}: {len(datas)} pregões, de {datas[0]} a {datas[-1]}"
+          + (f", {len(ciclos)} ciclos de Selic" if ciclos else ""))
     return erros
 
 

@@ -103,58 +103,144 @@
 
     <div class="faixa" id="faixaSpread"></div>
 
+    <div id="histSpread">
+
+      <!-- 1. Juro real dos dois lados e a diferença -->
+      <div class="card" style="margin-bottom:18px">
+        <h2>Juro real: Brasil, Estados Unidos e a diferença</h2>
+        <p class="note">As três linhas que a comparação precisa ter. O juro real
+           brasileiro sai da NTN-B; o americano, do TIPS — os dois são títulos
+           que pagam uma taxa <i>acima</i> da inflação do próprio país, então a
+           diferença entre eles já vem limpa de expectativa de inflação e do
+           câmbio. É o prêmio que o Brasil paga por ser o Brasil.</p>
+
+        <div class="ctls" style="display:flex;gap:18px;flex-wrap:wrap;margin:0 0 14px">
+          <label>Prazo:
+            <select id="ctlVertice">
+              <option value="5.0">5 anos</option>
+              <option value="10.0" selected>10 anos</option>
+              <option value="20.0">20 anos</option>
+            </select>
+          </label>
+          <label>Período:
+            <select id="ctlSpreadAnos">
+              <option value="1">1 ano</option>
+              <option value="5">5 anos</option>
+              <option value="10">10 anos</option>
+              <option value="0" selected>Tudo</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="legend">
+          <span><i class="linha" style="background:var(--s1)"></i>Brasil — NTN-B</span>
+          <span><i class="linha" style="background:var(--s2)"></i>Estados Unidos — TIPS</span>
+          <span><i class="linha" style="background:var(--s3)"></i>Diferença</span>
+        </div>
+        <svg id="chReal" class="chart"></svg>
+        <p class="note" style="margin:14px 0 0" id="notaReal"></p>
+      </div>
+
+      <!-- 2. O prêmio e o dólar -->
+      <div class="card hidden" style="margin-bottom:18px" id="cardDolar">
+        <h2>O prêmio e o dólar</h2>
+        <p class="note">A tese é conhecida: prêmio maior atrai capital, capital
+           que entra derruba o dólar. O gráfico deixa julgar se ela se sustenta
+           em vinte e um anos — e o prazo escolhido lá em cima vale aqui também.</p>
+        <p class="note"><b>Por que não há dois eixos verticais.</b> O prêmio está
+           em pontos percentuais e o dólar em reais; não existe conversão entre os
+           dois. Com dois eixos, quem desenha escolhe onde as linhas se cruzam, e
+           a escolha vira a conclusão. Por padrão as duas aparecem em
+           <b>desvios-padrão da própria média no período visível</b> — mesma
+           unidade, mesmo eixo, e os cruzamentos são dos dados. O botão ao lado
+           mostra as duas nas unidades originais, em gráficos separados.</p>
+
+        <div class="ctls" style="display:flex;gap:18px;flex-wrap:wrap;margin:0 0 14px">
+          <label>Como mostrar:
+            <select id="ctlDolarModo">
+              <option value="padronizado" selected>Sobrepostas, padronizadas</option>
+              <option value="separado">Separadas, unidades originais</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="legend">
+          <span><i class="linha" style="background:var(--s3)"></i>Prêmio real Brasil − EUA</span>
+          <span><i class="linha" style="background:var(--s2)"></i>Dólar (PTAX venda)</span>
+        </div>
+        <svg id="chDolar" class="chart"></svg>
+        <svg id="chDolarA" class="chart hidden"></svg>
+        <svg id="chDolarB" class="chart hidden"></svg>
+
+        <p class="note" style="margin:18px 0 6px"><b>E a relação ao longo do
+           tempo.</b> Correlação entre as variações diárias das duas séries, numa
+           janela móvel de um ano de pregões. Acima de zero, prêmio e dólar sobem
+           juntos; abaixo, andam em sentidos opostos.</p>
+        <svg id="chCorrel" class="chart"></svg>
+        <p class="note" style="margin:14px 0 0" id="notaDolar"></p>
+      </div>
+
+      <!-- 3. Juro real e o ciclo da Selic -->
+      <div class="card hidden" style="margin-bottom:18px" id="cardSelic">
+        <h2>Juro real e o ciclo da Selic</h2>
+        <p class="note">O Copom controla uma taxa nominal de um dia. O que chega
+           à economia é o juro <i>real</i>, e em prazos que o Copom não fixa. As
+           faixas de fundo são os ciclos de alta e de queda da meta; as linhas
+           mostram o que o juro real de curto e de longo prazo fez dentro deles.</p>
+        <p class="note"><b>O juro real ex-ante de um ano</b> é o prefixado de um
+           ano do Tesouro descontado pela inflação que o Focus espera para os doze
+           meses seguintes — pela divisão de Fisher, não pela subtração. É a
+           medida de quanto a política monetária está realmente apertando: a meta
+           Selic a 14% significa coisas opostas com inflação esperada de 4% e de
+           12%.</p>
+
+        <div class="ctls" style="display:flex;gap:18px;flex-wrap:wrap;margin:0 0 14px">
+          <label>Período:
+            <select id="ctlSelicAnos">
+              <option value="1">1 ano</option>
+              <option value="5">5 anos</option>
+              <option value="10">10 anos</option>
+              <option value="0" selected>Tudo</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="legend">
+          <span><i class="linha" style="background:var(--s1)"></i>Meta Selic (nominal)</span>
+          <span><i class="linha" style="background:var(--s2)"></i>Juro real ex-ante, 1 ano</span>
+          <span><i class="linha" style="background:var(--s3)"></i>Juro real longo — NTN-B 10 anos</span>
+        </div>
+        <svg id="chSelic" class="chart"></svg>
+        <p class="note" style="margin:14px 0 0" id="notaSelic"></p>
+
+        <p class="note" style="margin:18px 0 6px"><b>Ciclo a ciclo.</b> A ponta
+           curta obedece ao Copom por construção. A pergunta interessante é a
+           ponta longa: subiu junto, ou foi para o outro lado? Quando o juro longo
+           cai durante um aperto, o mercado está dizendo que acreditou; quando
+           sobe, está dizendo que não.</p>
+        <div class="scroll">
+          <table id="tbCiclos"><thead><tr>
+            <th class="l">Ciclo</th><th class="l">Período</th><th>Meta Selic</th>
+            <th>Δ Selic</th><th>Δ real 1a</th><th>Δ real 10a</th><th class="l">Ponta longa</th>
+          </tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+
+      <p class="note muted" id="histStatus" style="margin:0 0 18px;font-size:12px"></p>
+    </div>
+
     <div class="card" style="margin-bottom:18px">
       <h2>Prêmio do Brasil sobre os Estados Unidos, prazo a prazo</h2>
-      <p class="note">A diferença em cada vencimento, em pontos percentuais.
-         Em cima, a comparação nominal — prefixado brasileiro contra Treasury.
-         Embaixo, a real — NTN-B contra TIPS, que tira a inflação esperada dos
-         dois lados e deixa mais perto do prêmio de risco puro.</p>
+      <p class="note">Os gráficos acima fixam um prazo e correm o tempo. Este faz
+         o contrário: fixa o fechamento de hoje e corre os prazos. Em cima, a
+         comparação nominal — prefixado brasileiro contra Treasury. Embaixo, a
+         real — NTN-B contra TIPS.</p>
       <div class="legend">
         <span><i class="linha" style="background:var(--s1)"></i>Nominal: pré − Treasury</span>
         <span><i class="linha" style="background:var(--s2)"></i>Real: NTN-B − TIPS</span>
       </div>
       <svg id="chSpread" class="chart"></svg>
       <p class="note" style="margin:12px 0 0" id="notaSpread"></p>
-    </div>
-
-    <div class="card" style="margin-bottom:18px" id="histSpread">
-      <h2>O prêmio ao longo do tempo</h2>
-      <p class="note">O mesmo número do gráfico acima, num prazo fixo, dia a dia
-         desde que o dado existe. O gráfico de cima compara países num dia; este
-         compara dias num prazo.</p>
-
-      <div class="ctls" style="display:flex;gap:18px;flex-wrap:wrap;margin:0 0 14px">
-        <label>Prazo:
-          <select id="ctlVertice">
-            <option value="2.0">2 anos</option>
-            <option value="5.0" selected>5 anos</option>
-            <option value="10.0">10 anos — nominal com falhas</option>
-            <option value="20.0">20 anos — só real</option>
-          </select>
-        </label>
-        <label>Período:
-          <select id="ctlSpreadAnos">
-            <option value="1">1 ano</option>
-            <option value="5">5 anos</option>
-            <option value="10">10 anos</option>
-            <option value="0" selected>Tudo</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="legend">
-        <span><i class="linha" style="background:var(--s1)"></i>Nominal: pré − Treasury</span>
-        <span><i class="linha" style="background:var(--s2)"></i>Real: NTN-B − TIPS</span>
-      </div>
-      <svg id="chHistSpread" class="chart"></svg>
-
-      <p class="note" style="margin:18px 0 6px"><b>E o nível brasileiro, no mesmo
-         período.</b> O prêmio sobe quando o Brasil piora e também quando os
-         Estados Unidos melhoram — sem o nível de um dos lados não dá para
-         distinguir as duas coisas. Dois gráficos empilhados em vez de dois eixos
-         no mesmo desenho: dois eixos sugerem uma relação que o dado não afirma.</p>
-      <svg id="chHistNivel" class="chart"></svg>
-      <p class="note muted" id="histStatus" style="margin:12px 0 0;font-size:12px"></p>
     </div>
 
     <div class="card" style="margin-bottom:18px">
@@ -166,7 +252,7 @@
       <svg id="chPaises" class="chart"></svg>
     </div>
 
-    <div class="card">
+    <div class="card" style="margin-bottom:18px">
       <h2>Vértices em destaque</h2>
       <p class="note">Onde o mercado costuma olhar. Todas as taxas em base
          efetiva ao ano — inclusive as americanas, convertidas da capitalização
@@ -177,6 +263,48 @@
           <th>1 semana</th><th>1 mês</th><th>6 meses</th>
         </tr></thead><tbody></tbody></table>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>De onde vem cada número</h2>
+      <p class="note">Cinco fontes, todas oficiais e todas públicas. Nenhuma
+         cotação de terceiro, nenhum número digitado à mão.</p>
+      <div class="scroll">
+        <table><thead><tr>
+          <th class="l">Série</th><th class="l">Fonte</th><th class="l">O que é</th>
+        </tr></thead><tbody>
+          <tr><td class="l">Juro real e nominal brasileiro</td>
+              <td class="l">Tesouro Transparente</td>
+              <td class="l">Taxas do Tesouro Direto, todo dia útil desde dez/2004.
+                  São de varejo, não as indicativas da ANBIMA — ficam alguns
+                  pontos-base distantes.</td></tr>
+          <tr><td class="l">Juro real e nominal americano</td>
+              <td class="l">U.S. Treasury</td>
+              <td class="l">Curvas diárias de par yield, nominal e TIPS.
+                  Publicadas em capitalização semestral e convertidas aqui para
+                  efetiva ao ano por (1 + y/2)² − 1, senão o prêmio sai inflado.</td></tr>
+          <tr><td class="l">Dólar</td>
+              <td class="l">Banco Central, SGS 1</td>
+              <td class="l">PTAX de venda — a taxa que o próprio Banco Central
+                  apura, não cotação de tela.</td></tr>
+          <tr><td class="l">Meta Selic</td>
+              <td class="l">Banco Central, SGS 432</td>
+              <td class="l">A meta definida pelo Copom. A Selic efetiva oscila
+                  centésimos por dia e borraria o degrau que define o ciclo.</td></tr>
+          <tr><td class="l">Inflação esperada</td>
+              <td class="l">Banco Central, Focus (Olinda)</td>
+              <td class="l">Mediana suavizada da expectativa de IPCA para os
+                  próximos doze meses, base de cálculo 0 — a mesma que o
+                  Relatório Focus publica.</td></tr>
+        </tbody></table>
+      </div>
+      <p class="note" style="margin:16px 0 0">O que não é feito aqui, de
+         propósito: nada é extrapolado além do prazo que existe em oferta; dia
+         sem dado fica em branco em vez de repetir o valor da véspera; e não há
+         ajuste, alisamento ou média móvel em nenhuma das séries de preço. A
+         única exceção declarada é o Focus, que é apurado semanalmente e
+         publicado com alguns dias de atraso — o último valor vale por até dez
+         dias corridos e depois vira lacuna.</p>
     </div>
   </section>
 

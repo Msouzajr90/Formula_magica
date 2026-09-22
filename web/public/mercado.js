@@ -72,11 +72,26 @@ function escala(valores, folga = 0.08) {
   if (min === max) { min -= 0.5; max += 0.5; }
   const margem = (max - min) * folga;
   min -= margem; max += margem;
-  const bruto = (max - min) / 4;
-  const mag = Math.pow(10, Math.floor(Math.log10(bruto)));
-  const passo = [1, 2, 2.5, 4, 5, 10].map(m => m * mag).find(p => p >= bruto) || mag * 10;
-  let lo = Math.floor(min / passo) * passo;
-  let hi = Math.ceil(max / passo) * passo;
+  // Escolhe o passo que desperdiça menos altura, em vez de fixar o número de
+  // divisões. Com quatro divisões fixas, uma série de −2 a 20 caía num passo
+  // de 10 e a escala ia de −10 a 30: metade do gráfico vazia, porque
+  // (max−min)/4 dava 6,4 e o degrau seguinte da régua era 10. Testando de
+  // quatro a sete divisões, o passo de 5 aparece e a escala fica −5 a 25.
+  let passo = null, lo = 0, hi = 1, melhor = Infinity;
+  for (const divisoes of [4, 5, 6, 7]) {
+    const bruto = (max - min) / divisoes;
+    if (!(bruto > 0)) continue;
+    const mag = Math.pow(10, Math.floor(Math.log10(bruto)));
+    const p = [1, 2, 2.5, 4, 5, 10].map(k => k * mag).find(k => k >= bruto) || mag * 10;
+    const a = Math.floor(min / p) * p, b = Math.ceil(max / p) * p;
+    const n = Math.round((b - a) / p);
+    if (n < 3 || n > 7) continue;
+    if (b - a < melhor - 1e-9) { melhor = b - a; passo = p; lo = a; hi = b; }
+  }
+  if (passo == null) {                       // rede de segurança
+    passo = (max - min) / 4 || 1;
+    lo = min; hi = max;
+  }
   // Num gráfico de diferença o zero entra na escala, mas a folga não pode
   // arrastá-la para o negativo quando nenhum valor é negativo: metade do
   // gráfico ficava vazia abaixo de uma região onde não existe dado.
@@ -230,7 +245,7 @@ function linhas(svg, { grade, series, eixoY, eixoX = 'Prazo (anos)', casas = 2,
  */
 function linhasNoTempo(svg, datas, series, { altura = 320, eixoY = '',
                        referencia = null, zero = false, casas = 2,
-                       formato = null } = {}) {
+                       formato = null, bandas = null } = {}) {
   const vivas = series.filter(s => s.valores.some(v => v != null && isFinite(v)));
   if (!vivas.length || datas.length < 2) {
     const h = moldura(svg, 88);
@@ -244,7 +259,11 @@ function linhasNoTempo(svg, datas, series, { altura = 320, eixoY = '',
 
   const h = altura, w = moldura(svg, h);
   const estreito = w < 620;
-  const m = { t: 16, r: estreito ? 48 : 76, b: 40, l: estreito ? 44 : 54 };
+  // Com faixas, o topo ganha uma tira própria para os rótulos ALTA/QUEDA:
+  // dentro da área do gráfico eles ficavam por cima das linhas.
+  const temBandas = !!(bandas && bandas.length);
+  const m = { t: temBandas ? 30 : 16, r: estreito ? 48 : 76, b: 40,
+              l: estreito ? 44 : 54 };
   const iw = w - m.l - m.r, ih = h - m.t - m.b;
 
   const ts = datas.map(d => Date.parse(d));
@@ -256,6 +275,28 @@ function linhasNoTempo(svg, datas, series, { altura = 320, eixoY = '',
   const px = (x) => m.l + ((x - t0) / (t1 - t0 || 1)) * iw;
   const py = (v) => m.t + ih - ((v - e.min) / (e.max - e.min)) * ih;
   const fmt = formato || ((v) => num(v, casas));
+
+  // Faixas de fundo (os ciclos da Selic). Vêm antes de tudo, para ficarem
+  // atrás das linhas.
+  //
+  // Cinza, não colorido. A tentação é pintar alta de vermelho e queda de
+  // verde, mas as três séries deste gráfico já usam o azul, o laranja e o
+  // verde da paleta — a faixa colorida faria a mesma cor significar duas
+  // coisas no mesmo desenho. Dois tons do mesmo cinza separam as faixas sem
+  // disputar com as linhas, e o rótulo diz qual é qual.
+  (bandas || []).forEach(b => {
+    const xa = Math.max(px(Date.parse(b.de)), m.l);
+    const xb = Math.min(px(Date.parse(b.ate)), m.l + iw);
+    if (!(xb > xa)) return;
+    svg.appendChild(mk('rect', { x: xa, y: m.t, width: xb - xa, height: ih,
+      fill: css('--ink'), opacity: b.sentido === 'alta' ? 0.075 : 0.022 }));
+    if (xb - xa > 46) {
+      const t = mk('text', { x: (xa + xb) / 2, y: m.t - 9, 'text-anchor': 'middle',
+        'font-size': 9.5, 'letter-spacing': '.07em', fill: css('--ink-3') });
+      t.textContent = b.sentido === 'alta' ? 'ALTA' : 'QUEDA';
+      svg.appendChild(t);
+    }
+  });
 
   for (let v = e.min; v <= e.max + 1e-9; v += e.passo) {
     const y = py(v);
@@ -354,6 +395,79 @@ function linhasNoTempo(svg, datas, series, { altura = 320, eixoY = '',
   });
 }
 
+// ===========================================================================
+// Estatística das comparações
+// ===========================================================================
+/** Média e desvio-padrão dos valores que existem. */
+function momentos(v) {
+  const x = v.filter(a => a != null && isFinite(a));
+  if (x.length < 2) return null;
+  const media = x.reduce((s, a) => s + a, 0) / x.length;
+  const va = x.reduce((s, a) => s + (a - media) ** 2, 0) / (x.length - 1);
+  return { media, dp: Math.sqrt(va), n: x.length };
+}
+
+/**
+ * Põe uma série em desvios-padrão da própria média, no período visível.
+ *
+ * É o que permite pôr o prêmio (em pontos percentuais) e o dólar (em reais)
+ * no mesmo eixo sem inventar uma relação entre as unidades. Dois eixos
+ * verticais fariam as duas linhas se cruzarem onde o desenhista escolheu;
+ * em desvios-padrão elas se cruzam onde os dados se cruzam.
+ *
+ * O preço: some o nível. Um dólar de R$ 5,10 e um de R$ 3,20 podem virar o
+ * mesmo ponto se a média do período for outra — por isso o gráfico em
+ * unidades originais fica a um clique de distância.
+ */
+function padronizar(v) {
+  const m = momentos(v);
+  if (!m || m.dp === 0) return v.map(() => null);
+  return v.map(a => (a == null || !isFinite(a)) ? null : (a - m.media) / m.dp);
+}
+
+/** Pearson sobre os dias em que as duas séries existem. */
+function correlacao(a, b) {
+  const pares = [];
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] != null && isFinite(a[i]) && b[i] != null && isFinite(b[i])) pares.push([a[i], b[i]]);
+  }
+  if (pares.length < 30) return null;
+  const n = pares.length;
+  const ma = pares.reduce((s, p) => s + p[0], 0) / n;
+  const mb = pares.reduce((s, p) => s + p[1], 0) / n;
+  let cov = 0, va = 0, vb = 0;
+  pares.forEach(([x, y]) => { cov += (x - ma) * (y - mb); va += (x - ma) ** 2; vb += (y - mb) ** 2; });
+  if (va === 0 || vb === 0) return null;
+  return { r: cov / Math.sqrt(va * vb), n };
+}
+
+/**
+ * Correlação entre as VARIAÇÕES das duas séries, numa janela móvel.
+ *
+ * Em nível, duas séries que sobem juntas ao longo de dez anos dão
+ * correlação alta mesmo sem nenhuma relação entre elas — é o problema das
+ * séries com tendência. A pergunta que interessa é outra: quando o prêmio
+ * se mexe, o dólar se mexe junto? Isso se mede nas variações.
+ */
+function correlacaoMovel(a, b, janela) {
+  const da = a.map((v, i) => (i && v != null && a[i - 1] != null) ? v - a[i - 1] : null);
+  const db = b.map((v, i) => (i && v != null && b[i - 1] != null) ? v - b[i - 1] : null);
+  const saida = new Array(a.length).fill(null);
+  for (let i = janela; i < a.length; i++) {
+    const c = correlacao(da.slice(i - janela, i), db.slice(i - janela, i));
+    saida[i] = c ? c.r : null;
+  }
+  return saida;
+}
+
+/** Último valor não nulo de uma série, com a data. */
+function ultimoValido(datas, v) {
+  for (let i = v.length - 1; i >= 0; i--) {
+    if (v[i] != null && isFinite(v[i])) return { data: datas[i], valor: v[i], i };
+  }
+  return null;
+}
+
 /** Corta as séries num período a partir do fim. `anos` 0 = tudo. */
 function recortar(datas, series, anos) {
   if (!anos) return { datas, series };
@@ -368,11 +482,13 @@ function recortar(datas, series, anos) {
 // ===========================================================================
 let D = null;
 let H = null;                    // spread_historico.json, carregado sob demanda
-// O vértice padrão é 5 anos, não 10. Na amostra de 21 anos o prefixado
-// brasileiro alcançava 10 anos em apenas 38% dos pregões — a linha nominal de
-// 10 anos é um tracejado cheio de falhas, e falha não é um bom padrão. Em 5
-// anos o dado existe em 93% do período.
-const estado = { pvpAnos: 0, spreadVertice: '5.0', spreadAnos: 0 };
+// O vértice padrão aqui é 10 anos. A ressalva que valia para o gráfico
+// nominal — o prefixado brasileiro raramente chega a 10 anos — não vale para
+// o real: a NTN-B vai a 2060 e o TIPS de 10 anos existe desde 2003. Estes
+// gráficos são todos de juro REAL, então 10 anos, que é o vértice que o
+// mercado cita, tem dado do começo ao fim.
+const estado = { pvpAnos: 0, spreadVertice: '10.0', spreadAnos: 0,
+                 dolarModo: 'padronizado', selicAnos: 0 };
 const FOTOS = ['hoje', 'semana', 'mes', 'semestre'];
 const CORES_FOTO = ['--t0', '--t1', '--t2', '--t3'];
 const ROTULO_CURTO = { hoje: 'hoje', semana: '1 sem', mes: '1 mês', semestre: '6 meses' };
@@ -480,15 +596,22 @@ function renderSpread() {
   const hoje = serie('hoje');
   if (!hoje) return;
 
+  // Os cartões abrem pelo juro REAL de 10 anos, que é o eixo desta aba: é o
+  // prêmio limpo de inflação esperada e de câmbio. O nominal vem depois,
+  // porque carrega dentro dele a inflação dos dois países.
   const faixa = [];
-  [[2, 'nominal'], [5, 'nominal'], [10, 'nominal'], [5, 'real'], [10, 'real'], [20, 'real']]
-    .forEach(([p, tipo]) => {
-      const v = naGrade(tipo === 'nominal' ? hoje.spreadNominal : hoje.spreadReal, p);
-      if (v == null) return;
-      faixa.push(tile(`${tipo === 'nominal' ? 'Nominal' : 'Real'} ${p} anos`, pp(v, 2),
-        tipo === 'nominal' ? 'pré − Treasury' : 'NTN-B − TIPS'));
-    });
+  const br10 = naGrade(hoje.ipca.grade, 10);
+  const us10 = naGrade(hoje.tips.grade, 10);
+  if (br10 != null) faixa.push(tile('Juro real Brasil, 10 anos', taxa(br10, 2), 'NTN-B'));
+  if (us10 != null) faixa.push(tile('Juro real EUA, 10 anos', taxa(us10, 2), 'TIPS'));
+  [[10, 'real'], [20, 'real'], [10, 'nominal']].forEach(([p, tipo]) => {
+    const v = naGrade(tipo === 'nominal' ? hoje.spreadNominal : hoje.spreadReal, p);
+    if (v == null) return;
+    faixa.push(tile(`Prêmio ${tipo === 'nominal' ? 'nominal' : 'real'} ${p} anos`, pp(v, 2),
+      tipo === 'nominal' ? 'pré − Treasury' : 'NTN-B − TIPS'));
+  });
   el('faixaSpread').innerHTML = faixa.join('');
+  el('faixaSpread').dataset.base = faixa.length;
 
   linhas(el('chSpread'), {
     grade: D.juros.grade, zero: true, eixoY: 'Diferença (pontos percentuais)',
@@ -576,12 +699,223 @@ function carregarHistorico() {
     .catch(() => { H = null; estadoHistorico = 'ausente'; renderSpreadHistorico(); });
 }
 
+/** A curva real americana. Arquivos antigos não a traziam; ela é a
+ *  brasileira menos o spread, que é a mesma conta feita do outro lado. */
+function euaReal(v) {
+  const direto = (H.euaReal || {})[v];
+  if (direto) return direto;
+  const br = (H.brasilNtnb || {})[v], sp = (H.real || {})[v];
+  if (!br || !sp) return null;
+  return br.map((a, i) => (a == null || sp[i] == null) ? null : +(a - sp[i]).toFixed(3));
+}
+
+const anosDoVertice = (v) => parseFloat(v);
+
+// ---------------------------------------------------------------------------
+// 1. Juro real: Brasil, Estados Unidos e a diferença
+// ---------------------------------------------------------------------------
+function renderReal() {
+  const v = estado.spreadVertice;
+  const br = (H.brasilNtnb || {})[v] || null;
+  const us = euaReal(v);
+  const sp = (H.real || {})[v] || null;
+  const n = anosDoVertice(v);
+
+  const series = [];
+  if (br) series.push({ nome: `Brasil — NTN-B ${n} anos`, rotulo: 'Brasil',
+    valores: br, cor: css('--s1') });
+  if (us) series.push({ nome: `Estados Unidos — TIPS ${n} anos`, rotulo: 'EUA',
+    valores: us, cor: css('--s2') });
+  if (sp) series.push({ nome: 'Diferença (Brasil − EUA)', rotulo: 'diferença',
+    valores: sp, cor: css('--s3') });
+
+  const r = recortar(H.datas, series, estado.spreadAnos);
+  linhasNoTempo(el('chReal'), r.datas, r.series, {
+    altura: 360, zero: true, eixoY: 'Juro real (% a.a.) e diferença (p.p.)',
+    formato: (x) => num(x, 2),
+  });
+
+  const uBr = br && ultimoValido(H.datas, br);
+  const uUs = us && ultimoValido(H.datas, us);
+  const uSp = sp && ultimoValido(H.datas, sp);
+  const mSp = sp && momentos(sp);
+  const extremos = sp ? (() => {
+    let lo = null, hi = null;
+    sp.forEach((x, i) => {
+      if (x == null) return;
+      if (!lo || x < lo.valor) lo = { valor: x, data: H.datas[i] };
+      if (!hi || x > hi.valor) hi = { valor: x, data: H.datas[i] };
+    });
+    return { lo, hi };
+  })() : null;
+
+  el('notaReal').innerHTML = !uSp ? 'Sem série neste prazo.' : `
+    Hoje, em ${n} anos: o Brasil paga <b>${taxa(uBr.valor, 2)}</b> de juro real e os
+    Estados Unidos, <b>${taxa(uUs.valor, 2)}</b> — uma diferença de
+    <b>${pp(uSp.valor, 2)}</b>.
+    A média do período inteiro é ${pp(mSp.media, 2)}, com desvio-padrão de
+    ${num(mSp.dp, 2)} p.p.; hoje estamos
+    <b>${num((uSp.valor - mSp.media) / mSp.dp, 1)} desvio(s)-padrão</b> da média.
+    O mínimo foi ${pp(extremos.lo.valor, 2)} em ${dataBR(extremos.lo.data)} e o máximo
+    ${pp(extremos.hi.valor, 2)} em ${dataBR(extremos.hi.data)}.`;
+}
+
+// ---------------------------------------------------------------------------
+// 2. O prêmio e o dólar
+// ---------------------------------------------------------------------------
+function renderDolar() {
+  const caixa = el('cardDolar');
+  const dol = H.dolar || null;
+  if (!dol) {
+    caixa.classList.add('hidden');
+    return;
+  }
+  caixa.classList.remove('hidden');
+
+  const v = estado.spreadVertice;
+  const sp = (H.real || {})[v] || null;
+  const n = anosDoVertice(v);
+  if (!sp) { el('chDolar').textContent = ''; return; }
+
+  const juntos = estado.dolarModo === 'padronizado';
+  el('chDolar').classList.toggle('hidden', !juntos);
+  el('chDolarA').classList.toggle('hidden', juntos);
+  el('chDolarB').classList.toggle('hidden', juntos);
+
+  const r = recortar(H.datas, [
+    { nome: `Prêmio real ${n} anos`, rotulo: 'prêmio', valores: sp, cor: css('--s3') },
+    { nome: 'Dólar (PTAX venda)', rotulo: 'dólar', valores: dol, cor: css('--s2') },
+  ], estado.spreadAnos);
+  const [sSp, sDol] = r.series;
+
+  if (juntos) {
+    // Padronizadas DENTRO do período visível: trocar o período reescala as
+    // duas, o que é a leitura certa — "como isto se moveu, para o que é
+    // normal neste período".
+    linhasNoTempo(el('chDolar'), r.datas, [
+      { ...sSp, valores: padronizar(sSp.valores) },
+      { ...sDol, valores: padronizar(sDol.valores) },
+    ], { altura: 320, zero: true, eixoY: 'Desvios-padrão da média do período',
+         formato: (x) => num(x, 2) + ' dp' });
+  } else {
+    linhasNoTempo(el('chDolarA'), r.datas, [sSp], {
+      altura: 210, zero: true, eixoY: 'Prêmio real (p.p.)', formato: (x) => pp(x, 2) });
+    linhasNoTempo(el('chDolarB'), r.datas, [sDol], {
+      altura: 210, eixoY: 'R$ por US$', formato: (x) => 'R$ ' + num(x, 4) });
+  }
+
+  // Correlação móvel das VARIAÇÕES, janela de um ano de pregões.
+  const movel = correlacaoMovel(sSp.valores, sDol.valores, 252);
+  linhasNoTempo(el('chCorrel'), r.datas, [
+    { nome: 'Correlação das variações diárias (janela de 1 ano)',
+      rotulo: 'correlação', valores: movel, cor: css('--s1') },
+  ], { altura: 190, zero: true, eixoY: 'Correlação', formato: (x) => num(x, 2) });
+
+  const nivel = correlacao(sSp.valores, sDol.valores);
+  const varia = correlacao(
+    sSp.valores.map((x, i) => (i && x != null && sSp.valores[i - 1] != null) ? x - sSp.valores[i - 1] : null),
+    sDol.valores.map((x, i) => (i && x != null && sDol.valores[i - 1] != null) ? x - sDol.valores[i - 1] : null));
+  const vivos = movel.filter(x => x != null);
+  const positivas = vivos.filter(x => x > 0).length;
+
+  el('notaDolar').innerHTML = `
+    No período escolhido, prêmio e dólar andam juntos em <b>nível</b> com
+    correlação de <b>${num(nivel ? nivel.r : null, 2)}</b> — mas isso diz pouco:
+    duas séries com tendência no mesmo sentido dão correlação alta sem nenhuma
+    relação entre elas.
+    Nas <b>variações diárias</b>, que é a pergunta de verdade, a correlação cai
+    para <b>${num(varia ? varia.r : null, 2)}</b>.
+    Na janela móvel de um ano, ela é positiva em
+    <b>${vivos.length ? num(100 * positivas / vivos.length, 0) : '—'}%</b> do tempo e
+    ${vivos.length ? `varia de ${num(Math.min(...vivos), 2)} a ${num(Math.max(...vivos), 2)}` : '—'}:
+    a relação existe, muda de força e chega a mudar de sinal.`;
+}
+
+// ---------------------------------------------------------------------------
+// 3. Juro real e o ciclo da Selic
+// ---------------------------------------------------------------------------
+function renderSelic() {
+  const caixa = el('cardSelic');
+  const meta = H.selicMeta || null;
+  if (!meta) { caixa.classList.add('hidden'); return; }
+  caixa.classList.remove('hidden');
+
+  const exAnte = H.juroRealExAnte || null;
+  const longo = (H.brasilNtnb || {})['10.0'] || null;
+
+  const series = [
+    { nome: 'Meta Selic (nominal)', rotulo: 'Selic', valores: meta, cor: css('--s1') },
+  ];
+  if (exAnte) series.push({ nome: 'Juro real ex-ante, 1 ano', rotulo: 'real 1a',
+    valores: exAnte, cor: css('--s2') });
+  if (longo) series.push({ nome: 'Juro real longo — NTN-B 10 anos', rotulo: 'real 10a',
+    valores: longo, cor: css('--s3') });
+
+  const r = recortar(H.datas, series, estado.selicAnos);
+  const limite = Date.parse(r.datas[0]);
+  const bandas = (H.ciclosSelic || []).filter(c => Date.parse(c.ate) >= limite);
+  linhasNoTempo(el('chSelic'), r.datas, r.series, {
+    altura: 380, zero: true, eixoY: '% ao ano', bandas,
+    formato: (x) => taxa(x, 2),
+  });
+
+  // A tabela responde a pergunta que o gráfico só insinua: em cada ciclo, o
+  // juro real longo acompanhou a Selic ou foi para o outro lado?
+  const emData = (d) => {
+    let lo = 0, hi = H.datas.length - 1;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (H.datas[m] < d) lo = m + 1; else hi = m; }
+    return lo;
+  };
+  const valorEm = (s, i) => {
+    if (!s) return null;
+    for (let k = i; k >= 0 && k > i - 15; k--) if (s[k] != null) return s[k];
+    return null;
+  };
+  const linhasTab = (H.ciclosSelic || []).slice().reverse().map(c => {
+    const ia = emData(c.de), ib = emData(c.ate);
+    const la = valorEm(longo, ia), lb = valorEm(longo, ib);
+    const ea = valorEm(exAnte, ia), eb = valorEm(exAnte, ib);
+    const dl = (la != null && lb != null) ? lb - la : null;
+    const de = (ea != null && eb != null) ? eb - ea : null;
+    const junto = (dl == null) ? '—'
+      : (Math.sign(dl) === Math.sign(c.fim - c.inicio) ? 'acompanhou' : 'foi ao contrário');
+    return `<tr>
+      <td class="l"><span class="tag">${c.sentido}</span></td>
+      <td class="l muted">${dataBR(c.de)} → ${dataBR(c.ate)}</td>
+      <td class="num">${num(c.inicio, 2)} → ${num(c.fim, 2)}</td>
+      <td class="num">${pp(c.fim - c.inicio, 2)}</td>
+      <td class="num">${pp(de, 2)}</td>
+      <td class="num">${pp(dl, 2)}</td>
+      <td class="l muted">${junto}</td>
+    </tr>`;
+  });
+  el('tbCiclos').querySelector('tbody').innerHTML = linhasTab.join('')
+    || '<tr><td colspan="7" class="vazio">Sem ciclos no arquivo.</td></tr>';
+
+  const uM = ultimoValido(H.datas, meta);
+  const uE = exAnte && ultimoValido(H.datas, exAnte);
+  const uL = longo && ultimoValido(H.datas, longo);
+  const foco = H.focusIpca12m && ultimoValido(H.datas, H.focusIpca12m);
+  const atual = (H.ciclosSelic || [])[(H.ciclosSelic || []).length - 1];
+  el('notaSelic').innerHTML = `
+    Hoje a meta Selic está em <b>${taxa(uM.valor, 2)}</b>.
+    ${foco ? `Com o Focus esperando <b>${taxa(foco.valor, 2)}</b> de IPCA para os
+      próximos doze meses, o juro real ex-ante de um ano é
+      <b>${taxa(uE ? uE.valor : null, 2)}</b>` : ''}${uL ? `, e o juro real longo,
+      pela NTN-B de 10 anos, está em <b>${taxa(uL.valor, 2)}</b>` : ''}.
+    ${atual ? `O ciclo em curso é de <b>${atual.sentido}</b>, aberto em
+      ${dataBR(atual.de)}, e já moveu a meta ${pp(atual.fim - atual.inicio, 2)}.` : ''}
+    Nos ${(H.ciclosSelic || []).length} ciclos desde 2004, a ponta curta obedece ao
+    Copom por construção; a ponta longa é que revela se o mercado comprou a
+    história — a última coluna da tabela diz em quais ela acompanhou.`;
+}
+
 function renderSpreadHistorico() {
   const caixa = el('histSpread');
   if (!caixa) return;
   if (!H) {
-    el('chHistSpread').textContent = '';
-    el('chHistNivel').textContent = '';
+    ['chReal', 'chDolar', 'chDolarA', 'chDolarB', 'chCorrel', 'chSelic']
+      .forEach(id => { const e = el(id); if (e) e.textContent = ''; });
     el('histStatus').textContent = {
       'nao-pedido': '',
       'buscando': 'Carregando 21 anos de pregões…',
@@ -591,41 +925,46 @@ function renderSpreadHistorico() {
     return;
   }
 
-  const v = estado.spreadVertice;
-  const temNominal = (H.nominal || {})[v] !== undefined;
-  const series = [];
-  if (temNominal) series.push({ nome: `Nominal ${parseFloat(v)} anos (pré − Treasury)`,
-    rotulo: 'nominal', valores: H.nominal[v], cor: css('--s1') });
-  if ((H.real || {})[v] !== undefined) series.push({ nome: `Real ${parseFloat(v)} anos (NTN-B − TIPS)`,
-    rotulo: 'real', valores: H.real[v], cor: css('--s2') });
+  if (H.demo && !el('avisoHistDemo')) {
+    caixa.insertAdjacentHTML('afterbegin',
+      '<div class="warn" id="avisoHistDemo"><b>Curvas inventadas.</b> Este '
+      + '<code>spread_historico.json</code> é o fixture de tela — a Selic, o '
+      + 'dólar e o Focus são reais, mas NTN-B, TIPS e prefixado são passeios '
+      + 'aleatórios. Rode <code>atualizar_mercado.py</code> para trocar pelo '
+      + 'arquivo de verdade.</div>');
+  }
 
-  const r = recortar(H.datas, series, estado.spreadAnos);
-  linhasNoTempo(el('chHistSpread'), r.datas, r.series, {
-    altura: 320, zero: true, eixoY: 'Diferença (p.p.)',
-    formato: (x) => pp(x, 2),
-  });
+  renderReal();
+  renderDolar();
+  renderSelic();
 
-  // O nível brasileiro, no mesmo eixo de tempo e em gráfico separado. Dois
-  // eixos verticais no mesmo desenho é a maneira mais fácil de sugerir uma
-  // relação que os dados não têm; dois gráficos empilhados dizem a mesma
-  // coisa sem inventar nada.
-  const nivel = [];
-  if ((H.brasilPre || {})[v] !== undefined) nivel.push({ nome: `Pré ${parseFloat(v)} anos`,
-    rotulo: 'pré', valores: H.brasilPre[v], cor: css('--s1') });
-  if ((H.brasilNtnb || {})[v] !== undefined) nivel.push({ nome: `NTN-B ${parseFloat(v)} anos`,
-    rotulo: 'NTN-B', valores: H.brasilNtnb[v], cor: css('--s2') });
-  const rn = recortar(H.datas, nivel, estado.spreadAnos);
-  linhasNoTempo(el('chHistNivel'), rn.datas, rn.series, {
-    altura: 240, eixoY: 'Taxa brasileira (% a.a.)',
-    formato: (x) => taxa(x, 2),
-  });
+  // Os três cartões que dependem do arquivo histórico entram quando ele
+  // chega; os outros já estão na tela desde a abertura da aba.
+  const caixaTiles = el('faixaSpread');
+  const base = +(caixaTiles.dataset.base || 0);
+  if (base && caixaTiles.children.length <= base) {
+    const extra = [];
+    const uD = H.dolar && ultimoValido(H.datas, H.dolar);
+    const uS = H.selicMeta && ultimoValido(H.datas, H.selicMeta);
+    const uE = H.juroRealExAnte && ultimoValido(H.datas, H.juroRealExAnte);
+    if (uD) extra.push(tile('Dólar', 'R$ ' + num(uD.valor, 4),
+      `PTAX de ${dataBR(uD.data)}`));
+    if (uS) extra.push(tile('Meta Selic', taxa(uS.valor, 2), 'definida pelo Copom'));
+    if (uE) extra.push(tile('Juro real ex-ante, 1 ano', taxa(uE.valor, 2),
+      'pré 1 ano descontado do Focus'));
+    caixaTiles.insertAdjacentHTML('beforeend', extra.join(''));
+  }
 
-  const comDado = (series[0] ? series[0].valores : []).filter(x => x != null).length;
-  el('histStatus').textContent =
-    `${H.datas.length} pregões no arquivo, de ${dataBR(H.datas[0])} a ${dataBR(H.datas[H.datas.length - 1])}`
-    + (temNominal && comDado < H.datas.length
-       ? ` · a linha nominal tem ${H.datas.length - comDado} dias sem dado, em que não havia prefixado tão longo em oferta`
-       : '');
+  const partes = [`${H.datas.length} pregões, de ${dataBR(H.datas[0])} a `
+                  + `${dataBR(H.datas[H.datas.length - 1])}`];
+  const sp = (H.real || {})[estado.spreadVertice];
+  if (sp) {
+    const faltam = sp.filter(x => x == null).length;
+    if (faltam) partes.push(`${faltam} dias sem o par completo neste prazo`);
+  }
+  if (!H.dolar) partes.push('sem dólar no arquivo — rode a coleta de novo');
+  if (!H.selicMeta) partes.push('sem Selic no arquivo — rode a coleta de novo');
+  el('histStatus').textContent = partes.join(' · ');
 }
 
 function renderPvp() {
@@ -731,6 +1070,12 @@ async function iniciar() {
   });
   el('ctlSpreadAnos').addEventListener('change', (e) => {
     estado.spreadAnos = +e.target.value; renderSpreadHistorico();
+  });
+  el('ctlDolarModo').addEventListener('change', (e) => {
+    estado.dolarModo = e.target.value; renderDolar();
+  });
+  el('ctlSelicAnos').addEventListener('change', (e) => {
+    estado.selicAnos = +e.target.value; renderSelic();
   });
   el('ctlPvpAnos').addEventListener('change', (e) => {
     estado.pvpAnos = +e.target.value; renderPvp();

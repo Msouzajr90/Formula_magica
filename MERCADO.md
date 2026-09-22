@@ -46,6 +46,9 @@ tem como conferir. A aba mostra a data do fechamento ao lado de cada número.
 | Prefixo do ticker → código CVM | B3, `GetInitialCompanies` | muda devagar |
 | Patrimônio líquido | `fundamentos.json` (CVM, DFP + ITR) | quando você roda `baixar_fundamentos.py` |
 | Preços e valor de mercado | Yahoo | fechamento |
+| Dólar (PTAX venda) | Banco Central, SGS série 1 | todo dia útil |
+| Meta Selic | Banco Central, SGS série 432 | a cada Copom, valendo todo dia |
+| Expectativa de IPCA 12 meses | Banco Central, Focus pela API Olinda | semanal, publicada com alguns dias de atraso |
 
 O CSV do Tesouro tem 21 anos de histórico num arquivo só (~15 MB). É de lá que
 saem de graça as quatro fotos da tela — hoje, uma semana, um mês e seis meses
@@ -94,24 +97,117 @@ longo dos 21 anos:
 | nominal 10 anos | **17 de 45** | 15/03/2010 |
 | real 5 / 10 / 20 anos | 45 de 45 | 31/12/2004 |
 
-O vértice de 10 anos só existe quando há um título prefixado que alcance esse
-prazo em oferta, e em boa parte do período não havia — em 2004 o mais longo
-vencia em três anos, em 2009 em sete, em 2023 em nove. **Por isso o seletor
-abre em 5 anos, não em 10:** a linha nominal de 10 anos é um tracejado cheio de
-falhas, e falha não é um bom padrão. Nesses dias a linha some, em vez de
-repetir o último valor — uma série de spread com o valor de ontem carregado
+O vértice **nominal** de 10 anos só existe quando há um título prefixado que
+alcance esse prazo em oferta, e em boa parte do período não havia — em 2004 o
+mais longo vencia em três anos, em 2009 em sete, em 2023 em nove. A linha
+nominal de 10 anos é um tracejado cheio de falhas. Nesses dias ela some, em vez
+de repetir o último valor: uma série de spread com o valor de ontem carregado
 para a frente parece estabilidade e é ausência de dado.
 
-Abaixo do gráfico do prêmio vem o **nível brasileiro** no mesmo período, em
-gráfico separado. O prêmio sobe quando o Brasil piora e também quando os
-Estados Unidos melhoram; sem o nível de um dos lados não dá para distinguir as
-duas coisas. Dois gráficos empilhados em vez de dois eixos no mesmo desenho —
-dois eixos sugerem uma relação que o dado não afirma.
+Do lado **real** isso não acontece — a NTN-B vai a 2060 e o TIPS de 10 anos
+existe desde 2003 —, e é por isso que os gráficos da seção seguinte, que são
+todos de juro real, podem abrir em 10 anos sem tracejado.
 
 A série bate com a história conhecida: pré de 2 anos a 17,5% no fim de 2004,
 pico de 15,1% em setembro de 2015, mínima de 3,9% em setembro de 2020 (Selic a
 2%), e 13,9% hoje. O prêmio nominal de 2 anos vai de 14,4 p.p. em 2004 a 3,7 no
 fundo de 2020.
+
+## A aba Brasil × EUA — três perguntas, três gráficos
+
+A primeira versão mostrava o spread e mais nada, e não respondia às perguntas
+que se faz olhando para um spread. A aba foi refeita em **22/09/2026** em torno
+de três delas. Todas usam o mesmo `spread_historico.json`, agora com o dólar, a
+meta Selic e a expectativa de inflação dentro.
+
+**1. O juro real dos dois lados, e não só a diferença.** Três linhas: NTN-B,
+TIPS e a diferença. Com só o spread na tela não dá para saber se ele subiu
+porque o Brasil piorou ou porque os Estados Unidos melhoraram — e essas duas
+coisas pedem decisões opostas. O padrão é **10 anos**: a ressalva que
+derrubava o vértice de 10 anos no gráfico nominal (não há prefixado brasileiro
+tão longo) não existe do lado real, onde a NTN-B vai a 2060 e o TIPS de 10 anos
+existe desde 2003.
+
+**2. O prêmio e o dólar, sem dois eixos verticais.** A tese é que prêmio maior
+atrai capital e capital que entra derruba o dólar. O problema de desenho é que
+p.p. e R$/US$ não têm conversão entre si: com dois eixos, quem desenha escolhe
+onde as linhas se cruzam, e a escolha vira a conclusão. As duas séries aparecem
+**padronizadas** — em desvios-padrão da própria média no período visível —, o
+que põe as duas no mesmo eixo sem inventar câmbio nenhum entre as unidades. O
+botão ao lado mostra as duas nas unidades originais, em gráficos separados.
+
+Abaixo vem uma **correlação móvel de um ano entre as variações diárias**, não
+entre os níveis. Em nível, duas séries com tendência no mesmo sentido dão
+correlação alta sem qualquer relação entre elas; a pergunta de verdade é se
+elas se mexem juntas, e isso se mede nas variações.
+
+**3. O juro real e o ciclo da Selic.** As faixas de fundo são os ciclos de alta
+e de queda da meta, extraídos da própria série pela `bcb.ciclos_da_selic` —
+viradas de sinal, com os movimentos abaixo de 0,5 p.p. fundidos no vizinho para
+não encher o gráfico de faixas de duas semanas. Desde dez/2004 saem **12
+ciclos**, e eles batem um a um com a história: 19,75% em mai/2005, 8,75% em
+jul/2009, 7,25% em out/2012, 14,25% em jul/2015, **2,00% em ago/2020**, 13,75%
+em ago/2022, 15,00% em jun/2025, e a queda em curso.
+
+Sobre as linhas: a meta Selic é nominal e de um dia. O que aperta a economia é
+o juro **real**, e a tabela ciclo a ciclo compara o que a ponta curta fez com o
+que a ponta longa fez — quando o juro longo cai durante um aperto, o mercado
+comprou a história; quando sobe, não comprou.
+
+### Juro real ex-ante
+
+`(1 + pré 1 ano) ÷ (1 + IPCA esperado 12 meses) − 1`, que é a definição que o
+próprio Banco Central usa. **Divisão, não subtração**: com juro de 14% e
+inflação esperada de 4,62%, subtrair dá 9,38 e a conta certa dá 8,96 — quase
+meio ponto num número que se discute em décimos.
+
+O prefixado de 1 ano vem do Tesouro (o LTN mais próximo de um ano, interpolado)
+e a inflação esperada vem do Focus. Nada de IPCA realizado: ex-ante é o juro
+que se aceita hoje contra a inflação que se espera, e olhar para trás
+responderia outra pergunta.
+
+### Duas armadilhas das APIs do Banco Central
+
+**O SGS recusa janela maior que 10 anos** em série diária — HTTP 406 com a
+mensagem em português. Vinte e dois anos de dólar têm que ser pedidos em
+pedaços (`bcb._fatiar`, oito anos por vez).
+
+**O Focus devolve cada data duas vezes.** A tabela tem uma coluna
+`baseCalculo`: 0 usa só quem respondeu nos últimos 30 dias, 1 usa uma janela
+maior. Sem filtrar vêm 8.892 linhas para 5.700 dias úteis, com medianas
+diferentes no mesmo dia — em 15/09/2015, 5,74 e 5,71. O número do Relatório
+Focus, e o daqui, é o de `baseCalculo = 0`.
+
+### A única série que repete valor
+
+O resto do projeto não carrega valor para a frente. O Focus é a exceção
+declarada: é apurado semanalmente e publicado com atraso (em 22/09/2026 o dado
+mais recente era de 18/09), e não carregar significaria perder a ponta da série
+toda semana. O limite é de dez dias corridos (`bcb.TOLERANCIA_FOCUS`); passou
+disso, vira lacuna. O dólar e a meta Selic **não** são carregados — o dólar tem
+valor em todo dia útil e a meta existe em todo dia do calendário.
+
+### Um bug que ficou uma semana no ar
+
+O robô gerava o `spread_historico.json` e o jogava fora: o passo de publicação
+do `atualizar-mercado.yml` listava `mercado.json`, `pvp_historico.json` e
+`ibov_carteira.json`, e o `git reset --hard origin/main` apagava o resto. A aba
+mostrou "o arquivo ainda não existe" por uma semana inteira enquanto o robô o
+produzia todo dia. Corrigido em 22/09/2026, junto com a reforma da aba.
+
+Daí também o `conferir_historico` no `validar_mercado.py`: este arquivo não
+aparece em cartão nenhum, só vira linha em gráfico, e **linha errada parece
+linha**. Ele agora confere faixas, tamanho das séries, ordem das datas, saltos
+impossíveis da meta Selic e buracos entre os ciclos.
+
+### Ver a tela sem esperar a coleta
+
+`python tests/fixture_spread.py` grava um `spread_historico.json` com a forma
+exata do de verdade: Selic, dólar e Focus **reais**, curvas de juros
+inventadas. Serve para conferir o JavaScript sem meia hora de download. O
+arquivo sai marcado com `"demo": true` — a tela mostra aviso vermelho e o
+`validar_mercado.py` sai com código 1, para que esquecer de apagá-lo não
+publique 21 anos de número inventado.
 
 ## Histórico do P/VP — `gerar_pvp_historico.py`
 
