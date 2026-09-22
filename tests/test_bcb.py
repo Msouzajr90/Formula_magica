@@ -154,3 +154,46 @@ def test_buraco_no_meio_nao_inventa_virada():
     datas, meta = _serie([2, None, 4, None, 8])
     ciclos = bcb.ciclos_da_selic(datas, meta)
     assert len(ciclos) == 1 and ciclos[0]["sentido"] == "alta"
+
+
+# ---------------------------------------------------------------------------
+# A URL do Focus
+# ---------------------------------------------------------------------------
+def test_espaco_do_filtro_vai_como_pct20_nunca_como_mais():
+    """O erro que derrubou a primeira coleta de verdade.
+
+    `requests` monta `params=` com urlencode, que escreve espaço como `+`. O
+    Olinda não desfaz esse `+` dentro do `$filter`: lê tudo como um nome de
+    campo só e devolve HTTP 400 "The types 'Edm.Boolean' and 'Edm.String' are
+    not compatible", que não diz nada sobre espaço. Por isso a URL é montada à
+    mão, e por isso este teste existe.
+    """
+    u = bcb.url_focus(date(2004, 12, 1))
+    assert "+" not in u.split("?", 1)[1], "espaço virou + e o Olinda recusa"
+    assert "%20" in u
+
+
+def test_url_do_focus_tem_as_tres_condicoes_que_importam():
+    u = bcb.url_focus(date(2004, 12, 1))
+    from urllib.parse import parse_qs, urlparse
+    q = parse_qs(urlparse(u).query)
+    filtro = q["$filter"][0]
+    assert "Indicador eq 'IPCA'" in filtro
+    assert "Suavizada eq 'S'" in filtro       # sem isto, a série pula o ano-calendário
+    assert "baseCalculo eq 0" in filtro       # sem isto, cada data vem duas vezes
+    assert "2004-12-01" in filtro
+
+
+def test_erro_do_olinda_chega_com_o_motivo(monkeypatch):
+    """`raise_for_status` diria só "400 Client Error". O motivo vem no corpo."""
+    class _R:
+        status_code = 400
+        text = '/*{ "codigo": 400, "mensagem": "The types are not compatible." }*/'
+
+    class _S:
+        def get(self, *a, **k):
+            return _R()
+
+    with pytest.raises(RuntimeError) as erro:
+        bcb.focus_ipca_12m(date(2004, 12, 1), _S())
+    assert "not compatible" in str(erro.value)

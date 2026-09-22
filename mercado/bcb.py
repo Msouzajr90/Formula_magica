@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, timedelta
+from urllib.parse import quote
 
 log = logging.getLogger(__name__)
 
@@ -113,6 +114,32 @@ def serie_sgs(codigo: int, inicio: date, fim: date, sessao=None) -> dict[date, f
     return saida
 
 
+def url_focus(inicio: date) -> str:
+    """Monta a URL do Focus à mão, com espaço em %20.
+
+    Não dá para passar isto em `params=` do requests. Ele monta a query com
+    `urlencode`, que escreve espaço como `+` — a convenção de formulário. O
+    Olinda não desfaz esse `+` dentro do `$filter`: ele lê
+    `Indicador+eq+'IPCA'+and+...` como um nome de campo só e devolve
+
+        HTTP 400  The types 'Edm.Boolean' and 'Edm.String' are not compatible.
+
+    que não diz nada sobre espaço nenhum. O erro apareceu na primeira coleta
+    de verdade: o dólar e a Selic vieram (o SGS usa parâmetros simples) e só o
+    Focus faltou, sem nada no arquivo dizendo por quê.
+    """
+    partes = {
+        "$format": "json",
+        "$select": "Data,Mediana",
+        "$filter": ("Indicador eq 'IPCA' and Suavizada eq 'S' "
+                    f"and baseCalculo eq 0 and Data ge '{inicio.isoformat()}'"),
+        "$orderby": "Data asc",
+        "$top": "100000",
+    }
+    return OLINDA + "?" + "&".join(
+        f"{quote(k, safe='$')}={quote(v, safe='')}" for k, v in partes.items())
+
+
 def focus_ipca_12m(inicio: date, sessao=None) -> dict[date, float]:
     """Mediana suavizada da expectativa de IPCA para os 12 meses seguintes.
 
@@ -121,13 +148,12 @@ def focus_ipca_12m(inicio: date, sessao=None) -> dict[date, float]:
     import requests
 
     s = sessao or requests
-    filtro = ("Indicador eq 'IPCA' and Suavizada eq 'S' and baseCalculo eq 0 "
-              f"and Data ge '{inicio.isoformat()}'")
-    r = s.get(OLINDA, timeout=180, params={
-        "$format": "json", "$select": "Data,Mediana",
-        "$filter": filtro, "$orderby": "Data asc", "$top": 100000,
-    })
-    r.raise_for_status()
+    r = s.get(url_focus(inicio), timeout=180)
+    if r.status_code >= 400:
+        # O Olinda devolve o motivo no corpo, dentro de /*{...}*/; sem isto o
+        # log fica só com "400 Client Error" e não se descobre o que houve.
+        raise RuntimeError(f"Olinda respondeu {r.status_code}: "
+                           f"{r.text[:200].strip()}")
     linhas = r.json().get("value") or []
 
     saida: dict[date, float] = {}

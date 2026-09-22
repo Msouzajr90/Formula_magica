@@ -35,7 +35,8 @@ log = logging.getLogger("mercado")
 # Juros
 # ---------------------------------------------------------------------------
 def coletar_juros(sessao, hoje: date | None = None,
-                  com_historico: bool = True) -> dict:
+                  com_historico: bool = True,
+                  avisos: list[str] | None = None) -> dict:
     """As quatro fotos da curva e, de quebra, a série do spread no tempo.
 
     As duas coisas saem do mesmo download. O CSV do Tesouro tem 21 anos e os
@@ -67,17 +68,27 @@ def coletar_juros(sessao, hoje: date | None = None,
         # Dólar, meta Selic e Focus. Cada um numa tentativa própria: são três
         # gráficos independentes, e o Banco Central fora do ar não pode
         # derrubar a série de juros, que é a parte principal do arquivo.
+        # Cada fonte numa tentativa própria, e cada falha vira AVISO no
+        # arquivo — não só linha de log. A primeira coleta de verdade falhou
+        # só no Focus, o log disse, e ninguém leu: o arquivo saiu com
+        # `avisos: []` e a aba ficou sem o juro real ex-ante sem nada na tela
+        # explicando. Log que ninguém lê não é aviso.
         inicio = td["DATA"].min().date()
+        recado = avisos if avisos is not None else []
         dolar = selic = focus = None
         try:
             dolar = bcb.serie_sgs(bcb.DOLAR, inicio, fim, sessao)
             selic = bcb.serie_sgs(bcb.SELIC_META, inicio, fim, sessao)
         except Exception as exc:                               # noqa: BLE001
             log.error("SGS do Banco Central: FALHOU — %s", exc)
+            recado.append("O SGS do Banco Central não respondeu; a aba "
+                          f"Brasil × EUA fica sem o dólar e sem a Selic. {exc}")
         try:
             focus = bcb.focus_ipca_12m(inicio, sessao)
         except Exception as exc:                               # noqa: BLE001
             log.error("Focus (Olinda): FALHOU — %s", exc)
+            recado.append("O Focus não respondeu; o gráfico do ciclo da Selic "
+                          f"fica sem o juro real ex-ante. {exc}")
 
         s = historico.serie(td, us_nom, us_real,
                             dolar=dolar, selic=selic, focus=focus)
@@ -273,7 +284,8 @@ def main(argv=None) -> int:
     juros = anterior.get("juros") or {}
     if not args.sem_juros:
         try:
-            juros = coletar_juros(sessao, com_historico=not args.sem_historico)
+            juros = coletar_juros(sessao, com_historico=not args.sem_historico,
+                                  avisos=avisos)
         except Exception as exc:                               # noqa: BLE001
             log.error("Curvas de juros: FALHOU — %s", exc)
             avisos.append(f"As curvas de juros não puderam ser atualizadas: {exc}")

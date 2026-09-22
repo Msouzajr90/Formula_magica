@@ -842,6 +842,10 @@ function renderSelic() {
 
   const exAnte = H.juroRealExAnte || null;
   const longo = (H.brasilNtnb || {})['10.0'] || null;
+  // Legenda de linha que não está no gráfico é pior que legenda nenhuma:
+  // quem olha procura a linha e conclui que ela está escondida atrás de outra.
+  const leg = el('legExAnte');
+  if (leg) leg.classList.toggle('hidden', !exAnte);
 
   const series = [
     { nome: 'Meta Selic (nominal)', rotulo: 'Selic', valores: meta, cor: css('--s1') },
@@ -897,17 +901,31 @@ function renderSelic() {
   const uL = longo && ultimoValido(H.datas, longo);
   const foco = H.focusIpca12m && ultimoValido(H.datas, H.focusIpca12m);
   const atual = (H.ciclosSelic || [])[(H.ciclosSelic || []).length - 1];
-  el('notaSelic').innerHTML = `
-    Hoje a meta Selic está em <b>${taxa(uM.valor, 2)}</b>.
-    ${foco ? `Com o Focus esperando <b>${taxa(foco.valor, 2)}</b> de IPCA para os
-      próximos doze meses, o juro real ex-ante de um ano é
-      <b>${taxa(uE ? uE.valor : null, 2)}</b>` : ''}${uL ? `, e o juro real longo,
-      pela NTN-B de 10 anos, está em <b>${taxa(uL.valor, 2)}</b>` : ''}.
-    ${atual ? `O ciclo em curso é de <b>${atual.sentido}</b>, aberto em
-      ${dataBR(atual.de)}, e já moveu a meta ${pp(atual.fim - atual.inicio, 2)}.` : ''}
-    Nos ${(H.ciclosSelic || []).length} ciclos desde 2004, a ponta curta obedece ao
-    Copom por construção; a ponta longa é que revela se o mercado comprou a
-    história — a última coluna da tabela diz em quais ela acompanhou.`;
+
+  // Montado por pedaços, não por template com condicional no meio: a versão
+  // anterior deixava ", e o juro real longo," solto na tela quando o Focus
+  // faltava. Frase que depende de série pode perder a série.
+  const frase = [`Hoje a meta Selic está em <b>${taxa(uM.valor, 2)}</b>`];
+  if (foco && uE) {
+    frase.push(`com o Focus esperando <b>${taxa(foco.valor, 2)}</b> de IPCA para
+      os próximos doze meses, o juro real ex-ante de um ano é
+      <b>${taxa(uE.valor, 2)}</b>`);
+  }
+  if (uL) frase.push(`o juro real longo, pela NTN-B de 10 anos, está em
+    <b>${taxa(uL.valor, 2)}</b>`);
+
+  const fim = [];
+  if (atual) fim.push(`O ciclo em curso é de <b>${atual.sentido}</b>, aberto em
+    ${dataBR(atual.de)}, e já moveu a meta ${pp(atual.fim - atual.inicio, 2)}.`);
+  fim.push(`Nos ${(H.ciclosSelic || []).length} ciclos desde 2004, a ponta curta
+    obedece ao Copom por construção; a ponta longa é que revela se o mercado
+    comprou a história — a última coluna da tabela diz em quais ela acompanhou.`);
+  if (!H.juroRealExAnte) {
+    fim.push(`<span class="muted">A linha do juro real ex-ante está faltando:
+      a expectativa de inflação do Focus não veio na última coleta. O motivo
+      aparece no aviso no topo da página.</span>`);
+  }
+  el('notaSelic').innerHTML = frase.join('; ') + '. ' + fim.join(' ');
 }
 
 function renderSpreadHistorico() {
