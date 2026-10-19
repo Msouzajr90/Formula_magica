@@ -62,16 +62,21 @@ jobs:
           # resultado foi uma aba mostrando "o arquivo ainda nao existe" por
           # uma semana inteira enquanto o robo o gerava e jogava fora.
           cp web/public/spread_historico.json /tmp/gerado/ 2>/dev/null || true
+          # O credito.json ACUMULA o historico dos spreads de credito, como o
+          # do P/VP: a ANBIMA so guarda os ultimos sete ou oito pregoes. Fora
+          # desta lista, o robo o geraria e o reset abaixo o apagaria.
+          cp web/public/credito.json /tmp/gerado/ 2>/dev/null || true
           for tentativa in 1 2 3 4 5; do
             git fetch origin main
             git reset --hard origin/main
             mkdir -p web/public
             cp /tmp/gerado/mercado.json web/public/mercado.json
-            for extra in pvp_historico.json ibov_carteira.json spread_historico.json; do
+            for extra in pvp_historico.json ibov_carteira.json spread_historico.json credito.json; do
               [ -f "/tmp/gerado/$extra" ] && cp "/tmp/gerado/$extra" "web/public/$extra"
             done
             git add web/public/mercado.json web/public/pvp_historico.json \
                     web/public/ibov_carteira.json web/public/spread_historico.json
+            [ -f web/public/credito.json ] && git add web/public/credito.json
             if git diff --staged --quiet; then
               echo "Nada mudou."
               exit 0
