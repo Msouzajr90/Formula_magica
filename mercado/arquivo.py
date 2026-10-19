@@ -122,6 +122,9 @@ def montar(juros: dict, pvp: dict, *, demo: bool = False,
                             "curve (nominal e TIPS)",
                 "carteira": "B3 — carteira teórica do Ibovespa",
                 "patrimonio": "CVM — DFP e ITR, via fundamentos.json",
+                "credito": "ANBIMA — mercado secundário de debêntures, títulos "
+                           "públicos e curvas de crédito; SND — cadastro da "
+                           "Lei 12.431 (credito.json)",
             },
         },
         "juros": juros,

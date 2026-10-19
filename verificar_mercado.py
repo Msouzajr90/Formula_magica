@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Testa as quatro fontes da aba de mercado, uma a uma, e diz o que está fora.
+"""Testa as fontes da aba de mercado, uma a uma, e diz o que está fora.
 
 Existe pelo mesmo motivo do `verificar_fiis.py`: quando a coleta quebra, a
 pergunta é sempre "qual das fontes?", e descobrir isso lendo o traceback de
@@ -72,6 +72,54 @@ def main() -> int:
         guardada = Path(__file__).parent / "web" / "public" / "ibov_carteira.json"
         linha("carteira guardada no repositório", guardada.exists(),
               str(guardada) if guardada.exists() else "não existe — o P/VP vai falhar")
+
+    print("\nANBIMA e SND — spreads de crédito privado")
+    from mercado import credito
+    ultimo = None
+    for d in reversed(credito.dias_uteis_recentes(date.today())):
+        try:
+            texto = credito.baixar_debentures(d, sessao)
+        except Exception as exc:                               # noqa: BLE001
+            tudo &= linha("debêntures (mercado secundário)", False, str(exc)[:110])
+            break
+        if texto:
+            ultimo = d
+            ps = credito.ler_debentures(texto)
+            tudo &= linha("debêntures (mercado secundário)", len(ps) > 500,
+                          f"{len(ps)} papéis em {d}")
+            break
+    else:
+        tudo &= linha("debêntures (mercado secundário)", False,
+                      f"nenhum arquivo nos últimos {credito.JANELA_DIAS} dias")
+    if ultimo:
+        try:
+            nb = credito.ler_titulos_publicos(credito.baixar_titulos(ultimo, sessao) or "")
+            tudo &= linha("títulos públicos (NTN-B)", len(nb) > 8, f"{len(nb)} NTN-B")
+        except Exception as exc:                               # noqa: BLE001
+            tudo &= linha("títulos públicos (NTN-B)", False, str(exc)[:110])
+        achou = None
+        for d in reversed(credito.dias_uteis_recentes(ultimo, 6)):
+            try:
+                c = credito.ler_curvas_credito(credito.baixar_curvas(d, sessao))
+            except Exception as exc:                           # noqa: BLE001
+                tudo &= linha("curvas de crédito por rating", False, str(exc)[:110])
+                achou = False
+                break
+            if c:
+                achou = c
+                break
+        if achou:
+            pt = credito.ponto_de_curva(achou, 3.0)
+            linha("curvas de crédito por rating", True,
+                  f"{achou['data']}: 3 anos AAA {pt['AAA']} · AA {pt['AA']} · A {pt['A']}")
+        elif achou is None:
+            tudo &= linha("curvas de crédito por rating", False, "nenhuma curva na janela")
+    try:
+        snd = credito.ler_snd(credito.baixar_snd(sessao))
+        tudo &= linha("cadastro do SND (Lei 12.431)", len(snd) >= credito.SND_MINIMO,
+                      f"{len(snd)} debêntures, {sum(snd.values())} incentivadas")
+    except Exception as exc:                                   # noqa: BLE001
+        tudo &= linha("cadastro do SND (Lei 12.431)", False, str(exc)[:110])
 
     print("\nCVM — patrimônio líquido (arquivo local)")
     fund = Path(__file__).parent / "web" / "public" / "fundamentos.json"

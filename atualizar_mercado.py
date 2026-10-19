@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Gera o `web/public/mercado.json` — a aba de indicadores de mercado.
 
-Três blocos independentes. Se o P/VP falhar, as curvas de juros são
+Quatro blocos independentes. Se o P/VP falhar, as curvas de juros são
 publicadas mesmo assim, com o aviso no arquivo; o contrário também vale. Um
 indicador fora do ar não deve derrubar os outros dois — foi o que aconteceu
 com os FIIs quando uma fonte mudou de contrato e a coleta inteira morreu.
@@ -10,6 +10,7 @@ Uso:
     python atualizar_mercado.py                # tudo
     python atualizar_mercado.py --sem-pvp      # só as curvas de juros
     python atualizar_mercado.py --demo         # números sorteados, para ver a tela
+    python atualizar_mercado.py --so-credito   # só os spreads de crédito privado
 """
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ import argparse
 import json
 import logging
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 RAIZ = Path(__file__).parent
@@ -26,6 +27,7 @@ CARTEIRA = RAIZ / "web" / "public" / "ibov_carteira.json"
 HISTORICO_PVP = RAIZ / "web" / "public" / "pvp_historico.json"
 MAPA_CVM = RAIZ / "web" / "public" / "mapa_cvm.json"
 HISTORICO_SPREAD = RAIZ / "web" / "public" / "spread_historico.json"
+CREDITO = RAIZ / "web" / "public" / "credito.json"
 FUNDAMENTOS = RAIZ / "web" / "public" / "fundamentos.json"
 
 log = logging.getLogger("mercado")
@@ -176,6 +178,132 @@ def coletar_pvp(sessao) -> tuple[dict, list[str]]:
 
 
 # ---------------------------------------------------------------------------
+# Crédito privado
+# ---------------------------------------------------------------------------
+def _ipca_esperado() -> float | None:
+    """Último Focus de IPCA 12 meses já gravado no `spread_historico.json`.
+
+    Serve só para o equivalente bruto das isentas. Ler do arquivo em vez de
+    baixar de novo mantém o bloco de crédito independente do Banco Central:
+    se o Focus faltar, a tela perde uma linha, não a aba.
+    """
+    try:
+        h = json.loads(HISTORICO_SPREAD.read_text(encoding="utf-8"))
+        datas, vals = h.get("datas") or [], h.get("focusIpca12m") or []
+        for d, v in zip(reversed(datas), reversed(vals)):
+            if v is not None:
+                if (date.today() - date.fromisoformat(d)).days <= 30:
+                    return float(v)
+                return None
+    except Exception:                                          # noqa: BLE001
+        pass
+    return None
+
+
+def coletar_credito(sessao, anterior: dict | None, hoje: date | None = None
+                    ) -> tuple[dict, list[str]]:
+    """Spreads de crédito privado — monta o `credito.json` inteiro.
+
+    Recolhe todos os pregões que a ANBIMA ainda mantém no ar (sete ou oito) e
+    funde no histórico do arquivo anterior. O dia mais novo com debêntures é o
+    "hoje" da tela; a curva de rating mais nova pode ser de um dia antes,
+    porque sai depois do horário do robô.
+    """
+    from mercado import credito
+
+    avisos: list[str] = []
+    anterior = anterior or {}
+    fim = hoje or date.today()
+
+    # Cadastro de incentivadas: SND, com o do arquivo anterior como recuo.
+    cad_ant = anterior.get("cadastro") or {}
+    isentas = {c: True for c in cad_ant.get("S", [])}
+    isentas.update({c: False for c in cad_ant.get("N", [])})
+    origem_cad, data_cad = "arquivo", cad_ant.get("data")
+    try:
+        snd = credito.ler_snd(credito.baixar_snd(sessao))
+        if len(snd) < credito.SND_MINIMO:
+            raise ValueError(f"só {len(snd)} debêntures no cadastro")
+        isentas.update(snd)
+        origem_cad, data_cad = "SND", fim.isoformat()
+        log.info("SND: %d debêntures, %d incentivadas", len(snd), sum(snd.values()))
+    except Exception as exc:                                   # noqa: BLE001
+        log.error("SND: FALHOU — %s", exc)
+        avisos.append("O cadastro do SND não respondeu; a separação entre isentas "
+                      "e não isentas usa o cadastro guardado"
+                      + (f", de {data_cad}." if data_cad else " — que está vazio.")
+                      + f" {exc}")
+
+    ipca = _ipca_esperado()
+    novos, ultimo = {}, None
+    for d in credito.dias_uteis_recentes(fim):
+        linha_res = None
+        try:
+            db = credito.baixar_debentures(d, sessao)
+            ms = credito.baixar_titulos(d, sessao) if db else None
+            if db and ms:
+                ps = credito.calcular(credito.ler_debentures(db),
+                                      credito.ler_titulos_publicos(ms), isentas, ipca)
+                res = credito.resumir(ps, ipca)
+                linha_res = res
+                ultimo = (d, ps, res)
+        except Exception as exc:                               # noqa: BLE001
+            log.error("Debêntures de %s: FALHOU — %s", d, exc)
+        curva = None
+        try:
+            curva = credito.ler_curvas_credito(credito.baixar_curvas(d, sessao))
+            if curva and curva.get("data") and curva["data"] != d:
+                curva = None        # a página devolveu outra data: não é a pedida
+        except Exception as exc:                               # noqa: BLE001
+            log.error("Curva de crédito de %s: FALHOU — %s", d, exc)
+        if linha_res or curva:
+            novos[d] = credito.linha_historico(linha_res, curva)
+            if curva:
+                novos[d]["_curva"] = curva
+
+    curvas_dia = {d: v.pop("_curva") for d, v in novos.items() if "_curva" in v}
+    hist = credito.fundir_historico(anterior.get("historico"), novos)
+    log.info("Crédito: %d dias recolhidos agora; histórico com %d dias",
+             len(novos), len(hist["datas"]))
+
+    if ultimo is None:
+        raise RuntimeError("Nenhum arquivo de debêntures da ANBIMA nos últimos "
+                           f"{credito.JANELA_DIAS} dias.")
+    d, ps, res = ultimo
+    log.info("Debêntures de %s: %d papéis; " + ", ".join(
+        f"{g} n={e['n']} mediana={e['mediana']}" for g, e in res["grupos"].items()),
+        d, len(ps))
+    if (fim - d).days > 5:
+        avisos.append(f"O arquivo de debêntures mais recente da ANBIMA é de {d}.")
+
+    if curvas_dia:
+        dc = max(curvas_dia)
+        c = curvas_dia[dc]
+        curva_bloco = {"data": dc.isoformat(), "vertices": c["vertices"],
+                       **{r: c[r] for r in credito.RATINGS}}
+    else:
+        curva_bloco = (anterior.get("curvas") or None)
+        avisos.append("A ANBIMA não devolveu curva de crédito por rating nesta "
+                      "coleta" + (f"; a da tela é a de {curva_bloco['data']}."
+                                  if curva_bloco else "."))
+
+    codigos = {p.codigo for p in ps}
+    cadastro = {"data": data_cad, "origem": origem_cad,
+                "S": sorted(c for c in codigos if isentas.get(c) is True),
+                "N": sorted(c for c in codigos if isentas.get(c) is False)}
+
+    return {
+        "meta": {"versao": 1, "geradoEm": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                 "demo": False, "avisos": avisos},
+        "hoje": {"data": d.isoformat(), **res},
+        "curvas": curva_bloco,
+        "papeis": credito.papeis_para_tabela(ps),
+        "historico": hist,
+        "cadastro": cadastro,
+    }, avisos
+
+
+# ---------------------------------------------------------------------------
 # Demonstração
 # ---------------------------------------------------------------------------
 def demo() -> dict:
@@ -245,6 +373,30 @@ def demo() -> dict:
 
 
 # ---------------------------------------------------------------------------
+def _rodar_credito(sessao) -> tuple[bool, list[str]]:
+    """Coleta e grava o `credito.json`. Falha vira aviso no `mercado.json` —
+    e o arquivo anterior fica como está, com o histórico acumulado intacto."""
+    anterior = None
+    if CREDITO.exists():
+        try:
+            anterior = json.loads(CREDITO.read_text(encoding="utf-8"))
+        except Exception:                                      # noqa: BLE001
+            anterior = None
+    if anterior and (anterior.get("meta") or {}).get("demo"):
+        anterior = None             # nunca fundir histórico inventado no real
+    try:
+        dados, avisos = coletar_credito(sessao, anterior)
+    except Exception as exc:                                   # noqa: BLE001
+        log.error("Crédito privado: FALHOU — %s", exc)
+        return False, [f"Os spreads de crédito privado não puderam ser "
+                       f"atualizados: {exc}"]
+    CREDITO.write_text(json.dumps(dados, ensure_ascii=False, separators=(",", ":")),
+                       encoding="utf-8")
+    log.info("credito.json: %.0f KB", CREDITO.stat().st_size / 1024)
+    return True, avisos
+
+
+# ---------------------------------------------------------------------------
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -256,6 +408,10 @@ def main(argv=None) -> int:
                     help="números sorteados, para ver a tela")
     ap.add_argument("--sem-historico", action="store_true",
                     help="não refaz a série do spread desde 2004 (coleta rápida)")
+    ap.add_argument("--sem-credito", action="store_true",
+                    help="não coleta os spreads de crédito privado")
+    ap.add_argument("--so-credito", action="store_true",
+                    help="só os spreads de crédito (não mexe no mercado.json)")
     ap.add_argument("--saida", default=str(SAIDA))
     args = ap.parse_args(argv)
 
@@ -281,6 +437,14 @@ def main(argv=None) -> int:
         except Exception:                                      # noqa: BLE001
             anterior = {}
 
+    if args.so_credito:
+        ok, avisos_cred = _rodar_credito(sessao)
+        if ok:
+            print(f"{CREDITO} gravado ({CREDITO.stat().st_size / 1024:.0f} KB).")
+        for a in avisos_cred:
+            print("  aviso:", a)
+        return 0 if ok else 1
+
     juros = anterior.get("juros") or {}
     if not args.sem_juros:
         try:
@@ -301,6 +465,12 @@ def main(argv=None) -> int:
         except Exception as exc:                               # noqa: BLE001
             log.error("P/VP do Ibovespa: FALHOU — %s", exc)
             avisos.append(f"O P/VP do Ibovespa não pôde ser atualizado: {exc}")
+
+    # Por último: o equivalente bruto das isentas usa o Focus que a coleta de
+    # juros acabou de gravar no spread_historico.json.
+    if not args.sem_credito:
+        ok, avisos_cred = _rodar_credito(sessao)
+        avisos += avisos_cred
 
     arquivo.gravar(arquivo.montar(juros, pvp_bloco, avisos=avisos), args.saida)
     tam = Path(args.saida).stat().st_size / 1024

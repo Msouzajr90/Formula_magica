@@ -309,8 +309,13 @@ function linhasNoTempo(svg, datas, series, { altura = 320, eixoY = '',
     const x = t0 + (t1 - t0) * k / marcos;
     const tx = mk('text', { x: px(x), y: m.t + ih + 18, 'text-anchor': 'middle', 'font-size': 11 });
     const d = new Date(x);
-    tx.textContent = (t1 - t0) > 3 * 365 * 864e5
-      ? d.getFullYear() : d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+    // Série curta (o histórico de crédito nasce com uma semana): com mês e
+    // ano, as seis marcas saíam todas "set. de 26".
+    tx.textContent = (t1 - t0) > 3 * 365 * 864e5 ? d.getFullYear()
+      : (t1 - t0) > 120 * 864e5 ? d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
+      // As datas ISO viram meia-noite UTC; formatadas no fuso de Brasília,
+      // caíam no dia anterior (22/09 saía 21/09).
+      : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
     svg.appendChild(tx);
   }
   if (zero && e.min < 0 && e.max > 0) {
@@ -337,8 +342,19 @@ function linhasNoTempo(svg, datas, series, { altura = 320, eixoY = '',
       d += (abriu ? 'L' : 'M') + px(ts[i]).toFixed(1) + ' ' + py(v).toFixed(1) + ' ';
       abriu = true;
     }
-    svg.appendChild(mk('path', { d, fill: 'none', stroke: s.cor, 'stroke-width': 2,
-      'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    const caminho = mk('path', { d, fill: 'none', stroke: s.cor, 'stroke-width': 2,
+      'stroke-linejoin': 'round', 'stroke-linecap': 'round' });
+    if (s.tracejado) caminho.setAttribute('stroke-dasharray', '6 4');
+    svg.appendChild(caminho);
+    // Série de poucos pontos: sem marcador, um dia isolado entre lacunas não
+    // desenha nada (um "M" sem "L"). O histórico de crédito nasce assim.
+    if (datas.length <= 40) {
+      for (let i = 0; i < datas.length; i++) {
+        const v = s.valores[i];
+        if (v == null || !isFinite(v)) continue;
+        svg.appendChild(mk('circle', { cx: px(ts[i]), cy: py(v), r: 2.6, fill: s.cor }));
+      }
+    }
   });
 
   const marcas = [];
@@ -488,7 +504,9 @@ let H = null;                    // spread_historico.json, carregado sob demanda
 // gráficos são todos de juro REAL, então 10 anos, que é o vértice que o
 // mercado cita, tem dado do começo ao fim.
 const estado = { pvpAnos: 0, spreadVertice: '10.0', spreadAnos: 0,
-                 dolarModo: 'padronizado', selicAnos: 0 };
+                 dolarModo: 'padronizado', selicAnos: 0,
+                 creditoSerie: 'grupos', creditoVertice: '3',
+                 papelGrupo: '', papelBusca: '' };
 const FOTOS = ['hoje', 'semana', 'mes', 'semestre'];
 const CORES_FOTO = ['--t0', '--t1', '--t2', '--t3'];
 const ROTULO_CURTO = { hoje: 'hoje', semana: '1 sem', mes: '1 mês', semestre: '6 meses' };
@@ -1029,20 +1047,239 @@ function renderPvp() {
     </tr>`).join('') || '<tr><td colspan="8" class="vazio">Sem empresas.</td></tr>';
 }
 
+// ===========================================================================
+// Crédito privado
+// ===========================================================================
+// Arquivo próprio (`credito.json`), carregado só quando a aba abre — como o
+// histórico do spread. Ele traz a lista de papéis, que a primeira aba não
+// precisa.
+let C = null;
+let estadoCredito = 'nao-pedido';     // nao-pedido | buscando | pronto | ausente
+function carregarCredito() {
+  if (estadoCredito !== 'nao-pedido') return;
+  estadoCredito = 'buscando';
+  renderCredito();
+  fetch('credito.json?' + encodeURIComponent(D.meta.geradoEm || ''))
+    .then(r => r.ok ? r.json() : Promise.reject(new Error(String(r.status))))
+    .then(j => { C = j; estadoCredito = 'pronto'; renderCredito(); })
+    .catch(() => { C = null; estadoCredito = 'ausente'; renderCredito(); });
+}
+
+const NOME_GRUPO = {
+  diSpread: 'DI + spread, não isentas',
+  ipcaIsenta: 'IPCA + spread, isentas',
+  ipcaNaoIsenta: 'IPCA + spread, não isentas',
+};
+const CURTO_GRUPO = { diSpread: 'DI+', ipcaIsenta: 'IPCA isenta', ipcaNaoIsenta: 'IPCA não isenta' };
+const BASE_GRUPO = { diSpread: 'sobre o DI', ipcaIsenta: 'sobre a NTN-B', ipcaNaoIsenta: 'sobre a NTN-B' };
+const MOTIVO_FORA = {
+  semTaxa: 'sem taxa indicativa no dia',
+  resgateEmExercicio: 'com resgate antecipado já exercível',
+  curta: 'com duração abaixo de meio ano',
+  indexador: 'atrelados a % do DI, IGP-M ou prefixados',
+  semNtnb: 'sem a NTN-B de referência no arquivo de títulos públicos',
+  semCadastro: 'fora do cadastro do SND (isenção desconhecida)',
+  diIsenta: 'de DI marcados como incentivados',
+};
+
+function renderCredito() {
+  const box = el('creditoStatus');
+  if (!box) return;
+  if (estadoCredito !== 'pronto') {
+    el('creditoConteudo').classList.add('hidden');
+    box.classList.remove('hidden');
+    box.innerHTML = estadoCredito === 'ausente'
+      ? `O <code>credito.json</code> ainda não existe. Ele é gerado pelo
+         <code>atualizar_mercado.py</code>, junto com o resto da aba — rode a ação
+         <b>Atualizar mercado</b> no GitHub ou <code>python atualizar_mercado.py --so-credito</code>.`
+      : 'Carregando os spreads de crédito…';
+    return;
+  }
+  box.classList.add('hidden');
+  el('creditoConteudo').classList.remove('hidden');
+  el('creditoDemo').classList.toggle('hidden', !(C.meta && C.meta.demo));
+
+  const h = C.hoje || {}, g = h.grupos || {};
+  const cv = C.curvas;
+  const ptCurva = (rating, prazo) => {
+    if (!cv) return null;
+    const i = cv.vertices.indexOf(prazo);
+    return i < 0 ? null : cv[rating][i];
+  };
+
+  // Cartões
+  const t = [];
+  const gt = (k) => g[k] || {};
+  t.push(tile('DI + spread · mediana', pp(gt('diSpread').mediana),
+    `${gt('diSpread').n || 0} papéis não isentos · sobre o DI`));
+  t.push(tile('IPCA isentas · mediana', pp(gt('ipcaIsenta').mediana),
+    `${gt('ipcaIsenta').n || 0} papéis · sobre a NTN-B`));
+  const bruto = (gt('ipcaIsenta').bruto || {}).mediana;
+  if (bruto != null) {
+    t.push(tile('Isentas · equivalente bruto', pp(bruto),
+      `com IR de ${num((h.aliquotaIR || 0) * 100, 0)}% e IPCA esperado de ${taxa(h.ipcaEsperado, 2)}`));
+  }
+  if (cv) {
+    t.push(tile('AA · 3 anos', pp(ptCurva('AA', 3)),
+      `curva ANBIMA de ${dataBR(cv.data)} · AAA ${num(ptCurva('AAA', 3), 2)} · A ${num(ptCurva('A', 3), 2)}`));
+  }
+  el('faixaCredito').innerHTML = t.join('');
+
+  // Tabela por grupo e faixa
+  const linhasG = [];
+  ['diSpread', 'ipcaIsenta', 'ipcaNaoIsenta'].forEach(k => {
+    const e = g[k];
+    if (!e) return;
+    const isenta = k === 'ipcaIsenta';
+    const lin = (rot, x, forte, brutoMed) => `<tr${forte ? ' class="total"' : ''}>
+        <td class="l tk">${forte ? esc(NOME_GRUPO[k]) : ''}</td>
+        <td class="l${forte ? '' : ' muted'}">${esc(rot)}</td>
+        <td class="num">${x.n || '—'}</td>
+        <td class="num">${pp(x.p25)}</td>
+        <td class="num">${forte ? '<b>' + pp(x.mediana) + '</b>' : pp(x.mediana)}</td>
+        <td class="num">${pp(x.p75)}</td>
+        <td class="num">${x.duracaoMediana == null ? '—' : num(x.duracaoMediana, 1) + ' anos'}</td>
+        <td class="num">${isenta ? pp(brutoMed) : '<span class="muted">—</span>'}</td>
+      </tr>`;
+    linhasG.push(lin('todas', e, true, (e.bruto || {}).mediana));
+    (e.faixas || []).forEach(f => linhasG.push(lin(f.faixa, f, false, f.brutoMediana)));
+  });
+  el('tbCreditoGrupos').querySelector('tbody').innerHTML = linhasG.join('');
+
+  const di = gt('diSpread'), is = gt('ipcaIsenta'), nao = gt('ipcaNaoIsenta');
+  const partes = [];
+  if (di.mediana != null && is.mediana != null) {
+    partes.push(`Em ${dataBR(h.data)}, a debênture típica de DI paga
+      <b>${pp(di.mediana)}</b> sobre o DI e a incentivada típica de IPCA,
+      <b>${pp(is.mediana)}</b> sobre a NTN-B.`);
+  }
+  if (bruto != null) {
+    partes.push(`Pelo equivalente bruto, a isenta típica vale o mesmo que um papel
+      tributado a <b>${pp(bruto)}</b> sobre a NTN-B — é o benefício fiscal medido em
+      spread, e é ele que faz o spread líquido das isentas parecer pequeno.`);
+  } else {
+    partes.push('Sem a inflação esperada do Focus nesta coleta, o equivalente bruto ficou de fora.');
+  }
+  if (nao.n != null && nao.n < 30) {
+    partes.push(`As IPCA não isentas são só <b>${nao.n}</b>: o mercado de IPCA é quase
+      todo incentivado, e a mediana desse grupo se mexe com a entrada ou saída de
+      um papel.`);
+  }
+  el('notaCreditoGrupos').innerHTML = partes.join(' ');
+
+  const fora = h.excluidos || {};
+  const somaFora = Object.values(fora).reduce((a, b) => a + b, 0);
+  el('notaCreditoFora').innerHTML = `Das <b>${h.total || 0}</b> debêntures do arquivo
+    de ${dataBR(h.data)}, <b>${somaFora}</b> ficaram fora da conta:
+    ${Object.entries(fora).map(([k, v]) => `${v} ${esc(MOTIVO_FORA[k] || k)}`).join('; ') || 'nenhuma'}.
+    Nada é extrapolado, nenhum spread é carregado de um dia para o outro, e a
+    tabela de papéis mostra exatamente o que entrou em cada mediana.`;
+
+  // Curvas por rating
+  if (cv) {
+    linhas(el('chRating'), {
+      grade: cv.vertices, eixoY: 'Spread sobre o DI (p.p.)',
+      series: [
+        { nome: 'AAA', rotulo: 'AAA', valores: cv.AAA, cor: css('--s1'), largura: 2.4 },
+        { nome: 'AA', rotulo: 'AA', valores: cv.AA, cor: css('--s2'), largura: 2.4 },
+        { nome: 'A', rotulo: 'A', valores: cv.A, cor: css('--s3'), largura: 2.4 },
+      ],
+    });
+    const dia = ptCurva('AA', 3), diaDI = di.mediana;
+    el('notaRating').innerHTML = `Curva de ${dataBR(cv.data)}. Em 3 anos: AAA
+      ${pp(ptCurva('AAA', 3))}, AA ${pp(ptCurva('AA', 3))}, A ${pp(ptCurva('A', 3))}.
+      ${diaDI != null && dia != null ? `A mediana das DI+ do mercado (${pp(diaDI)}, duração
+      típica de ${num(di.duracaoMediana, 1)} anos) cai perto da curva AA.` : ''}
+      A curva do dia sai depois do fechamento; quando ela atrasa, a tela mostra a
+      mais recente e diz a data.`;
+  } else {
+    moldura(el('chRating'), 60);
+    el('notaRating').textContent = 'A ANBIMA não devolveu a curva por rating nas últimas coletas.';
+  }
+
+  renderCreditoHistorico();
+  renderPapeis();
+}
+
+function renderCreditoHistorico() {
+  if (!C) return;
+  const H2 = C.historico || {};
+  const datas = H2.datas || [];
+  const rating = estado.creditoSerie === 'rating';
+  el('ctlCreditoVerticeBox').classList.toggle('hidden', !rating);
+
+  let series;
+  if (rating) {
+    const v = estado.creditoVertice;
+    series = [
+      { nome: `AAA ${v} anos`, rotulo: 'AAA', valores: H2['AAA_' + v] || [], cor: css('--s1') },
+      { nome: `AA ${v} anos`, rotulo: 'AA', valores: H2['AA_' + v] || [], cor: css('--s2') },
+      { nome: `A ${v} anos`, rotulo: 'A', valores: H2['A_' + v] || [], cor: css('--s3') },
+    ];
+  } else {
+    series = [
+      { nome: 'DI+ não isentas (sobre o DI)', rotulo: 'DI+', valores: H2.diSpread || [], cor: css('--s1') },
+      { nome: 'IPCA isentas (sobre a NTN-B)', rotulo: 'isentas', valores: H2.ipcaIsenta || [], cor: css('--s2') },
+      { nome: 'IPCA isentas — equivalente bruto', rotulo: 'bruto', valores: H2.ipcaIsentaBruta || [],
+        cor: css('--s2'), tracejado: true },
+      { nome: 'IPCA não isentas (sobre a NTN-B)', rotulo: 'não isentas', valores: H2.ipcaNaoIsenta || [], cor: css('--s3') },
+    ];
+  }
+  el('legCreditoHist').innerHTML = series.map(s => `<span><i class="linha" style="${s.tracejado
+      ? `background:repeating-linear-gradient(90deg,${s.cor} 0 5px,transparent 5px 8px)`
+      : `background:${s.cor}`}"></i>${esc(s.nome)}</span>`).join('');
+  linhasNoTempo(el('chCreditoHist'), datas, series, {
+    altura: 320, zero: true, eixoY: 'Spread (p.p.)', formato: (x) => pp(x),
+  });
+  el('notaCreditoHist').textContent = datas.length
+    ? `${datas.length} pregão(ões) acumulado(s), de ${dataBR(datas[0])} a ${dataBR(datas[datas.length - 1])}.`
+      + (rating ? ' A curva de um dia costuma entrar só na coleta do dia seguinte.' : '')
+    : 'O histórico começa a se formar na primeira coleta.';
+}
+
+function renderPapeis() {
+  if (!C || !C.papeis) return;
+  const col = {};
+  (C.papeis.colunas || []).forEach((c, i) => { col[c] = i; });
+  const busca = (estado.papelBusca || '').trim().toUpperCase();
+  const todas = C.papeis.linhas || [];
+  const filtradas = todas.filter(l =>
+    (!estado.papelGrupo || l[col.grupo] === estado.papelGrupo) &&
+    (!busca || String(l[col.codigo]).includes(busca) ||
+     String(l[col.emissor] || '').toUpperCase().includes(busca)));
+  const LIMITE = 300;
+  el('contagemPapeis').innerHTML = `<b>${filtradas.length}</b> de ${todas.length} papéis`
+    + (filtradas.length > LIMITE ? ` · mostrando os ${LIMITE} primeiros; use a busca` : '');
+  el('tbPapeis').querySelector('tbody').innerHTML = filtradas.slice(0, LIMITE).map(l => `<tr>
+      <td class="l tk">${esc(l[col.codigo])}${l[col.resgate] ? ' <span class="tag" title="Tem cláusula de resgate ou amortização antecipada (ainda não exercível)">resgate</span>' : ''}</td>
+      <td class="l cap" title="${esc(l[col.emissor])}">${esc(l[col.emissor])}</td>
+      <td class="l muted">${esc(l[col.indice])}</td>
+      <td class="l">${esc(CURTO_GRUPO[l[col.grupo]] || l[col.grupo])}</td>
+      <td class="l muted">${dataBR(l[col.vencimento])}</td>
+      <td class="num">${num(l[col.duracao], 1)}</td>
+      <td class="num">${taxa(l[col.taxa], 2)}</td>
+      <td class="num">${l[col.ntnb] == null ? '<span class="muted">—</span>' : taxa(l[col.ntnb], 2)}</td>
+      <td class="num"><b>${pp(l[col.spread])}</b></td>
+      <td class="num">${l[col.spreadBruto] == null ? '<span class="muted">—</span>' : pp(l[col.spreadBruto])}</td>
+    </tr>`).join('') || '<tr><td colspan="10" class="vazio">Nenhum papel com esse filtro.</td></tr>';
+}
+
 function render() {
   renderTiles();
   renderJuros();
   renderSpread();
   renderSpreadHistorico();
+  renderCredito();
   renderPvp();
 }
 
 function trocarAba(nome) {
   document.querySelectorAll('.tabs button').forEach(b =>
     b.setAttribute('aria-selected', String(b.dataset.p === nome)));
-  ['juros', 'spread', 'pvp', 'metodo'].forEach(p =>
+  ['juros', 'spread', 'credito', 'pvp', 'metodo'].forEach(p =>
     el('p-' + p).classList.toggle('hidden', p !== nome));
   if (nome === 'spread') carregarHistorico();
+  if (nome === 'credito') carregarCredito();
   // Os gráficos das abas escondidas nascem com largura zero; redesenhar ao
   // abrir é o que evita o gráfico de 0 pixel que aparecia na primeira visita.
   render();
@@ -1097,6 +1334,18 @@ async function iniciar() {
   });
   el('ctlPvpAnos').addEventListener('change', (e) => {
     estado.pvpAnos = +e.target.value; renderPvp();
+  });
+  el('ctlCreditoSerie').addEventListener('change', (e) => {
+    estado.creditoSerie = e.target.value; renderCreditoHistorico();
+  });
+  el('ctlCreditoVertice').addEventListener('change', (e) => {
+    estado.creditoVertice = e.target.value; renderCreditoHistorico();
+  });
+  el('ctlPapelGrupo').addEventListener('change', (e) => {
+    estado.papelGrupo = e.target.value; renderPapeis();
+  });
+  el('ctlPapelBusca').addEventListener('input', (e) => {
+    estado.papelBusca = e.target.value; renderPapeis();
   });
 
   let t = null;

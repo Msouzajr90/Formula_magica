@@ -166,6 +166,9 @@ def conferir(caminho: Path) -> list[str]:
     # 8. O arquivo do histórico, se existir
     erros += conferir_historico(caminho.parent / "spread_historico.json", aviso)
 
+    # 9. Os spreads de crédito privado
+    erros += conferir_credito(caminho.parent / "credito.json", aviso)
+
     for a in aviso:
         print("aviso:", a)
     return erros
@@ -245,6 +248,106 @@ def conferir_historico(caminho: Path, aviso: list[str]) -> list[str]:
 
     print(f"{caminho.name}: {len(datas)} pregões, de {datas[0]} a {datas[-1]}"
           + (f", {len(ciclos)} ciclos de Selic" if ciclos else ""))
+    return erros
+
+
+# Faixas do `credito.json`, em pontos percentuais. Folga larga: é para pegar
+# taxa no lugar de spread (8,5 em vez de 0,9), sinal trocado ou % do DI
+# entrando como spread (102,9), não variação de mercado. Em 30/09/2026:
+#   DI + spread, mediana              0,90   (497 papéis)
+#   IPCA isentas sobre a NTN-B        0,43   (580)   — já foi negativa
+#   IPCA não isentas sobre a NTN-B    1,77   (17)
+#   AAA / AA / A em 3 anos            0,59 / 0,92 / 1,91
+FAIXAS_CREDITO = {
+    "diSpread":      (0.0, 6.0, "mediana do spread das DI+"),
+    "ipcaIsenta":    (-3.0, 6.0, "mediana do spread das IPCA isentas"),
+    "ipcaNaoIsenta": (-3.0, 10.0, "mediana do spread das IPCA não isentas"),
+}
+N_MINIMO_CREDITO = {"diSpread": 100, "ipcaIsenta": 100}
+
+
+def conferir_credito(caminho: Path, aviso: list[str]) -> list[str]:
+    """Confere o `credito.json`.
+
+    O histórico deste arquivo é acumulado — não dá para refazer o passado
+    como o do spread soberano. Um número errado gravado hoje fica lá. Por
+    isso a conferência é mais dura com a ordem dos ratings e a escala do que
+    com a idade.
+    """
+    erros: list[str] = []
+    if not caminho.exists():
+        aviso.append(f"{caminho.name} não existe — a aba de crédito privado fica "
+                     "vazia. Ele é gerado junto com o mercado.json.")
+        return erros
+    try:
+        c = json.loads(caminho.read_text(encoding="utf-8"))
+    except Exception as exc:                                   # noqa: BLE001
+        return [f"{caminho.name} está ilegível: {exc}"]
+
+    if (c.get("meta") or {}).get("demo"):
+        erros.append(f"{caminho.name} é o fixture de tela (tests/fixture_credito.py), "
+                     "com papéis inventados. Apague e rode o atualizar_mercado.py.")
+
+    hoje = c.get("hoje") or {}
+    try:
+        d = date.fromisoformat(hoje["data"])
+        if (date.today() - d).days > IDADE_MAXIMA_DIAS:
+            erros.append(f"O arquivo de debêntures mais novo é de {d}. A ANBIMA "
+                         "parou de publicar ou a coleta está falhando.")
+    except Exception:                                          # noqa: BLE001
+        erros.append(f"Data das debêntures ilegível: {hoje.get('data')!r}")
+
+    grupos = hoje.get("grupos") or {}
+    for g, (lo, hi, nome) in FAIXAS_CREDITO.items():
+        e = grupos.get(g) or {}
+        if e.get("mediana") is None:
+            if g in N_MINIMO_CREDITO:
+                erros.append(f"Sem {nome} — o grupo saiu vazio.")
+            continue
+        if not (lo <= e["mediana"] <= hi):
+            erros.append(f"{nome}: {e['mediana']} fora da faixa {lo}–{hi} p.p. "
+                         "Taxa no lugar de spread, ou sinal trocado.")
+        if e.get("n", 0) < N_MINIMO_CREDITO.get(g, 0):
+            erros.append(f"{nome}: só {e.get('n')} papéis (o normal passa de "
+                         f"{N_MINIMO_CREDITO[g] * 4}). O cadastro do SND ou o arquivo "
+                         "da ANBIMA veio cortado.")
+        if not (e.get("p25") is None or e["p25"] <= e["mediana"] <= e["p75"]):
+            erros.append(f"{nome}: quartis fora de ordem ({e.get('p25')}, "
+                         f"{e['mediana']}, {e.get('p75')}).")
+
+    curvas = c.get("curvas")
+    if curvas:
+        ratings = [curvas.get(r) or [] for r in ("AAA", "AA", "A")]
+        n = len(curvas.get("vertices") or [])
+        if not n or any(len(x) != n for x in ratings):
+            erros.append("Curvas de rating com tamanhos diferentes dos vértices.")
+        else:
+            fora = [v for x in ratings for v in x if not (-1.0 <= v <= 15.0)]
+            if fora:
+                erros.append(f"Curvas de rating: valor {fora[0]} fora de −1 a 15 p.p.")
+            inv = [curvas["vertices"][i] for i in range(n)
+                   if not (ratings[0][i] <= ratings[1][i] <= ratings[2][i])]
+            if inv:
+                erros.append(f"Curvas de rating fora de ordem (AAA ≤ AA ≤ A) em "
+                             f"{len(inv)} vértice(s), o primeiro em {inv[0]:g} anos. "
+                             "Colunas trocadas na leitura.")
+    else:
+        aviso.append("Sem curvas por rating no credito.json.")
+
+    h = c.get("historico") or {}
+    datas = h.get("datas") or []
+    if datas != sorted(set(datas)):
+        erros.append("O histórico de crédito tem datas fora de ordem ou repetidas.")
+    for k, v in h.items():
+        if k != "datas" and len(v) != len(datas):
+            erros.append(f"Histórico de crédito: {k} tem {len(v)} valores para "
+                         f"{len(datas)} datas.")
+            break
+
+    print(f"{caminho.name}: debêntures de {hoje.get('data')}, "
+          + ", ".join(f"{g} {(grupos.get(g) or {}).get('mediana')} "
+                      f"(n={(grupos.get(g) or {}).get('n')})" for g in FAIXAS_CREDITO)
+          + f"; histórico com {len(datas)} dia(s)")
     return erros
 
 

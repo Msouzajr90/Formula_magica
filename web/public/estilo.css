@@ -214,3 +214,7 @@ th.ord[data-dir=asc]::after{content:' ▴'}
 .metodo p{color:var(--ink-2);margin:0 0 10px;max-width:74ch;font-size:13px}
 .metodo ul{color:var(--ink-2);margin:0 0 10px;padding-left:20px;font-size:13px;max-width:74ch}
 .metodo li{margin-bottom:5px}
+
+/* Aba de crédito: a linha "todas" de cada grupo separa os blocos da tabela */
+tr.total td{border-top:1px solid var(--line-strong)}
+tr.total:first-child td{border-top:none}

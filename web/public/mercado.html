@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Indicadores de mercado — Fórmula Mágica B3</title>
-<meta name="description" content="P/VP do Ibovespa, curvas de juros prefixada e de NTN-B e a diferença de juros entre Brasil e Estados Unidos.">
+<meta name="description" content="P/VP do Ibovespa, curvas de juros prefixada e de NTN-B, a diferença de juros entre Brasil e Estados Unidos e os spreads de crédito privado.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='54'>📉</text></svg>">
 <link rel="stylesheet" href="estilo.css">
 </head>
@@ -21,7 +21,8 @@
 <header>
   <h1>Indicadores de mercado</h1>
   <p class="sub">O preço do patrimônio no Ibovespa, a curva de juros em duas moedas —
-     nominal e real — e o quanto o Brasil paga a mais que os Estados Unidos.
+     nominal e real —, o quanto o Brasil paga a mais que os Estados Unidos e o
+     quanto uma empresa paga a mais que o governo.
      É o pano de fundo contra o qual as duas outras abas fazem sentido.</p>
   <div class="stamp">
     <span><span class="dot"></span>Fechamento de <b id="stamp">—</b></span>
@@ -48,6 +49,7 @@
   <div class="tabs" role="tablist">
     <button role="tab" aria-selected="true"  data-p="juros">Curva de juros</button>
     <button role="tab" aria-selected="false" data-p="spread">Brasil × EUA</button>
+    <button role="tab" aria-selected="false" data-p="credito">Crédito privado</button>
     <button role="tab" aria-selected="false" data-p="pvp">P/VP do Ibovespa</button>
     <button role="tab" aria-selected="false" data-p="metodo">Método e limites</button>
   </div>
@@ -308,6 +310,153 @@
     </div>
   </section>
 
+  <!-- ============ CRÉDITO PRIVADO ============ -->
+  <section id="p-credito" class="hidden">
+
+    <div class="warn hidden" id="creditoDemo"
+         style="border-left-color:var(--bad);background:color-mix(in srgb, var(--bad) 8%, transparent)">
+      <b>⚠ Arquivo de tela.</b> Este <code>credito.json</code> foi gravado pelo
+      <code>tests/fixture_credito.py</code>: as medianas, a curva e o histórico são
+      de verdade, mas a tabela de papéis tem só a amostra dos testes. Rode
+      <code>atualizar_mercado.py</code> para substituir.
+    </div>
+    <div id="creditoStatus" class="load hidden"></div>
+
+    <div id="creditoConteudo" class="hidden">
+      <div class="faixa" id="faixaCredito"></div>
+
+      <div class="card" style="margin-bottom:18px">
+        <h2>Isentas e não isentas</h2>
+        <p class="note">O spread é o que a empresa paga acima do governo no mesmo
+           indexador: nas debêntures atreladas ao DI, a taxa acima do DI; nas
+           atreladas ao IPCA, a taxa acima da NTN-B de prazo parecido — a que a
+           própria ANBIMA indica como referência de cada papel.</p>
+        <p class="note"><b>Por que a comparação não é direta.</b> Quase toda
+           debênture de IPCA é incentivada (Lei 12.431, isenta de IR para pessoa
+           física), e quase toda de DI não é — a lei exige índice de preços ou taxa
+           prefixada. Isento contra não isento acaba sendo, na prática, IPCA contra
+           DI, e com prazos diferentes. Por isso a tabela separa por faixa de
+           duração, e por isso existe a coluna do <b>equivalente bruto</b>: o spread
+           que um papel tributado teria de pagar para entregar, depois do IR, o
+           mesmo que a isenta.</p>
+        <div class="scroll">
+          <table id="tbCreditoGrupos"><thead><tr>
+            <th class="l">Grupo</th><th class="l">Duração</th><th>Papéis</th>
+            <th>1º quartil</th><th>Mediana</th><th>3º quartil</th>
+            <th>Duração mediana</th><th>Equivalente bruto</th>
+          </tr></thead><tbody></tbody></table>
+        </div>
+        <p class="note" id="notaCreditoGrupos" style="margin:12px 0 0"></p>
+      </div>
+
+      <div class="card" style="margin-bottom:18px">
+        <h2>Por rating — curvas de crédito da ANBIMA</h2>
+        <p class="note">Spread sobre o DI, prazo a prazo, para os três níveis de
+           risco que a ANBIMA publica. A classificação é do comitê de precificação
+           da ANBIMA, não de S&amp;P, Fitch ou Moody's: rating de agência papel a
+           papel não existe em dado aberto, e esta é a única segmentação por risco
+           que se obtém sem pagar.</p>
+        <div class="legend">
+          <span><i class="linha" style="background:var(--s1)"></i>AAA</span>
+          <span><i class="linha" style="background:var(--s2)"></i>AA</span>
+          <span><i class="linha" style="background:var(--s3)"></i>A</span>
+        </div>
+        <svg id="chRating" class="chart"></svg>
+        <p class="note" id="notaRating" style="margin:12px 0 0"></p>
+      </div>
+
+      <div class="card" style="margin-bottom:18px">
+        <h2>No tempo</h2>
+        <p class="note">A ANBIMA guarda só os últimos sete ou oito pregões, e não
+           há série gratuita para trás. Esta é <b>acumulada</b>, um ponto por dia,
+           desde que a aba entrou no ar — como a do P/VP. Um dia que o robô perder
+           é recuperado na execução seguinte, se ainda estiver na janela da ANBIMA.</p>
+        <div class="ctls" style="display:flex;gap:18px;flex-wrap:wrap;margin:0 0 14px">
+          <label>Mostrar:
+            <select id="ctlCreditoSerie">
+              <option value="grupos" selected>Isentas × não isentas (medianas)</option>
+              <option value="rating">Rating ANBIMA</option>
+            </select>
+          </label>
+          <label id="ctlCreditoVerticeBox" class="hidden">Prazo:
+            <select id="ctlCreditoVertice">
+              <option value="1">1 ano</option>
+              <option value="3" selected>3 anos</option>
+              <option value="5">5 anos</option>
+            </select>
+          </label>
+        </div>
+        <div class="legend" id="legCreditoHist"></div>
+        <svg id="chCreditoHist" class="chart"></svg>
+        <p class="note muted" id="notaCreditoHist" style="margin:12px 0 0;font-size:12px"></p>
+      </div>
+
+      <div class="card" style="margin-bottom:18px">
+        <h2>Os papéis</h2>
+        <p class="note">Cada debênture que entrou na conta, do maior spread para o
+           menor. No topo ficam os emissores que o mercado está cobrando caro —
+           às vezes por bom motivo.</p>
+        <div class="ctls" style="display:flex;gap:18px;flex-wrap:wrap;margin:0 0 12px">
+          <label>Grupo:
+            <select id="ctlPapelGrupo">
+              <option value="">Todos</option>
+              <option value="diSpread">DI + spread, não isentas</option>
+              <option value="ipcaIsenta">IPCA + spread, isentas</option>
+              <option value="ipcaNaoIsenta">IPCA + spread, não isentas</option>
+            </select>
+          </label>
+          <label>Buscar:
+            <input type="search" id="ctlPapelBusca" placeholder="código ou emissor"
+                   style="width:100%;padding:7px 9px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface-1);color:var(--ink)">
+          </label>
+        </div>
+        <div class="contagem" id="contagemPapeis"></div>
+        <div class="scroll tall">
+          <table id="tbPapeis"><thead><tr>
+            <th class="l">Código</th><th class="l">Emissor</th><th class="l">Remuneração</th>
+            <th class="l">Grupo</th><th class="l">Vencimento</th><th>Duração</th>
+            <th>Taxa ANBIMA</th><th>NTN-B ref.</th><th>Spread</th><th>Equiv. bruto</th>
+          </tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>De onde vem cada número</h2>
+        <div class="scroll">
+          <table><thead><tr>
+            <th class="l">Série</th><th class="l">Fonte</th><th class="l">O que é</th>
+          </tr></thead><tbody>
+            <tr><td class="l">Taxa de cada debênture</td>
+                <td class="l">ANBIMA, mercado secundário de debêntures</td>
+                <td class="l">Taxa indicativa do fechamento, todo dia útil. Nas de DI
+                    a taxa já é o spread; nas de IPCA é o juro real, e o arquivo diz
+                    qual NTN-B serve de referência.</td></tr>
+            <tr><td class="l">NTN-B de referência</td>
+                <td class="l">ANBIMA, mercado secundário de títulos públicos</td>
+                <td class="l">Taxa indicativa da NTN-B no mesmo fechamento. ANBIMA
+                    contra ANBIMA — não a taxa do Tesouro Direto, que é de varejo.</td></tr>
+            <tr><td class="l">Isenta ou não</td>
+                <td class="l">SND (debentures.com.br)</td>
+                <td class="l">Coluna "Deb. Incent. (Lei 12.431)" do cadastro. O
+                    arquivo da ANBIMA não diz: os asteriscos ao lado do nome marcam
+                    cláusula de resgate antecipado, não incentivo.</td></tr>
+            <tr><td class="l">Curvas por rating</td>
+                <td class="l">ANBIMA, curvas de crédito</td>
+                <td class="l">Spread zero-cupom sobre o DI para AAA, AA e A,
+                    estimado pela ANBIMA sobre as debêntures sem cláusula de
+                    resgate. Publicada depois do fechamento — às vezes no dia
+                    seguinte.</td></tr>
+            <tr><td class="l">Inflação esperada</td>
+                <td class="l">Banco Central, Focus</td>
+                <td class="l">Só para o equivalente bruto: o IR incide sobre o
+                    ganho nominal, inflação inclusive.</td></tr>
+          </tbody></table>
+        </div>
+        <p class="note" style="margin:16px 0 0" id="notaCreditoFora"></p>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ P/VP DO IBOVESPA ============ -->
   <section id="p-pvp" class="hidden">
 
@@ -377,8 +526,8 @@
 
       <h3>Por que não é tempo real</h3>
       <p>Porque não existe. ANBIMA, B3 e Tesouro publicam no fechamento; a ANBIMA
-        divulga uma prévia por volta das 13h e a final por volta das 19h30, e o
-        acesso gratuito aos arquivos dela saiu do ar. Uma tela que se dissesse
+        divulga uma prévia por volta das 13h e a final por volta das 19h30, e os
+        arquivos gratuitos dela guardam só a última semana. Uma tela que se dissesse
         "tempo real" com dado de fechamento estaria mentindo sobre a única coisa
         que o usuário não tem como conferir.</p>
 
@@ -421,6 +570,28 @@
         períodos — 2009, 2012, 2023 — em que não havia. Nesses dias a linha
         nominal simplesmente some, em vez de repetir o último valor.</p>
 
+      <h3>Spreads de crédito privado</h3>
+      <p>Spread de uma debênture de DI é a própria taxa indicativa da ANBIMA
+        (DI + x%). Spread de uma de IPCA é a taxa indicativa menos a da NTN-B que
+        a ANBIMA indica como referência daquele papel, em pontos percentuais —
+        subtração, que é como o mercado cota. A estatística é a <b>mediana</b>,
+        não a média: no mesmo dia convivem papéis a DI + 0,3% e emissores em
+        reestruturação a DI + 5%, e a média iria para onde não está nenhum papel
+        típico.</p>
+      <p>Ficam fora da conta, e a tela diz quantos: os papéis sem taxa no dia, os
+        de cláusula de resgate já em período de exercício (o preço passa a refletir
+        a chance de recompra ao par, não o crédito), os de duração abaixo de meio
+        ano, os atrelados a % do DI, IGP-M ou prefixados, e os que não estão no
+        cadastro do SND — isenção desconhecida não vira "não isenta" por omissão.</p>
+      <p>O <b>equivalente bruto</b> de uma isenta é o spread sobre a NTN-B que um
+        papel tributado a 15% precisaria pagar para render o mesmo depois do IR.
+        A conta passa pelo nominal, porque o IR incide sobre o ganho nominal: juro
+        real → nominal líquido → nominal bruto (÷ 0,85) → real bruto → menos a
+        NTN-B. Vale para pessoa física, com a alíquota de prazo acima de dois anos.</p>
+      <p>As curvas por <b>rating</b> são da ANBIMA, com a classificação do comitê
+        dela. Elas não separam isentas de não isentas, e a amostra que as estima
+        exclui papéis com cláusula de resgate — que são a maioria do mercado.</p>
+
       <h3>O que estes números não dizem</h3>
       <ul>
         <li>O patrimônio líquido é contábil — custo histórico corrigido, não valor
@@ -445,7 +616,7 @@
     <p><b>Ferramenta de estudo. Não é recomendação de investimento.</b>
        Rentabilidade passada não garante rentabilidade futura.</p>
     <p>Tesouro Transparente (Secretaria do Tesouro Nacional), U.S. Department of
-       the Treasury, B3 e CVM. Os dados são coletados no fechamento — a data no
+       the Treasury, B3, CVM, ANBIMA e SND. Os dados são coletados no fechamento — a data no
        topo da página diz quando.</p>
   </footer>
 </main>

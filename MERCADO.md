@@ -1,7 +1,8 @@
 # Aba de indicadores de mercado
 
 Terceira aba do site: o P/VP do Ibovespa, as curvas de juros prefixada e de
-NTN-B em quatro datas, e a diferença de juros entre Brasil e Estados Unidos.
+NTN-B em quatro datas, a diferença de juros entre Brasil e Estados Unidos e os
+spreads de crédito privado — isentos × não isentos e por rating.
 
 Roda sozinha. Diferente da aba de FIIs, nada aqui precisa passar pela sua
 máquina — as quatro fontes responderam de fora do Brasil quando este documento
@@ -16,8 +17,10 @@ foi escrito, e o robô do GitHub faz tudo. A única dependência local é o
      |-- B3                    -> carteira teorica do Ibovespa
      |-- Yahoo                 -> precos e valor de mercado
      |-- fundamentos.json      -> patrimonio liquido (CVM), ja no repositorio
+     |-- ANBIMA                -> debentures, NTN-B e curvas de credito
+     |-- SND                   -> quem e incentivada (Lei 12.431)
               |
-         mercado.json + pvp_historico.json --> Vercel
+         mercado.json + pvp_historico.json + credito.json --> Vercel
 ```
 
 ## Por que não é tempo real
@@ -49,6 +52,10 @@ tem como conferir. A aba mostra a data do fechamento ao lado de cada número.
 | Dólar (PTAX venda) | Banco Central, SGS série 1 | todo dia útil |
 | Meta Selic | Banco Central, SGS série 432 | a cada Copom, valendo todo dia |
 | Expectativa de IPCA 12 meses | Banco Central, Focus pela API Olinda | semanal, publicada com alguns dias de atraso |
+| Taxa de cada debênture | ANBIMA, `merc-sec-debentures/arqs/dbAAMMDD.txt` | todo dia útil, à noite; só os últimos 7–8 pregões ficam no ar |
+| NTN-B de referência | ANBIMA, `merc-sec/arqs/msAAMMDD.txt` | idem |
+| Curvas de crédito AAA / AA / A | ANBIMA, `curvas-debentures/CD.asp` | depois do fechamento, às vezes no dia seguinte; mesma janela |
+| Debênture incentivada ou não | SND, exportação de características | cadastro, muda devagar |
 
 O CSV do Tesouro tem 21 anos de histórico num arquivo só (~15 MB). É de lá que
 saem de graça as quatro fotos da tela — hoje, uma semana, um mês e seis meses
@@ -208,6 +215,106 @@ inventadas. Serve para conferir o JavaScript sem meia hora de download. O
 arquivo sai marcado com `"demo": true` — a tela mostra aviso vermelho e o
 `validar_mercado.py` sai com código 1, para que esquecer de apagá-lo não
 publique 21 anos de número inventado.
+
+## Spreads de crédito privado — `credito.json`
+
+Aba própria, incluída em **01/10/2026**: quanto uma empresa paga acima do
+governo, separado em isentas × não isentas e por rating. Código em
+`mercado/credito.py`, testes em `tests/test_credito.py` (sem rede, com
+recortes reais em `tests/amostras/`).
+
+### A ANBIMA não saiu do ar — só guarda uma semana
+
+O texto acima diz que a ANBIMA saiu do ar para uso gratuito. Vale para o
+formulário antigo (`merc-sec.asp`). Os **arquivos de texto** continuam
+públicos, sem login, e respondem de fora do Brasil:
+
+| arquivo | conteúdo |
+|---|---|
+| `/informacoes/merc-sec-debentures/arqs/db260930.txt` | taxa indicativa, duration e NTN-B de referência de ~1.290 debêntures |
+| `/informacoes/merc-sec/arqs/ms260930.txt` | taxa indicativa de todos os títulos públicos |
+| `/informacoes/curvas-debentures/CD.asp` (POST) | curvas de spread AAA, AA e A, de 0,5 a 10,5 anos |
+
+O problema é outro: **só os últimos sete ou oito pregões ficam no ar** (em
+01/10/2026, de 22/09 em diante; 01/09 já respondia 404). Não há série
+histórica gratuita. Por isso o histórico do crédito é **acumulado**, como o do
+P/VP, e o `credito.json` não pode ser perdido — está na lista do passo de
+publicação do robô, com um teste que exige isso.
+
+Cada execução recolhe todos os pregões da janela e funde no arquivo: um dia
+que o robô perder volta na execução seguinte. A curva de rating do dia D sai
+depois do robô de D; ela entra na coleta de D+1, na linha de D.
+
+### O asterisco não é a isenção
+
+O arquivo da ANBIMA marca nomes com `(*)` e `(**)`. A tentação é ler como
+"incentivada". A legenda da página diz outra coisa: `(*)` é cláusula de
+resgate ou amortização antecipada, `(**)` é cláusula já em período de
+exercício. Quem diz se a debênture é incentivada é o **SND**: a exportação de
+características (`caracteristicas_e.asp?op_exc=False`, 2,8 MB, tabulada)
+traz a coluna **"Deb. Incent. (Lei 12.431)"** — 1.307 S e 3.503 N em
+01/10/2026. Se o SND não responder, vale o cadastro guardado no próprio
+`credito.json`; papel que não está em nenhum dos dois fica fora, em vez de
+virar "não isenta" por omissão.
+
+Rating de agência por papel não existe em dado aberto — o próprio ANBIMA Data
+diz que "pode ser adquirido através das agências". A segmentação por rating é
+a da curva de crédito da ANBIMA, com a classificação do comitê dela.
+
+### O cálculo
+
+* **DI + spread**: o spread é a própria taxa indicativa.
+* **IPCA + spread**: taxa indicativa menos a NTN-B que a ANBIMA indica como
+  referência daquele papel (coluna "Referência NTN-B"), no mesmo arquivo de
+  títulos públicos do dia. Subtração, em p.p. — é como o mercado cota.
+* **Mediana e quartis**, não média: no mesmo dia há Claro a DI + 0,36 e
+  Equipav a DI + 5,48.
+* **Faixas de duração** (até 3, 3 a 6, acima de 6 anos), porque as DI+ têm
+  duração típica de 2,6 anos e as IPCA isentas de 5,2.
+* **Equivalente bruto** das isentas: o spread que um papel tributado a 15%
+  teria de pagar para render o mesmo depois do IR, passando pelo nominal
+  (o IR incide sobre a inflação também) com o Focus de 12 meses.
+
+Ficam fora, com a contagem no arquivo: sem taxa no dia (60), resgate já
+exercível (107), duração abaixo de meio ano (31), % do DI / IGP-M / prefixado
+(28), sem NTN-B de referência, e sem cadastro no SND.
+
+### Conferência — 01/10/2026, arquivo inteiro
+
+| grupo | papéis | mediana | quartis |
+|---|---|---|---|
+| DI + spread, não isentas | 469 | +0,90 p.p. sobre o DI | 0,62 – 1,47 |
+| IPCA isentas | 578 | +0,46 p.p. sobre a NTN-B | 0,15 – 1,02 |
+| — equivalente bruto | 578 | +2,64 p.p. | 2,29 – 3,25 |
+| IPCA não isentas | 17 | +1,80 p.p. | 1,07 – 5,20 |
+| Curva ANBIMA 3 anos (30/09) | | AAA 0,59 · AA 0,92 · A 1,91 | |
+
+Os spreads de sete papéis da amostra foram conferidos um a um contra uma conta
+feita à parte, no navegador, sobre o arquivo inteiro (ACRC21 +0,9466,
+ALGE16 −0,0903, CSAN33 +2,4970…). Dois achados do dado:
+
+1. **IPCA não isenta quase não existe** — 17 papéis contra 578 isentos. Na
+   prática, isento × não isento é IPCA × DI. A tela diz isso e mostra o
+   equivalente bruto para a comparação fazer sentido.
+2. **As isentas abriram 23 centésimos numa semana** (0,23 em 22/09, 0,46 em
+   01/10), com as DI+ paradas em 0,90. A NTN-B fechou e as taxas das
+   debêntures não acompanharam no mesmo ritmo.
+
+### Operação
+
+```
+python atualizar_mercado.py --so-credito   # só o credito.json
+python verificar_mercado.py                # agora testa ANBIMA e SND também
+python tests/fixture_credito.py            # arquivo de tela, "demo": true
+```
+
+O `validar_mercado.py` confere faixas das medianas (pega taxa no lugar de
+spread), contagem mínima de papéis (pega cadastro cortado), a ordem AAA ≤ AA ≤ A
+em todo vértice (pega coluna trocada) e o alinhamento do histórico.
+
+**Próximos passos:** CRI e CRA (também isentos; a ANBIMA só os publica no
+ANBIMA Data, que exige token); letras financeiras; e, quando o histórico tiver
+alguns meses, o spread contra o ciclo da Selic.
 
 ## Histórico do P/VP — `gerar_pvp_historico.py`
 
@@ -379,14 +486,17 @@ Os três blocos são independentes: se o P/VP falhar, as curvas são publicadas
 com o aviso no arquivo, e a aba mostra o aviso no topo da página.
 
 **Arquivos acumulados que o robô não pode perder:** `pvp_historico.json` (um
-ponto por dia), `ibov_carteira.json` e `mapa_cvm.json` (recuo para quando a B3
-não responde). O passo de publicação do `.yml` copia os três.
+ponto por dia), `credito.json` (histórico dos spreads e cadastro de
+incentivadas), `ibov_carteira.json` e `mapa_cvm.json` (recuo para quando a B3
+não responde). O passo de publicação do `.yml` copia os que o robô
+reescreve: `pvp_historico.json`, `credito.json`, `ibov_carteira.json` e
+`spread_historico.json`.
 
 ## O que a aba não olha
 
-Risco de crédito soberano medido por CDS, câmbio, inflação implícita explícita
-(dá para tirar da diferença entre pré e NTN-B, mas a tela não calcula), e
-qualquer curva de crédito privado. O P/VP usa patrimônio contábil — custo
+Risco de crédito soberano medido por CDS, inflação implícita explícita (dá
+para tirar da diferença entre pré e NTN-B, mas a tela não calcula), e CRI/CRA
+e letras financeiras no crédito privado (ver a seção de crédito). O P/VP usa patrimônio contábil — custo
 histórico corrigido, não valor de reposição — e a série histórica, quando
 existir, usará a carteira atual do Ibovespa aplicada ao passado, com o viés de
 sobrevivência que isso traz.
