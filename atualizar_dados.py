@@ -12,7 +12,7 @@ No GitHub Actions cabe com folga — 16 GB de RAM e até 6 horas.
 Uso:
     python atualizar_dados.py                # dados reais
     python atualizar_dados.py --demo         # dados sintéticos, para testar o site
-    python atualizar_dados.py --pool 80      # nº de ações exportadas
+    python atualizar_dados.py --pool 80      # nº de ações na otimização (o ranking sai inteiro)
 """
 from __future__ import annotations
 
@@ -58,9 +58,16 @@ def montar_json(res, params: C.Params, pool: int,
     # arquivo saía só com operacionais mesmo tendo vagas reservadas. Foi assim
     # que os bancos continuaram sumidos do site depois de "corrigidos".
     # `SELECIONADA` já respeita a cota de cada grupo, que é o que queremos.
-    rk = res.ranking
-    sel = rk[rk["SELECIONADA"]] if "SELECIONADA" in rk.columns else rk.head(pool)
-    rk = (sel if not sel.empty else rk.head(pool)).copy()
+    #
+    # O arquivo leva o ranking INTEIRO, não só as selecionadas. Antes só as
+    # `pool` primeiras saíam, e quem passava nos filtros mas ficava abaixo do
+    # corte não aparecia nem no ranking nem nas excluídas — a VALE3 (posição
+    # ~150 numa lista que parava em 88) parecia ter sumido do site. O `pool`
+    # continua decidindo quem tem série de preços e entra na otimização; o
+    # resto vai só para a tabela, marcado com `selecionada: false`.
+    rk = res.ranking.copy()
+    if "SELECIONADA" not in rk.columns or not rk["SELECIONADA"].any():
+        rk["SELECIONADA"] = rk.index < pool
 
     empresas = []
     for r in rk.itertuples():
@@ -82,9 +89,11 @@ def montar_json(res, params: C.Params, pool: int,
             "liquidez": _num(getattr(r, "LIQUIDEZ_MEDIA", None)),
             "dataBase": _texto(getattr(r, "DT_BASE", None))[:10]
                         if _texto(getattr(r, "DT_BASE", None)) else None,
+            "selecionada": bool(r.SELECIONADA),
         })
 
-    # Só exporta estatísticas dos papéis que têm série de preços.
+    # Só exporta estatísticas dos papéis que têm série de preços — na prática,
+    # as selecionadas, que são as únicas cujo histórico o pipeline baixa.
     tickers = [e["yf"] for e in empresas if e["yf"] in res.cov.columns]
     mu = res.mu.reindex(tickers)
     cov = res.cov.reindex(index=tickers, columns=tickers)
@@ -148,7 +157,8 @@ def main() -> int:
     ap.add_argument("--demo", action="store_true",
                     help="usa dados sintéticos (não acessa a rede)")
     ap.add_argument("--pool", type=int, default=80,
-                    help="quantas empresas do ranking exportar")
+                    help="quantas empresas do ranking entram na otimizacao "
+                         "(com serie de precos); o arquivo leva o ranking inteiro")
     ap.add_argument("--liquidez", type=float, default=1_000_000)
     ap.add_argument("--vagas-financeiras", type=int, default=0,
                     help="quantas vagas da carteira ficam com bancos e seguradoras "

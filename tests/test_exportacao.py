@@ -95,3 +95,28 @@ def test_arquivo_leva_os_tres_grupos_e_nao_so_os_80_primeiros(tmp_path):
     tipos = {e["tipo"] for e in d["empresas"]}
     assert "financeira" in tipos, "as financeiras foram cortadas do arquivo"
     assert "utilidade" in tipos, "as concessionarias foram cortadas do arquivo"
+
+
+def test_arquivo_leva_o_ranking_inteiro_e_nao_so_o_pool(tmp_path):
+    """Quem passa nos filtros mas fica abaixo do corte tem que aparecer no site.
+
+    Antes só as selecionadas eram exportadas, e uma empresa aprovada fora do
+    corte (a VALE3) não estava nem no ranking nem nas excluídas — parecia ter
+    sumido. O pool continua limitando quem tem série de preços.
+    """
+    saida = tmp_path / "dados.json"
+    r = subprocess.run(
+        [sys.executable, "atualizar_dados.py", "--demo", "--pool", "20",
+         "--saida", str(saida)], capture_output=True, text=True, cwd=str(RAIZ))
+    assert r.returncode == 0, r.stdout + r.stderr
+    d = json.loads(saida.read_text(encoding="utf-8"))
+
+    sel = [e for e in d["empresas"] if e["selecionada"]]
+    fora = [e for e in d["empresas"] if not e["selecionada"]]
+    assert fora, "as aprovadas abaixo do corte nao foram exportadas"
+    assert len(sel) <= 20
+    # estatística só de quem foi selecionado; o resto é só ranking
+    assert set(d["estatisticas"]["tickers"]) <= {e["ticker"] for e in sel}
+    # a exportação completa não pode repetir empresa nem perder o ranking
+    assert len({e["ticker"] for e in d["empresas"]}) == len(d["empresas"])
+    assert all(isinstance(e["rank"], int) for e in d["empresas"])

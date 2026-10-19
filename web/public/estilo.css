@@ -85,6 +85,15 @@
   .tag{font-size:10px;letter-spacing:.04em;text-transform:uppercase;background:var(--surface-2);
        border:1px solid var(--line-strong);border-radius:4px;padding:1px 4px;color:var(--ink-2)}
   .cap{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* ---------- barra do ranking: quantas mostrar + busca ---------- */
+  .rkbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:0 0 10px}
+  .rkbar label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
+  .rkbar select{width:auto}
+  .rkbar input[type=search]{flex:1 1 220px;max-width:340px;padding:7px 9px;
+    border:1px solid var(--line-strong);border-radius:8px;background:var(--surface-0);
+    color:var(--ink);font:inherit}
+  .rkbar .muted{font-size:12px}
+  tr.fora td{opacity:.55}
   /* Caixa de rolagem das tabelas longas. Eram 460px fixos, e 460px mostravam
      SETE das 125 linhas do ranking: a barra de rolagem interna passava
      despercebida e a lista parecia terminar ali. Agora a caixa usa a altura da

@@ -132,6 +132,23 @@
         <b>ROE</b> e <b>Lucro/Preço</b>. Cada grupo é numerado a partir de 1, e as
         posições de um não se comparam com as do outro.
       </div>
+      <div class="rkbar">
+        <label for="ctlMostrar">Mostrar
+          <select id="ctlMostrar">
+            <option value="20">20 de cada grupo</option>
+            <option value="40">40 de cada grupo</option>
+            <option value="80">80 de cada grupo</option>
+            <option value="0" selected>Todas</option>
+          </select>
+        </label>
+        <input type="search" id="ctlBusca" placeholder="Buscar ticker ou nome (ex.: VALE3)"
+               aria-label="Buscar empresa no ranking" autocomplete="off">
+        <span class="muted" id="rkConta"></span>
+      </div>
+      <p class="note" id="rkForaNota" style="margin:0 0 10px">Linhas esmaecidas passaram nos
+         filtros mas ficaram abaixo do corte do seu grupo: estão no ranking, mas não
+         entram na otimização, porque o site só tem histórico de preços das primeiras
+         de cada grupo.</p>
       <div class="scroll tall">
         <table id="tbRank"><thead><tr>
           <th class="l">#</th><th class="l">Ativo</th><th class="l">Empresa</th>

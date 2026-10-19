@@ -556,8 +556,12 @@ function metricas(rp, rb, rf) {
 // ===========================================================================
 let D = null;                      // dados.json
 let idx = new Map();               // ticker -> empresa
+// Quem tem série de preços (e portanto entra na otimização). O arquivo traz o
+// ranking inteiro, mas o histórico só das primeiras de cada grupo.
+let comSerie = new Set();
 let estado = { n: 30, cap: 0.15, perfil: 0, capital: 100000, unico: true,
-               vagasFin: 0, vagasUti: 0, btAnos: 5, btFreq: 'anual' };
+               vagasFin: 0, vagasUti: 0, btAnos: 5, btFreq: 'anual',
+               mostrar: 0, busca: '' };   // mostrar: 0 = todas
 
 /** Rótulo das métricas: numa financeira as colunas medem outra coisa. */
 const rotulos = (tipo) => tipo === 'financeira'
@@ -597,7 +601,11 @@ function selecionar(lista, n, vagasFin, vagasUti) {
 }
 
 function calcular() {
-  const { escolhidas } = selecionar(elegiveis(), estado.n, estado.vagasFin,
+  // Só concorre à carteira quem tem série de preços: sem ela não há retorno
+  // esperado nem covariância. Filtrar ANTES de selecionar mantém as vagas
+  // cheias, em vez de perder silenciosamente quem não tem estatística.
+  const candidatas = elegiveis().filter(e => comSerie.has(e.ticker));
+  const { escolhidas } = selecionar(candidatas, estado.n, estado.vagasFin,
                                   estado.vagasUti);
   const sel = escolhidas;
   const pos = new Map(D.estatisticas.tickers.map((t, i) => [t, i]));
@@ -662,14 +670,18 @@ function render() {
 
   // --- ranking ---
   const lista = elegiveis();
-  dispersao(el('chScatter'), lista.slice(0, 60).map(e => ({
+  const limite = estado.mostrar > 0 ? estado.mostrar : Infinity;
+  // Só operacionais no gráfico: ROE e Lucro/Preço das financeiras não estão
+  // na mesma escala dos eixos. (O filtro antigo testava um campo que não
+  // existia e deixava as financeiras passarem.)
+  const opsGrafico = lista.filter(e => !ehFin(e) && !ehUti(e)).slice(0, limite);
+  dispersao(el('chScatter'), opsGrafico.map(e => ({
     x: e.ey, y: e.roic, forte: r.carteira.has(e.ticker),
     tip: `<b>${e.ticker} — ${e.nome || ''}</b>
       <div class="r"><span>ROIC</span><span>${pct(e.roic)}</span></div>
       <div class="r"><span>Earnings Yield</span><span>${pct(e.ey)}</span></div>
       <div class="r"><span>Soma no ranking</span><span>${e.rank}</span></div>`
-  })).filter(p => { const e = idx.get(p.tk || '') || {};
-                    return !ehFin(e) && !ehUti(e); }),
+  })),
      { fx: v => pct(v, 0), fy: v => pct(v, 0), rotuloX: 'Earnings Yield (preço)',
        rotuloY: 'ROIC (qualidade)', altura: 400 });
 
@@ -678,12 +690,28 @@ function render() {
   grupos.op.forEach((e, i) => posDe.set(e.ticker, i + 1));
   grupos.fin.forEach((e, i) => posDe.set(e.ticker, i + 1));
   grupos.uti.forEach((e, i) => posDe.set(e.ticker, i + 1));
-  const ordenada = [...grupos.op, ...grupos.fin, ...grupos.uti];
+  // O corte é por grupo, nunca na lista concatenada: cortar a lista inteira
+  // decapitaria financeiras e concessionárias, que vêm depois das operacionais.
+  const busca = estado.busca.trim().toUpperCase();
+  const casa = (e) => !busca || e.ticker.toUpperCase().includes(busca)
+                      || (e.nome || '').toUpperCase().includes(busca);
+  // Com busca ativa, procura no ranking inteiro: quem pergunta pela VALE3
+  // quer achá-la mesmo que esteja abaixo do limite escolhido.
+  const corta = (g) => busca ? g.filter(casa) : g.slice(0, limite);
+  const ordenada = [...corta(grupos.op), ...corta(grupos.fin), ...corta(grupos.uti)];
+  const total = grupos.op.length + grupos.fin.length + grupos.uti.length;
+  el('rkConta').textContent = busca
+    ? `${ordenada.length} encontrada${ordenada.length === 1 ? '' : 's'} em ${total}`
+    : `${ordenada.length} de ${total} empresas`;
+  el('nFin').textContent = String(ordenada.filter(ehFin).length);
+  el('rkForaNota').classList.toggle('hidden', !ordenada.some(e => !comSerie.has(e.ticker)));
 
-  el('tbRank').querySelector('tbody').innerHTML = ordenada.slice(0, 120).map((e) => {
+  el('tbRank').querySelector('tbody').innerHTML = ordenada.map((e) => {
     const dentro = r.carteira.has(e.ticker);
+    const fora = !comSerie.has(e.ticker);
     const rot = rotulos(e.tipo);
-    return `<tr${dentro ? ' style="background:color-mix(in srgb, var(--s1) 7%, transparent)"' : ''}>
+    return `<tr${dentro ? ' style="background:color-mix(in srgb, var(--s1) 7%, transparent)"' : ''}${
+      fora ? ' class="fora" title="Abaixo do corte do grupo: fora da otimização"' : ''}>
       <td class="l num muted">${posDe.get(e.ticker)}${ehFin(e) ? ' <span class="tag">fin</span>' : ''}</td>
       <td class="l tk" title="${rot.q} / ${rot.p}">${e.ticker}</td>
       <td class="l cap" title="${e.nome || ''}">${e.nome || '—'}</td>
@@ -692,7 +720,9 @@ function render() {
       <td class="num muted">${e.posRoic}</td><td class="num muted">${e.posEy}</td>
       <td class="num"><b>${e.rank}</b></td>
       <td class="num">${brl(e.preco)}</td><td class="num">${compacto(e.liquidez)}</td></tr>`;
-  }).join('');
+  }).join('') || `<tr><td colspan="11" class="l muted">Nenhuma empresa aprovada
+      corresponde a “${estado.busca.trim()}”. Se ela foi barrada em algum filtro,
+      o motivo está na aba de excluídas.</td></tr>`;
 
   // --- fronteira ---
   dispersao(el('chFront'), frontAtual.map((p, i) => ({
@@ -810,6 +840,8 @@ function ligarControles() {
        () => el('lblFin').textContent = el('ctlFin').value);
   bind('ctlUti', 'vagasUti', c => Math.max(0, +c.value || 0),
        () => el('lblUti').textContent = el('ctlUti').value);
+  bind('ctlMostrar', 'mostrar', c => +c.value || 0);
+  bind('ctlBusca', 'busca', c => c.value);
   bind('ctlBtAnos', 'btAnos', c => +c.value);
   bind('ctlBtFreq', 'btFreq', c => c.value);
   document.querySelectorAll('.tabs button').forEach(b =>
@@ -836,6 +868,7 @@ async function iniciar() {
   }
 
   idx = new Map(D.empresas.map(e => [e.ticker, e]));
+  comSerie = new Set((D.estatisticas && D.estatisticas.tickers) || []);
   el('stamp').textContent = D.meta.geradoEm;
   // Uma linha cinza ao lado da data não é aviso suficiente para uma tela que
   // imprime ordem de compra com quantidade e valor em reais. Se os números
@@ -857,7 +890,9 @@ async function iniciar() {
   const nFin = D.empresas.filter(ehFin).length;
   el('avisoFin').classList.toggle('hidden', nFin === 0);
   if (nFin) el('nFin').textContent = String(nFin);
-  const maxN = Math.min(D.empresas.length, 60);
+  // O teto é quem tem série de preços, não o tamanho do arquivo: as demais
+  // aparecem no ranking mas não podem entrar na carteira.
+  const maxN = Math.min(D.empresas.filter(e => comSerie.has(e.ticker)).length, 60);
   el('ctlN').max = String(maxN);
   if (estado.n > maxN) { estado.n = maxN; el('ctlN').value = String(maxN); el('lblN').textContent = String(maxN); }
 
