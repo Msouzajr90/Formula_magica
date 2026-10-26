@@ -31,7 +31,30 @@ def main() -> int:
     sessao = rede.sessao(tentativas=2, backoff=1.5)
     tudo = True
 
-    print("\nTesouro Transparente — curvas brasileiras")
+    print("\nANBIMA — curvas brasileiras (títulos públicos)")
+    from mercado import titulos
+    try:
+        recentes = titulos.baixar_recentes(date.today(), sessao)
+        tudo &= linha("pregões no ar", bool(recentes),
+                      f"{len(recentes)}: {', '.join(recentes)}" if recentes else "nenhum")
+        if recentes:
+            tab = titulos.tabela(recentes)
+            dia = max(date.fromisoformat(d) for d in recentes)
+            pre = tesouro.curva(tab, "pre", dia)
+            ipca = tesouro.curva(tab, "ipca", dia)
+            tudo &= linha("curva prefixada", bool(pre),
+                          f"{dia}: {len(pre)} vértices, até {pre[-1].prazo:.1f} anos"
+                          if pre else "vazia")
+            tudo &= linha("curva de NTN-B", bool(ipca),
+                          f"{dia}: {len(ipca)} vértices, até {ipca[-1].prazo:.1f} anos"
+                          if ipca else "vazia")
+    except Exception as exc:                                   # noqa: BLE001
+        tudo &= linha("títulos públicos", False, str(exc)[:110])
+
+    # Desde 16/10/2026 esta fonte está parada e responde 429. A coleta segue
+    # sem ela (as curvas saem da ANBIMA e do acervo); só a série histórica da
+    # aba Brasil × EUA depende dela.
+    print("\nTesouro Transparente — série histórica desde 2004")
     try:
         texto = tesouro.baixar_csv(sessao)
         td = tesouro.ler_csv(texto)

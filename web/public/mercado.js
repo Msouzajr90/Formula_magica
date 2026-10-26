@@ -293,7 +293,7 @@ function linhasNoTempo(svg, datas, series, { altura = 320, eixoY = '',
     if (xb - xa > 46) {
       const t = mk('text', { x: (xa + xb) / 2, y: m.t - 9, 'text-anchor': 'middle',
         'font-size': 9.5, 'letter-spacing': '.07em', fill: css('--ink-3') });
-      t.textContent = b.sentido === 'alta' ? 'ALTA' : 'QUEDA';
+      t.textContent = b.rotulo || (b.sentido === 'alta' ? 'ALTA' : 'QUEDA');
       svg.appendChild(t);
     }
   });
@@ -505,8 +505,8 @@ let H = null;                    // spread_historico.json, carregado sob demanda
 // mercado cita, tem dado do começo ao fim.
 const estado = { pvpAnos: 0, spreadVertice: '10.0', spreadAnos: 0,
                  dolarModo: 'padronizado', selicAnos: 0,
-                 creditoSerie: 'grupos', creditoVertice: '3',
-                 papelGrupo: '', papelBusca: '' };
+                 creditoSerie: 'ipcaIsenta', creditoVertice: '3', creditoLimiar: 0.05,
+                 papelGrupo: '', papelBusca: '', papelOrdem: 'spread' };
 const FOTOS = ['hoje', 'semana', 'mes', 'semestre'];
 const CORES_FOTO = ['--t0', '--t1', '--t2', '--t3'];
 const ROTULO_CURTO = { hoje: 'hoje', semana: '1 sem', mes: '1 mês', semestre: '6 meses' };
@@ -522,7 +522,11 @@ function seriesDasFotos(campo) {
     const s = serie(k);
     const v = campo === 'spreadNominal' || campo === 'spreadReal'
       ? s[campo] : s[campo].grade;
-    return { nome: `${s.rotulo} (${dataBR(s.dataBR)})`, rotulo: ROTULO_CURTO[k],
+    // Quando a foto caiu longe do alvo, o rótulo dela diz a distância de
+    // verdade ("5 semanas atrás"); a etiqueta da ponta da linha acompanha.
+    const curto = /semanas|dias|meses/.test(s.rotulo || '') && s.rotulo !== '6 meses atrás'
+      ? s.rotulo.replace(/ atrás$/, '').replace(' semanas', ' sem') : ROTULO_CURTO[k];
+    return { nome: `${s.rotulo} (${dataBR(s.dataBR)})`, rotulo: curto,
              valores: v, cor: css(CORES_FOTO[i]), largura: i === 0 ? 2.4 : 1.8 };
   });
 }
@@ -532,7 +536,7 @@ function legendaFotos(destino) {
   if (!box) return;
   box.innerHTML = FOTOS.filter(k => serie(k)).map((k, i) =>
     `<span><i class="linha" style="background:${css(CORES_FOTO[i])}"></i>${esc(serie(k).rotulo)}
-       <span class="muted">· ${dataBR(serie(k).dataBR)}</span></span>`).join('');
+       <span class="muted">· ${dataBR(serie(k).dataBR)}${serie(k).fonteBR ? ` · ${esc(serie(k).fonteBR)}` : ''}</span></span>`).join('');
 }
 
 function tile(k, v, h) {
@@ -1201,40 +1205,302 @@ function renderCredito() {
   renderPapeis();
 }
 
+// ---------------------------------------------------------------------------
+// Abertura e fechamento
+// ---------------------------------------------------------------------------
+// Variação em pontos-base (centésimos de ponto percentual). É a unidade em que
+// o mercado fala de spread de crédito: "abriu 10" é 0,10 p.p.
+const bps = (v) => (v == null || !isFinite(v)) ? '—'
+  : Math.abs(v) < 0.0005 ? '0 bps'
+  : (v > 0 ? '+' : '') + nf(Math.abs(v) < 0.1 ? 1 : 0).format(v * 100) + ' bps';
+// Menos de meio ponto-base num período inteiro é "estável", não abertura.
+const ESTAVEL = 0.005;
+const sentidoDe = (v) => v == null ? '' : v > ESTAVEL ? 'abriu' : v < -ESTAVEL ? 'fechou' : 'estável';
+
+const SERIES_GRUPO = {
+  diSpread: { nome: 'DI + spread, não isentas', base: 'sobre o DI' },
+  ipcaIsenta: { nome: 'IPCA + spread, isentas', base: 'sobre a NTN-B' },
+  ipcaIsentaBruta: { nome: 'IPCA isentas — equivalente bruto', base: 'sobre a NTN-B, como se tributada' },
+  ipcaNaoIsenta: { nome: 'IPCA + spread, não isentas', base: 'sobre a NTN-B' },
+};
+
+/** Nível dos mesmos papéis: as variações diárias encadeadas para trás a
+ *  partir da mediana do último pregão — o fim da linha coincide com o número
+ *  dos cartões do topo. Onde a corrente quebra (dia sem variação gravada),
+ *  recomeça na mediana daquele dia em vez de inventar a ligação. */
+function encadear(med, vars) {
+  const n = med.length, out = new Array(n).fill(null);
+  let ultimo = -1;
+  for (let i = n - 1; i >= 0; i--) if (med[i] != null) { ultimo = i; break; }
+  if (ultimo < 0) return out;
+  out[ultimo] = med[ultimo];
+  for (let i = ultimo - 1; i >= 0; i--) {
+    const v = vars[i + 1];
+    out[i] = (out[i + 1] != null && v != null) ? out[i + 1] - v : med[i];
+  }
+  return out;
+}
+
+/** A série escolhida no seletor, já com nível, variação e amplitude. */
+function serieCredito(H2, chave, vertice) {
+  const n = (H2.datas || []).length;
+  const vazio = new Array(n).fill(null);
+  if (SERIES_GRUPO[chave]) {
+    const med = H2[chave] || vazio, vars = H2['var_' + chave] || vazio;
+    return { ...SERIES_GRUPO[chave], grupo: true, mediana: med, variacao: vars,
+             nivel: encadear(med, vars),
+             abriu: H2['abriu_' + chave] || null, fechou: H2['fechou_' + chave] || null };
+  }
+  // Curva de rating: prazo fixo, sem troca de papéis — o nível é a própria
+  // curva, e a variação é a diferença para o pregão anterior que tem curva.
+  const v = H2[`${chave}_${vertice}`] || vazio;
+  const variacao = v.map((x, i) => {
+    if (x == null) return null;
+    for (let k = i - 1; k >= 0; k--) if (v[k] != null) return x - v[k];
+    return null;
+  });
+  return { nome: `Curva ANBIMA ${chave}, ${vertice} ${vertice === '1' ? 'ano' : 'anos'}`,
+           base: 'sobre o DI', grupo: false, mediana: null, nivel: v, variacao,
+           abriu: null, fechou: null };
+}
+
+/** Episódios de abertura e fechamento: a série em zigue-zague. Um movimento
+ *  só termina quando o spread volta pelo menos `lim` desde o extremo. */
+function episodios(L, lim) {
+  const idx = [];
+  for (let i = 0; i < L.length; i++) if (L[i] != null && isFinite(L[i])) idx.push(i);
+  if (idx.length < 2) return [];
+  const eps = [];
+  let dir = 0, piv = idx[0], ext = idx[0], lo = idx[0], hi = idx[0];
+  for (const i of idx.slice(1)) {
+    if (dir === 0) {
+      if (L[i] < L[lo]) lo = i;
+      if (L[i] > L[hi]) hi = i;
+      if (L[i] - L[lo] >= lim - 1e-9) { dir = 1; piv = lo; ext = i; }
+      else if (L[hi] - L[i] >= lim - 1e-9) { dir = -1; piv = hi; ext = i; }
+      continue;
+    }
+    if (dir === 1) {
+      if (L[i] >= L[ext]) ext = i;
+      else if (L[ext] - L[i] >= lim - 1e-9) {
+        eps.push({ sentido: 'abriu', de: piv, ate: ext }); piv = ext; ext = i; dir = -1;
+      }
+    } else {
+      if (L[i] <= L[ext]) ext = i;
+      else if (L[i] - L[ext] >= lim - 1e-9) {
+        eps.push({ sentido: 'fechou', de: piv, ate: ext }); piv = ext; ext = i; dir = 1;
+      }
+    }
+  }
+  // O último movimento ainda não voltou o mínimo desde o extremo: não
+  // terminou, mesmo que o spread tenha recuado um pouco depois do pico.
+  if (dir !== 0) eps.push({ sentido: dir === 1 ? 'abriu' : 'fechou', de: piv, ate: ext,
+                            emCurso: true });
+  return eps;
+}
+
+/** Barras da variação de cada pregão, no mesmo eixo de datas do gráfico de
+ *  linha logo acima (mesmas margens), para os dois se lerem juntos. */
+function barrasNoTempo(svg, datas, valores, { altura = 170, cor, dica = null } = {}) {
+  const vivos = valores.filter(v => v != null && isFinite(v));
+  if (!vivos.length || datas.length < 2) {
+    const h = moldura(svg, 60);
+    const w = svg.viewBox.baseVal.width || 640;
+    const t = mk('text', { x: w / 2, y: h / 2 + 4, 'text-anchor': 'middle', 'font-size': 12.5 });
+    t.textContent = 'A variação diária aparece a partir do segundo pregão com os mesmos papéis.';
+    svg.appendChild(t); return;
+  }
+  const h = altura, w = moldura(svg, h);
+  const estreito = w < 620;
+  const m = { t: 10, r: estreito ? 48 : 76, b: 30, l: estreito ? 44 : 54 };
+  const iw = w - m.l - m.r, ih = h - m.t - m.b;
+  const ts = datas.map(d => Date.parse(d));
+  const t0 = ts[0], t1 = ts[ts.length - 1];
+  const px = (x) => m.l + ((x - t0) / (t1 - t0 || 1)) * iw;
+  const e = escala([...vivos, 0]);
+  const py = (v) => m.t + ih - ((v - e.min) / (e.max - e.min)) * ih;
+
+  for (let v = e.min; v <= e.max + 1e-9; v += e.passo) {
+    const y = py(v);
+    svg.appendChild(mk('line', { x1: m.l, x2: m.l + iw, y1: y, y2: y, class: 'gridline', 'stroke-width': 1 }));
+    const tx = mk('text', { x: m.l - 9, y: y + 4, 'text-anchor': 'end', 'font-size': 11 });
+    tx.textContent = nf(e.passo * 100 < 1 ? 1 : 0).format(v * 100); svg.appendChild(tx);
+  }
+  svg.appendChild(mk('line', { x1: m.l, x2: m.l + iw, y1: py(0), y2: py(0),
+    stroke: css('--line-strong'), 'stroke-width': 1.2 }));
+  const ry = mk('text', { x: 13, y: m.t + ih / 2, 'font-size': 11.5, 'text-anchor': 'middle',
+    transform: `rotate(-90 13 ${m.t + ih / 2})` });
+  ry.textContent = 'bps'; svg.appendChild(ry);
+  const marcos = estreito ? 3 : 5;
+  for (let k = 0; k <= marcos; k++) {
+    const x = t0 + (t1 - t0) * k / marcos;
+    const tx = mk('text', { x: px(x), y: m.t + ih + 18, 'text-anchor': 'middle', 'font-size': 11 });
+    tx.textContent = new Date(x).toLocaleDateString('pt-BR',
+      { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+    svg.appendChild(tx);
+  }
+  const passoX = iw / Math.max(datas.length - 1, 1);
+  const larg = Math.max(2, Math.min(14, passoX * 0.62));
+  valores.forEach((v, i) => {
+    if (v == null || !isFinite(v)) return;
+    const x = px(ts[i]), y0 = py(0), y1 = py(v);
+    svg.appendChild(mk('rect', { x: x - larg / 2, y: Math.min(y0, y1), width: larg,
+      height: Math.max(Math.abs(y1 - y0), 1), fill: cor, rx: 1.5 }));
+    if (dica) {
+      const alvo = mk('rect', { x: x - Math.max(larg, passoX) / 2, y: m.t,
+        width: Math.max(larg, passoX), height: ih, fill: 'transparent' });
+      alvo.addEventListener('mousemove', (ev) => mostrarTip(ev, dica(i)));
+      alvo.addEventListener('mouseleave', esconderTip);
+      svg.appendChild(alvo);
+    }
+  });
+}
+
+/** Variação do nível nos últimos `n` pregões com valor. */
+function variacaoDosUltimos(datas, L, n) {
+  const idx = [];
+  for (let i = 0; i < L.length; i++) if (L[i] != null) idx.push(i);
+  if (idx.length < 2) return null;
+  const fim = idx[idx.length - 1];
+  const ini = n == null ? idx[0] : idx[Math.max(0, idx.length - 1 - n)];
+  if (ini === fim || (n != null && idx.length - 1 < n)) return null;
+  return { v: L[fim] - L[ini], de: datas[ini], ate: datas[fim], pregoes: idx.indexOf(fim) - idx.indexOf(ini) };
+}
+
 function renderCreditoHistorico() {
   if (!C) return;
   const H2 = C.historico || {};
   const datas = H2.datas || [];
-  const rating = estado.creditoSerie === 'rating';
+  const chave = estado.creditoSerie;
+  const rating = ['AAA', 'AA', 'A'].includes(chave);
+  const comparar = chave === 'comparar';
   el('ctlCreditoVerticeBox').classList.toggle('hidden', !rating);
+  el('ctlCreditoLimiarBox').classList.toggle('hidden', comparar);
+  el('boxCreditoVar').classList.toggle('hidden', comparar);
+  el('boxEpisodios').classList.toggle('hidden', comparar);
 
-  let series;
-  if (rating) {
-    const v = estado.creditoVertice;
-    series = [
-      { nome: `AAA ${v} anos`, rotulo: 'AAA', valores: H2['AAA_' + v] || [], cor: css('--s1') },
-      { nome: `AA ${v} anos`, rotulo: 'AA', valores: H2['AA_' + v] || [], cor: css('--s2') },
-      { nome: `A ${v} anos`, rotulo: 'A', valores: H2['A_' + v] || [], cor: css('--s3') },
-    ];
-  } else {
-    series = [
-      { nome: 'DI+ não isentas (sobre o DI)', rotulo: 'DI+', valores: H2.diSpread || [], cor: css('--s1') },
-      { nome: 'IPCA isentas (sobre a NTN-B)', rotulo: 'isentas', valores: H2.ipcaIsenta || [], cor: css('--s2') },
-      { nome: 'IPCA isentas — equivalente bruto', rotulo: 'bruto', valores: H2.ipcaIsentaBruta || [],
-        cor: css('--s2'), tracejado: true },
-      { nome: 'IPCA não isentas (sobre a NTN-B)', rotulo: 'não isentas', valores: H2.ipcaNaoIsenta || [], cor: css('--s3') },
-    ];
+  if (comparar) {
+    const cores = { diSpread: css('--s1'), ipcaIsenta: css('--s2'), ipcaNaoIsenta: css('--s3') };
+    const series = Object.keys(cores).map(k => {
+      const sc = serieCredito(H2, k);
+      return { nome: `${sc.nome} — mesmos papéis`, rotulo: CURTO_GRUPO[k], valores: sc.nivel,
+               cor: cores[k], sc, k };
+    });
+    el('legCreditoHist').innerHTML = series.map(s => `<span><i class="linha"
+        style="background:${s.cor}"></i>${esc(s.nome)}</span>`).join('');
+    linhasNoTempo(el('chCreditoHist'), datas, series, {
+      altura: 320, zero: true, eixoY: 'Spread (p.p.)', formato: (x) => pp(x),
+    });
+    el('faixaCreditoMov').innerHTML = series.map(s => {
+      const r = variacaoDosUltimos(datas, s.valores, null);
+      return tile(`${CURTO_GRUPO[s.k]} · desde ${r ? dataBR(r.de) : '—'}`, r ? bps(r.v) : '—',
+        r ? `${sentidoDe(r.v)} em ${r.pregoes} pregões · hoje ${pp(s.valores[s.valores.length - 1])}` : '');
+    }).join('');
+    el('notaCreditoHist').textContent = datas.length
+      ? `${datas.length} pregões, de ${dataBR(datas[0])} a ${dataBR(datas[datas.length - 1])}. `
+        + 'Cada linha é o nível dos mesmos papéis, ancorado na mediana do último pregão.'
+      : 'O histórico começa a se formar na primeira coleta.';
+    return;
   }
+
+  const sc = serieCredito(H2, chave, estado.creditoVertice);
+  const cor = css('--s1');
+  const lim = +estado.creditoLimiar || 0.05;
+  const eps = episodios(sc.nivel, lim);
+  const bandas = eps.map(e => ({ de: datas[e.de], ate: datas[e.ate],
+    sentido: e.sentido === 'abriu' ? 'alta' : 'queda',
+    rotulo: e.sentido === 'abriu' ? 'ABRIU' : 'FECHOU' }));
+
+  const series = [{ nome: sc.grupo ? `Mesmos papéis — ${sc.base}` : `${sc.nome} — ${sc.base}`,
+                    rotulo: sc.grupo ? 'mesmos' : chave,
+                    valores: sc.nivel, cor }];
+  if (sc.grupo) series.push({ nome: 'Mediana do dia', rotulo: 'mediana', valores: sc.mediana,
+                              cor: css('--ink-3'), tracejado: true });
   el('legCreditoHist').innerHTML = series.map(s => `<span><i class="linha" style="${s.tracejado
       ? `background:repeating-linear-gradient(90deg,${s.cor} 0 5px,transparent 5px 8px)`
-      : `background:${s.cor}`}"></i>${esc(s.nome)}</span>`).join('');
+      : `background:${s.cor}`}"></i>${esc(s.nome)}</span>`).join('')
+    + '<span><i style="background:var(--ink);opacity:.14"></i>abertura</span>'
+    + '<span><i style="background:var(--ink);opacity:.05;border:1px solid var(--line)"></i>fechamento</span>';
   linhasNoTempo(el('chCreditoHist'), datas, series, {
-    altura: 320, zero: true, eixoY: 'Spread (p.p.)', formato: (x) => pp(x),
+    altura: 320, zero: sc.nivel.some(v => v != null && v < 0.15), eixoY: 'Spread (p.p.)',
+    formato: (x) => pp(x), bandas,
   });
-  el('notaCreditoHist').textContent = datas.length
-    ? `${datas.length} pregão(ões) acumulado(s), de ${dataBR(datas[0])} a ${dataBR(datas[datas.length - 1])}.`
-      + (rating ? ' A curva de um dia costuma entrar só na coleta do dia seguinte.' : '')
-    : 'O histórico começa a se formar na primeira coleta.';
+
+  barrasNoTempo(el('chCreditoVar'), datas, sc.variacao, {
+    cor,
+    dica: (i) => {
+      let html = `<b>${dataBR(datas[i])}</b><div class="r"><span>${sentidoDe(sc.variacao[i])}</span>`
+        + `<span>${bps(sc.variacao[i])}</span></div>`;
+      if (sc.abriu && sc.abriu[i] != null) {
+        html += `<div class="r"><span>papéis que abriram</span><span>${num(sc.abriu[i] * 100, 0)}%</span></div>`
+          + `<div class="r"><span>papéis que fecharam</span><span>${num(sc.fechou[i] * 100, 0)}%</span></div>`;
+      }
+      return html;
+    },
+  });
+
+  // Cartões: o último pregão, uma semana, um mês e desde o começo da série.
+  const t = [];
+  const ult = variacaoDosUltimos(datas, sc.nivel, 1);
+  if (ult) {
+    const iu = datas.indexOf(ult.ate);
+    const amp = sc.abriu && sc.abriu[iu] != null
+      ? ` · ${num(sc.abriu[iu] * 100, 0)}% dos papéis abriram, ${num(sc.fechou[iu] * 100, 0)}% fecharam` : '';
+    t.push(tile('Último pregão', bps(ult.v), `${sentidoDe(ult.v)} em ${dataBR(ult.ate)}${amp}`));
+  }
+  [[5, '5 pregões'], [21, '21 pregões']].forEach(([n, rot]) => {
+    const r = variacaoDosUltimos(datas, sc.nivel, n);
+    if (r) t.push(tile(rot, bps(r.v), `${sentidoDe(r.v)} · desde ${dataBR(r.de)}`));
+  });
+  const tudo = variacaoDosUltimos(datas, sc.nivel, null);
+  if (tudo) t.push(tile(`Desde ${dataBR(tudo.de)}`, bps(tudo.v),
+    `${sentidoDe(tudo.v)} em ${tudo.pregoes} pregões · de ${pp(sc.nivel[datas.indexOf(tudo.de)])} `
+    + `para ${pp(sc.nivel[datas.indexOf(tudo.ate)])}`));
+  el('faixaCreditoMov').innerHTML = t.join('');
+
+  // Episódios, do mais recente para o mais antigo
+  const linhasEp = eps.slice().reverse().map(e => {
+    const a = sc.nivel[e.de], b = sc.nivel[e.ate];
+    let amp = '—';
+    if (sc.abriu) {
+      const v = [];
+      for (let i = e.de + 1; i <= e.ate; i++) if (sc.abriu[i] != null) v.push(sc.abriu[i]);
+      if (v.length) amp = num(v.reduce((x, y) => x + y, 0) / v.length * 100, 0) + '%';
+    }
+    const pregoes = sc.nivel.slice(e.de, e.ate + 1).filter(x => x != null).length - 1;
+    return `<tr>
+      <td class="l"><span class="tag">${e.sentido}</span>${e.emCurso ? ' <span class="muted">em curso</span>' : ''}</td>
+      <td class="l muted">${dataBR(datas[e.de])} → ${dataBR(datas[e.ate])}</td>
+      <td class="num">${pregoes}</td>
+      <td class="num">${pp(a)}</td><td class="num">${pp(b)}</td>
+      <td class="num"><b>${bps(b - a)}</b></td>
+      <td class="num">${amp}</td></tr>`;
+  });
+  el('tbEpisodios').querySelector('tbody').innerHTML = linhasEp.join('')
+    || `<tr><td colspan="7" class="vazio">Nenhum movimento de ${nf(0).format(lim * 100)} bps ou mais
+        no período — o spread ficou parado. Diminua o mínimo para ver os menores.</td></tr>`;
+
+  // Nota de rodapé: alcance da série e onde a variação dos mesmos papéis começa
+  const partes = [];
+  if (datas.length) partes.push(`${datas.length} pregões, de ${dataBR(datas[0])} a ${dataBR(datas[datas.length - 1])}.`);
+  if (sc.grupo) {
+    const primeira = sc.variacao.findIndex(v => v != null);
+    if (primeira < 0) partes.push('Ainda não há variação dos mesmos papéis gravada — a linha cheia acompanha a mediana até a próxima coleta.');
+    else if (primeira > 1) partes.push(`A variação dos mesmos papéis começa em ${dataBR(datas[primeira])}; antes disso a linha cheia segue a mediana do dia.`);
+    // Quando as duas linhas se afastam, dizer quanto foi troca de papéis
+    const i0 = sc.nivel.findIndex(v => v != null), i1 = sc.nivel.length - 1;
+    if (i0 >= 0 && sc.mediana[i0] != null && sc.mediana[i1] != null && sc.nivel[i1] != null) {
+      const dm = sc.mediana[i1] - sc.mediana[i0], dn = sc.nivel[i1] - sc.nivel[i0];
+      if (Math.abs(dm - dn) >= 0.02) {
+        partes.push(`Desde ${dataBR(datas[i0])} a mediana do dia andou ${bps(dm)} e os mesmos
+          papéis, ${bps(dn)}: os ${bps(dm - dn).replace('+', '')} de diferença vieram de papéis
+          que entraram ou saíram da conta, não de spread que mudou.`);
+      }
+    }
+  } else {
+    partes.push('A curva de um dia costuma entrar só na coleta do dia seguinte.');
+  }
+  el('notaCreditoHist').textContent = partes.join(' ');
 }
 
 function renderPapeis() {
@@ -1243,10 +1509,22 @@ function renderPapeis() {
   (C.papeis.colunas || []).forEach((c, i) => { col[c] = i; });
   const busca = (estado.papelBusca || '').trim().toUpperCase();
   const todas = C.papeis.linhas || [];
+  const varDe = (l) => col.variacao == null ? null : l[col.variacao];
   const filtradas = todas.filter(l =>
     (!estado.papelGrupo || l[col.grupo] === estado.papelGrupo) &&
     (!busca || String(l[col.codigo]).includes(busca) ||
      String(l[col.emissor] || '').toUpperCase().includes(busca)));
+  // O arquivo já vem do maior spread para o menor; as outras duas ordens
+  // põem no topo quem mais abriu ou fechou no último pregão (sem variação, no fim).
+  if (estado.papelOrdem !== 'spread') {
+    const sinal = estado.papelOrdem === 'abriu' ? -1 : 1;
+    filtradas.sort((a, b) => {
+      const va = varDe(a), vb = varDe(b);
+      if (va == null) return vb == null ? 0 : 1;
+      if (vb == null) return -1;
+      return sinal * (va - vb);
+    });
+  }
   const LIMITE = 300;
   el('contagemPapeis').innerHTML = `<b>${filtradas.length}</b> de ${todas.length} papéis`
     + (filtradas.length > LIMITE ? ` · mostrando os ${LIMITE} primeiros; use a busca` : '');
@@ -1260,8 +1538,9 @@ function renderPapeis() {
       <td class="num">${taxa(l[col.taxa], 2)}</td>
       <td class="num">${l[col.ntnb] == null ? '<span class="muted">—</span>' : taxa(l[col.ntnb], 2)}</td>
       <td class="num"><b>${pp(l[col.spread])}</b></td>
+      <td class="num">${varDe(l) == null ? '<span class="muted">—</span>' : bps(varDe(l))}</td>
       <td class="num">${l[col.spreadBruto] == null ? '<span class="muted">—</span>' : pp(l[col.spreadBruto])}</td>
-    </tr>`).join('') || '<tr><td colspan="10" class="vazio">Nenhum papel com esse filtro.</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="11" class="vazio">Nenhum papel com esse filtro.</td></tr>';
 }
 
 function render() {
@@ -1340,6 +1619,12 @@ async function iniciar() {
   });
   el('ctlCreditoVertice').addEventListener('change', (e) => {
     estado.creditoVertice = e.target.value; renderCreditoHistorico();
+  });
+  el('ctlCreditoLimiar').addEventListener('change', (e) => {
+    estado.creditoLimiar = +e.target.value; renderCreditoHistorico();
+  });
+  el('ctlPapelOrdem').addEventListener('change', (e) => {
+    estado.papelOrdem = e.target.value; renderPapeis();
   });
   el('ctlPapelGrupo').addEventListener('change', (e) => {
     estado.papelGrupo = e.target.value; renderPapeis();

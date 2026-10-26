@@ -43,7 +43,8 @@ tem como conferir. A aba mostra a data do fechamento ao lado de cada número.
 
 | O quê | Onde | Quando sai |
 |---|---|---|
-| Curvas brasileiras | Tesouro Transparente, CSV de taxas do Tesouro Direto | todo dia útil de manhã, com o fechamento de D-1 |
+| Curvas brasileiras | ANBIMA, `merc-sec/arqs/msAAMMDD.txt` (LTN, NTN-F, NTN-B), guardadas no acervo | todo dia útil, à noite; só sete ou oito pregões ficam no ar |
+| Curvas brasileiras antigas e série desde 2004 | Tesouro Transparente, CSV de taxas do Tesouro Direto | parado desde 16/10/2026 (ver abaixo) |
 | Curvas americanas | U.S. Treasury, *daily par yield curve* nominal e TIPS | fim da tarde de Nova York |
 | Carteira do Ibovespa | B3, `GetPortfolioDay` | diária |
 | Prefixo do ticker → código CVM | B3, `GetInitialCompanies` | muda devagar |
@@ -52,17 +53,45 @@ tem como conferir. A aba mostra a data do fechamento ao lado de cada número.
 | Dólar (PTAX venda) | Banco Central, SGS série 1 | todo dia útil |
 | Meta Selic | Banco Central, SGS série 432 | a cada Copom, valendo todo dia |
 | Expectativa de IPCA 12 meses | Banco Central, Focus pela API Olinda | semanal, publicada com alguns dias de atraso |
-| Taxa de cada debênture | ANBIMA, `merc-sec-debentures/arqs/dbAAMMDD.txt` | todo dia útil, à noite; só os últimos 7–8 pregões ficam no ar |
+| Taxa de cada debênture | ANBIMA, `merc-sec-debentures/arqs/dbAAMMDD.txt` | todo dia útil, à noite; cerca de cinco semanas ficam no ar (a janela muda) |
 | NTN-B de referência | ANBIMA, `merc-sec/arqs/msAAMMDD.txt` | idem |
 | Curvas de crédito AAA / AA / A | ANBIMA, `curvas-debentures/CD.asp` | depois do fechamento, às vezes no dia seguinte; mesma janela |
 | Debênture incentivada ou não | SND, exportação de características | cadastro, muda devagar |
 
-O CSV do Tesouro tem 21 anos de histórico num arquivo só (~15 MB). É de lá que
-saem de graça as quatro fotos da tela — hoje, uma semana, um mês e seis meses
-atrás — sem precisar guardar nada entre execuções.
+### Curvas brasileiras: ANBIMA e o acervo (desde 25/10/2026)
 
-O preço: são as taxas do Tesouro Direto, do varejo, não as indicativas do
-mercado secundário da ANBIMA. Ficam alguns pontos-base distantes.
+Até outubro de 2026 as quatro fotos da tela — hoje, uma semana, um mês e seis
+meses atrás — saíam do CSV do Tesouro Transparente, que tem 21 anos de
+histórico num arquivo só (~15 MB) e dispensava guardar qualquer coisa.
+
+Em 16/10/2026 esse arquivo parou de ser atualizado (o último pregão é 15/10) e
+o download passou a devolver uma página "429 – Muitas Requisições" no lugar
+do CSV, também de um computador comum no Brasil. A coleta seguiu publicando a
+curva de 15/10, com aviso, até o validador barrar a idade em 24/10.
+
+Agora as curvas do dia vêm do `msAAMMDD.txt` da ANBIMA — o mesmo arquivo que
+o crédito privado já baixava para as NTN-B. É a taxa **indicativa** de
+mercado, melhor que a de varejo do Tesouro Direto. Mas a ANBIMA só deixa no ar
+sete ou oito pregões, então o robô guarda o que vê em `juros.acervo`, dentro
+do próprio `mercado.json` (o workflow já publica esse arquivo; não foi preciso
+mexer no `.yml`). Regras (`mercado/titulos.py`):
+
+- Um dia, uma fonte. Precedência: ANBIMA, depois Tesouro, depois "foto" —
+  pontos recuperados das fotos de um `mercado.json` anterior. Foi assim que a
+  primeira execução sem o Tesouro manteve as comparações de um mês e de seis
+  meses: das fotos de 15/09 e 16/04 que já estavam publicadas.
+- Guarda todos os pregões dos últimos 45 dias, um por semana de 45 a 220 dias,
+  e sempre os dias que estão servindo de foto. Algumas dezenas de KB.
+- Com o Tesouro de volta, os dias dele entram no acervo (abaixo da ANBIMA) e a
+  série histórica da aba Brasil × EUA volta a ser refeita. Sem ele, essa série
+  fica como está, com aviso — ela não tem como sair de oito pregões.
+- O nome da foto diz a distância de verdade quando o pregão guardado mais
+  próximo cai longe do alvo: "5 semanas atrás", não "1 mês atrás".
+- Cada foto leva `fonteBR` ("ANBIMA" ou "Tesouro Direto"). Comparar uma foto de
+  cada fonte mistura alguns pontos-base de diferença entre atacado e varejo
+  com o movimento do mercado.
+- A ANBIMA não traz a NTN-B Principal (o "Tesouro IPCA+" sem cupom); a curva
+  real das fotos da ANBIMA é toda de títulos com cupom, marcados na tabela.
 
 ## Decisões que mudam o número
 
@@ -235,15 +264,77 @@ públicos, sem login, e respondem de fora do Brasil:
 | `/informacoes/merc-sec/arqs/ms260930.txt` | taxa indicativa de todos os títulos públicos |
 | `/informacoes/curvas-debentures/CD.asp` (POST) | curvas de spread AAA, AA e A, de 0,5 a 10,5 anos |
 
-O problema é outro: **só os últimos sete ou oito pregões ficam no ar** (em
-01/10/2026, de 22/09 em diante; 01/09 já respondia 404). Não há série
-histórica gratuita. Por isso o histórico do crédito é **acumulado**, como o do
-P/VP, e o `credito.json` não pode ser perdido — está na lista do passo de
-publicação do robô, com um teste que exige isso.
+O problema é outro: **só algumas semanas ficam no ar, e a janela muda**. Em
+01/10/2026 o arquivo mais antigo era o de 22/09; em 20/10/2026 eram os de
+14/09 — 25 pregões de debêntures, títulos públicos desde 11/09, curvas de
+rating desde 14/09. Antes disso, 404. Não há série histórica gratuita. Por
+isso o histórico do crédito é **acumulado**, como o do P/VP, e o
+`credito.json` não pode ser perdido — está na lista do passo de publicação do
+robô, com um teste que exige isso.
 
-Cada execução recolhe todos os pregões da janela e funde no arquivo: um dia
-que o robô perder volta na execução seguinte. A curva de rating do dia D sai
-depois do robô de D; ela entra na coleta de D+1, na linha de D.
+O robô procura **45 dias corridos** para trás (`credito.JANELA_DIAS`). Com os
+12 dias da primeira versão, calibrados pela janela de 01/10, ele deixava três
+semanas publicadas sem recolher. Cada execução recolhe todos os pregões da
+janela e funde no arquivo: um dia que o robô perder volta na execução
+seguinte. A curva de rating do dia D sai depois do robô de D; ela entra na
+coleta de D+1, na linha de D.
+
+Fontes que foram testadas para ir mais longe e **não servem** (20/10/2026):
+
+* **Carteira do IDA** (`ida/IDA_result.asp`, "Resultado Diário por Índice"):
+  traz a taxa de cada debênture do índice, mas na mesma janela de cinco
+  semanas; o "download" devolve sempre a prévia da carteira atual.
+* **Carteira do IMA-B**, para a NTN-B de cada vencimento: só uma semana. A
+  série histórica do IMA (`ima-sh`) vai a anos atrás, mas é do índice, não de
+  cada título.
+* **Tesouro Direto** para a NTN-B: taxa arredondada a 0,01 e da manhã. Num
+  spread que anda de 1 a 4 centésimos por dia, isso fabrica aberturas e
+  fechamentos.
+* **Internet Archive**: nenhuma cópia dos arquivos diários da ANBIMA.
+
+### Abertura e fechamento: os mesmos papéis, não a mediana
+
+A mediana do dia não diz se o mercado abriu ou fechou. O conjunto de papéis
+muda — emissão nova entra na precificação, papel vence, resgate fica
+exercível — e a mediana anda com a troca mesmo que nenhum spread se mexa.
+Medido sobre os arquivos inteiros, de 14/09 a 19/10/2026:
+
+| | mediana do dia | mesmos papéis |
+|---|---|---|
+| DI + spread | de 0,93 a 0,94, passando por 0,87 | **+0,8 bp** no período |
+| IPCA isentas | **+77 bps** (0,09 → 0,86) | **+59 bps** |
+
+Em 24/09 a mediana das DI+ caiu 4 bps com a entrada de 13 papéis novos,
+enquanto os mesmos papéis abriram meio ponto. Nas isentas, 18 dos 77 bps
+foram troca de papéis.
+
+Por isso cada dia do histórico leva, além das medianas:
+
+* `var_<grupo>` — mediana das variações de spread dos papéis que estavam no
+  mesmo grupo no pregão anterior e neste (`credito.variacao_diaria`);
+* `abriu_<grupo>` e `fechou_<grupo>` — a fração desses papéis que subiu ou
+  caiu mais de meio ponto-base (a amplitude: um dia em que a mediana anda 1
+  bp com 80% dos papéis abrindo não é o mesmo que um dia de 1 bp com metade
+  para cada lado).
+
+A tela encadeia as variações para trás a partir da mediana do último pregão
+— o fim da linha coincide com os cartões — e marca os **episódios** de
+abertura e fechamento em zigue-zague: um movimento só termina quando o
+spread volta o mínimo escolhido (3, 5, 10 ou 20 bps) a partir do extremo.
+Nas curvas de rating não há troca de papéis (prazo fixo), e a linha é a
+própria curva.
+
+A variação só é calculada entre dois pregões **vizinhos no histórico**: se um
+dia do meio falhou na coleta mas está gravado de uma execução anterior,
+comparar o seguinte com o anterior a ele contaria o movimento desse dia duas
+vezes. Nesse caso a variação fica em branco e a corrente recomeça.
+
+Conferência: um recorte real de 13 a 15/10/2026 (14 DI+ e 14 IPCA isentas,
+`tests/amostras/anbima_db2610*_recorte.txt`) foi calculado à parte no
+navegador; o código reproduz as medianas e as variações até a quarta casa
+(`test_variacao_no_recorte_real`). O `validar_mercado.py` recusa variação
+acima de 1 p.p. num dia (o maior de 14/09 a 19/10 foi +10 bps, nas isentas,
+em 14/10) e frações de abertura e fechamento que somem mais de 1.
 
 ### O asterisco não é a isenção
 

@@ -58,10 +58,13 @@ URL_SND = ("https://www.debentures.com.br/exploreosnd/consultaadados/"
 # cadastro bom guardado por um ruim.
 SND_MINIMO = 1000
 
-# Quantos dias corridos para trás procurar. A ANBIMA mantém sete ou oito
-# pregões no ar (em 01/10/2026 o mais antigo era 22/09); doze dias corridos
-# cobrem isso com feriado no meio.
-JANELA_DIAS = 12
+# Quantos dias corridos para trás procurar. A janela da ANBIMA não é fixa:
+# em 01/10/2026 o arquivo mais antigo no ar era o de 22/09; em 20/10/2026 eram
+# os de 14/09 — 25 pregões, com títulos públicos desde 11/09 e curvas de
+# rating desde 14/09. Com 12 dias o robô deixava três semanas publicadas sem
+# recolher. Procurar 45 dias custa pouco (dia fora do ar responde 404 e é
+# pulado) e não perde nada que a ANBIMA ainda mostre.
+JANELA_DIAS = 45
 
 # --- Regras de entrada na estatística -------------------------------------
 # Cada corte tem um motivo, e a contagem de cada um vai para o arquivo.
@@ -433,21 +436,88 @@ def resumir(papeis: list[Papel], ipca_esperado: float | None = None) -> dict:
             "aliquotaIR": ALIQUOTA_IR if ipca_esperado is not None else None}
 
 
-def papeis_para_tabela(papeis: list[Papel]) -> dict:
-    """Uma linha por papel que entrou na conta — o detalhe que a tela lista."""
+def papeis_para_tabela(papeis: list[Papel], anterior: list[Papel] | None = None) -> dict:
+    """Uma linha por papel que entrou na conta — o detalhe que a tela lista.
+
+    `anterior` é o pregão de antes; com ele cada linha leva quanto o spread
+    daquele papel andou no dia (None se o papel não estava no mesmo grupo).
+    A coluna nova vai no fim: a tela lê pelo nome, mas arquivo antigo e tela
+    nova precisam continuar se entendendo.
+    """
     colunas = ["codigo", "emissor", "indice", "grupo", "vencimento",
-               "duracao", "taxa", "ntnb", "spread", "spreadBruto", "resgate"]
+               "duracao", "taxa", "ntnb", "spread", "spreadBruto", "resgate",
+               "variacao"]
+    ant = {p.codigo: p for p in (anterior or []) if grupo(p)}
     linhas = []
     r = lambda x, c=4: None if x is None else round(x, c)      # noqa: E731
     for p in sorted(papeis, key=lambda x: (x.spread is None, -(x.spread or 0))):
         g = grupo(p)
         if not g:
             continue
+        q = ant.get(p.codigo)
+        var = (p.spread - q.spread if q is not None and grupo(q) == g
+               and q.spread is not None and p.spread is not None else None)
         linhas.append([p.codigo, p.emissor, p.indice, g,
                        p.vencimento.isoformat() if p.vencimento else None,
                        r(p.duracao, 2), r(p.taxa), r(p.ntnb), r(p.spread),
-                       r(p.spread_bruto), 1 if p.resgate else 0])
+                       r(p.spread_bruto), 1 if p.resgate else 0, r(var)])
     return {"colunas": colunas, "linhas": linhas}
+
+
+# ---------------------------------------------------------------------------
+# Abertura e fechamento — a variação dos mesmos papéis
+# ---------------------------------------------------------------------------
+# Abaixo disto a taxa não se mexeu: meio centésimo de ponto. A ANBIMA publica
+# quatro casas, e uma parte grande dos papéis repete a taxa de um dia para o
+# outro — eles contam como "parados", nem abrindo nem fechando.
+LIMIAR_MOVIMENTO = 0.005
+
+# Séries com variação diária no histórico: os três grupos e o equivalente
+# bruto das isentas.
+CHAVES_VARIACAO = (*GRUPOS, "ipcaIsentaBruta")
+
+
+def variacao_diaria(anterior: list[Papel], atual: list[Papel]) -> dict[str, dict | None]:
+    """Quanto os spreads andaram de um pregão para o seguinte, nos MESMOS papéis.
+
+    A mediana do dia não serve para dizer se o mercado abriu ou fechou: o
+    conjunto de papéis muda — emissão nova entra na precificação, papel vence,
+    resgate fica exercível — e a mediana anda com a troca de papéis mesmo que
+    nenhum spread se mexa. Medido entre 14/09 e 19/10/2026, sobre os arquivos
+    inteiros: a mediana das DI+ oscilou 7 centésimos (em 24/09 caiu 4, com a
+    entrada de 13 papéis novos), enquanto a variação dos mesmos papéis somou
+    0,8 centésimo no período inteiro. Nas IPCA isentas a mediana subiu 77
+    centésimos e os mesmos papéis, 59: 18 deles eram troca de papéis.
+
+    Para cada série: a mediana das variações dos papéis que estavam no mesmo
+    grupo nos dois dias, quantos pares entraram, e a fração que abriu e que
+    fechou mais que `LIMIAR_MOVIMENTO`. Grupo com menos de
+    `N_MINIMO_HISTORICO` pares sai None.
+    """
+    ant = {p.codigo: p for p in anterior if grupo(p)}
+    campos = [(g, g, "spread") for g in GRUPOS] + [("ipcaIsentaBruta", "ipcaIsenta", "spread_bruto")]
+    saida: dict[str, dict | None] = {}
+    for chave, g, campo in campos:
+        dif = []
+        for p in atual:
+            if grupo(p) != g:
+                continue
+            q = ant.get(p.codigo)
+            if q is None or grupo(q) != g:
+                continue
+            a, b = getattr(q, campo), getattr(p, campo)
+            if a is None or b is None:
+                continue
+            dif.append(b - a)
+        if len(dif) < N_MINIMO_HISTORICO:
+            saida[chave] = None
+            continue
+        r = {"var": quantil(dif, .5), "n": len(dif)}
+        if campo == "spread":
+            r["abriu"] = sum(1 for d in dif if d > LIMIAR_MOVIMENTO) / len(dif)
+            r["fechou"] = sum(1 for d in dif if d < -LIMIAR_MOVIMENTO) / len(dif)
+        saida[chave] = r
+    return saida
 
 
 def ponto_de_curva(curva: dict | None, prazo: float) -> dict[str, float | None]:
@@ -464,13 +534,25 @@ def ponto_de_curva(curva: dict | None, prazo: float) -> dict[str, float | None]:
 def chaves_historico() -> list[str]:
     ch = list(GRUPOS) + ["ipcaIsentaBruta"]
     ch += [f"{r}_{int(v)}" for r in RATINGS for v in VERTICES_HISTORICO]
+    # Variação do dia nos mesmos papéis, contra o pregão anterior do
+    # histórico; e a fração dos papéis que abriu e que fechou.
+    ch += [f"var_{g}" for g in CHAVES_VARIACAO]
+    ch += [f"{k}_{g}" for k in ("abriu", "fechou") for g in GRUPOS]
     return ch
 
 
-def linha_historico(resumo: dict | None = None, curva: dict | None = None) -> dict:
+def linha_historico(resumo: dict | None = None, curva: dict | None = None,
+                    variacao: dict | None = None) -> dict:
     """O que um dia acrescenta ao histórico. Campo ausente é None, e None não
     apaga valor já gravado (ver `fundir_historico`)."""
     linha = {k: None for k in chaves_historico()}
+    for g, v in (variacao or {}).items():
+        if not v:
+            continue
+        linha[f"var_{g}"] = v.get("var")
+        if g in GRUPOS:
+            linha[f"abriu_{g}"] = v.get("abriu")
+            linha[f"fechou_{g}"] = v.get("fechou")
     if resumo:
         for g in GRUPOS:
             e = resumo["grupos"].get(g) or {}

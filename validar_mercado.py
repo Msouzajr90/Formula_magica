@@ -266,6 +266,31 @@ FAIXAS_CREDITO = {
 N_MINIMO_CREDITO = {"diSpread": 100, "ipcaIsenta": 100}
 
 
+# Variação diária dos mesmos papéis, em p.p. O maior dia entre 14/09 e
+# 19/10/2026 foi +0,10 (IPCA isentas, 14/10); na crise da Americanas, em 2023,
+# o IDA-DI abriu cerca de 1,1 p.p. em um mês inteiro. Um dia acima de 1 p.p.
+# é taxa no lugar de spread ou um papel trocado de lugar na leitura.
+VARIACAO_MAXIMA_DIA = 1.0
+
+
+def _conferir_variacao(h: dict, datas: list[str]) -> list[str]:
+    erros = []
+    for g in ("diSpread", "ipcaIsenta", "ipcaNaoIsenta", "ipcaIsentaBruta"):
+        for d, v in zip(datas, h.get(f"var_{g}") or []):
+            if v is not None and abs(v) > VARIACAO_MAXIMA_DIA:
+                erros.append(f"Variação de {g} em {d}: {v:+.4f} p.p. num dia só — "
+                             f"acima de {VARIACAO_MAXIMA_DIA} p.p., não é mercado.")
+                break
+    for g in ("diSpread", "ipcaIsenta", "ipcaNaoIsenta"):
+        ab, fe = h.get(f"abriu_{g}") or [], h.get(f"fechou_{g}") or []
+        for d, a, f in zip(datas, ab, fe):
+            if a is not None and f is not None and not (0 <= a and 0 <= f and a + f <= 1.0001):
+                erros.append(f"Frações de abertura e fechamento de {g} em {d} "
+                             f"não fecham: {a} + {f}.")
+                break
+    return erros
+
+
 def conferir_credito(caminho: Path, aviso: list[str]) -> list[str]:
     """Confere o `credito.json`.
 
@@ -343,6 +368,7 @@ def conferir_credito(caminho: Path, aviso: list[str]) -> list[str]:
             erros.append(f"Histórico de crédito: {k} tem {len(v)} valores para "
                          f"{len(datas)} datas.")
             break
+    erros += _conferir_variacao(h, datas)
 
     print(f"{caminho.name}: debêntures de {hoje.get('data')}, "
           + ", ".join(f"{g} {(grupos.get(g) or {}).get('mediana')} "

@@ -38,35 +38,86 @@ log = logging.getLogger("mercado")
 # ---------------------------------------------------------------------------
 def coletar_juros(sessao, hoje: date | None = None,
                   com_historico: bool = True,
-                  avisos: list[str] | None = None) -> dict:
+                  avisos: list[str] | None = None,
+                  anterior: dict | None = None) -> dict:
     """As quatro fotos da curva e, de quebra, a série do spread no tempo.
 
-    As duas coisas saem do mesmo download. O CSV do Tesouro tem 21 anos e os
-    do Treasury são um por ano — baixar os 22 anos custa algumas dezenas de
-    segundos a mais e dá a série histórica inteira, sem nada a acumular entre
-    execuções. Ela é reescrita do zero todo dia: um erro corrigido no cálculo
-    conserta o passado na execução seguinte.
+    Duas fontes brasileiras, cada uma numa tentativa própria:
+
+    - ANBIMA (`msAAMMDD.txt`): os últimos sete ou oito pregões, com a taxa
+      indicativa. É o que faz as fotos recentes. Cada dia baixado vai para o
+      acervo, em `juros.acervo` do próprio `mercado.json`, e é dele que saem as
+      fotos de um mês e de seis meses depois que a ANBIMA tira o dia do ar.
+    - Tesouro Transparente: o CSV com 21 anos do Tesouro Direto. Faz a série
+      histórica da aba Brasil × EUA e cobre os dias que o acervo não tem.
+      Parou de ser atualizado em 16/10/2026 e o download passou a responder
+      429; sem ele, a série histórica fica como está e as fotos saem do acervo.
+
+    Só falha de vez se as duas faltarem e não houver acervo.
     """
-    from mercado import arquivo, bcb, historico, tesouro, treasury
+    from mercado import arquivo, bcb, historico, tesouro, titulos, treasury
 
-    log.info("Baixando o CSV do Tesouro Transparente…")
-    td = tesouro.ler_csv(tesouro.baixar_csv(sessao))
-    log.info("Tesouro: %d linhas, de %s a %s", len(td),
-             td["DATA"].min().date(), td["DATA"].max().date())
-
+    recado = avisos if avisos is not None else []
     fim = hoje or date.today()
-    if com_historico:
+    anterior = anterior or {}
+
+    td = None
+    log.info("Baixando o CSV do Tesouro Transparente…")
+    try:
+        td = tesouro.ler_csv(tesouro.baixar_csv(sessao))
+        log.info("Tesouro: %d linhas, de %s a %s", len(td),
+                 td["DATA"].min().date(), td["DATA"].max().date())
+    except Exception as exc:                                   # noqa: BLE001
+        log.error("Tesouro Transparente: FALHOU — %s", exc)
+        recado.append("O Tesouro Transparente não entregou o arquivo de taxas; "
+                      "as curvas brasileiras saem da ANBIMA e do acervo, e a "
+                      "série histórica da aba Brasil × EUA não foi refeita. "
+                      f"{str(exc).strip()}")
+
+    log.info("Baixando os títulos públicos da ANBIMA…")
+    anbima = {}
+    try:
+        anbima = titulos.baixar_recentes(fim, sessao)
+        log.info("ANBIMA: %d pregões (%s)", len(anbima), ", ".join(anbima) or "nenhum")
+    except Exception as exc:                                   # noqa: BLE001
+        log.error("Títulos públicos ANBIMA: FALHOU — %s", exc)
+    if not anbima:
+        recado.append("A ANBIMA não devolveu nenhum arquivo de títulos públicos "
+                      "nesta coleta.")
+
+    # Acervo: o guardado (ou, na primeira vez, as fotos do arquivo anterior),
+    # os dias do Tesouro dentro da janela e os da ANBIMA, nessa precedência.
+    guardado = anterior.get("acervo") or titulos.das_fotos(anterior)
+    do_tesouro = (titulos.do_tesouro(td, fim - timedelta(days=titulos.DIAS_SEMANAIS))
+                  if td is not None else {})
+    acervo = titulos.fundir(guardado, do_tesouro, anbima)
+    if not acervo and td is None:
+        raise RuntimeError("Nem o Tesouro Transparente nem a ANBIMA responderam, "
+                           "e não há acervo de curvas guardado.")
+
+    tabela = titulos.juntar_com_tesouro(acervo, td)
+    datas = tesouro.fotos(tabela, hoje)
+    if not datas:
+        raise RuntimeError("Nenhum pregão com títulos prefixados ou NTN-B.")
+    acervo = titulos.podar(acervo, datas["hoje"], set(datas.values()))
+    fontes = {d: dia["fonte"] for d, dia in acervo.items()}
+    log.info("Fotos: " + ", ".join(f"{k} {v} ({fontes.get(v.isoformat(), 'tesouro')})"
+                                   for k, v in datas.items()))
+    log.info("Acervo: %d pregões, de %s a %s", len(acervo),
+             next(iter(acervo), "-"), next(reversed(acervo), "-"))
+
+    serie_inteira = com_historico and td is not None
+    if serie_inteira:
         anos = list(range(td["DATA"].min().year, fim.year + 1))
     else:
-        # Seis meses atrás pode cair no ano anterior; por isso dois anos.
-        anos = sorted({fim.year, (fim - timedelta(days=200)).year})
+        anos = list(range(min(datas.values()).year, fim.year + 1))
     log.info("Baixando as curvas do Treasury (%d anos: %s a %s)…",
              len(anos), anos[0], anos[-1])
     us_nom = treasury.baixar(treasury.TIPO_NOMINAL, anos, sessao)
     us_real = treasury.baixar(treasury.TIPO_REAL, anos, sessao)
     log.info("Treasury: %d pontos nominais, %d reais", len(us_nom), len(us_real))
 
-    if com_historico:
+    if serie_inteira:
         # Dólar, meta Selic e Focus. Cada um numa tentativa própria: são três
         # gráficos independentes, e o Banco Central fora do ar não pode
         # derrubar a série de juros, que é a parte principal do arquivo.
@@ -76,7 +127,6 @@ def coletar_juros(sessao, hoje: date | None = None,
         # `avisos: []` e a aba ficou sem o juro real ex-ante sem nada na tela
         # explicando. Log que ninguém lê não é aviso.
         inicio = td["DATA"].min().date()
-        recado = avisos if avisos is not None else []
         dolar = selic = focus = None
         try:
             dolar = bcb.serie_sgs(bcb.DOLAR, inicio, fim, sessao)
@@ -103,7 +153,9 @@ def coletar_juros(sessao, hoje: date | None = None,
             log.info("  %-12s %4d dias, %s a %s, último %s",
                      k, v["n"], v["inicio"], v["fim"], v["ultimo"])
 
-    return arquivo.montar_juros(td, us_nom, us_real, hoje)
+    juros = arquivo.montar_juros(tabela, us_nom, us_real, hoje, fontes=fontes)
+    juros["acervo"] = acervo
+    return juros
 
 
 # ---------------------------------------------------------------------------
@@ -200,14 +252,27 @@ def _ipca_esperado() -> float | None:
     return None
 
 
+def _vizinhos(antes: date, depois: date, datas_gravadas: list[str]) -> bool:
+    """Nenhum pregão gravado entre os dois — o par mede um dia só."""
+    a, b = antes.isoformat(), depois.isoformat()
+    return not any(a < x < b for x in datas_gravadas)
+
+
 def coletar_credito(sessao, anterior: dict | None, hoje: date | None = None
                     ) -> tuple[dict, list[str]]:
     """Spreads de crédito privado — monta o `credito.json` inteiro.
 
-    Recolhe todos os pregões que a ANBIMA ainda mantém no ar (sete ou oito) e
-    funde no histórico do arquivo anterior. O dia mais novo com debêntures é o
-    "hoje" da tela; a curva de rating mais nova pode ser de um dia antes,
-    porque sai depois do horário do robô.
+    Recolhe todos os pregões que a ANBIMA ainda mantém no ar (a janela muda;
+    em 20/10/2026 eram 25) e funde no histórico do arquivo anterior. O dia mais
+    novo com debêntures é o "hoje" da tela; a curva de rating mais nova pode
+    ser de um dia antes, porque sai depois do horário do robô.
+
+    Cada dia leva também a variação dos mesmos papéis contra o pregão
+    anterior (`credito.variacao_diaria`) — é ela, não a mediana, que diz se o
+    mercado abriu ou fechou. A variação só é calculada entre dois pregões
+    vizinhos no histórico: se um dia do meio falhou agora mas está gravado de
+    uma execução anterior, a conta pularia esse dia e contaria o movimento
+    dele duas vezes.
     """
     from mercado import credito
 
@@ -235,9 +300,11 @@ def coletar_credito(sessao, anterior: dict | None, hoje: date | None = None
                       + f" {exc}")
 
     ipca = _ipca_esperado()
+    datas_gravadas = sorted((anterior.get("historico") or {}).get("datas") or [])
     novos, ultimo = {}, None
+    vizinho = None          # (data, papéis) do último pregão lido nesta execução
     for d in credito.dias_uteis_recentes(fim):
-        linha_res = None
+        linha_res, variacao = None, None
         try:
             db = credito.baixar_debentures(d, sessao)
             ms = credito.baixar_titulos(d, sessao) if db else None
@@ -246,9 +313,15 @@ def coletar_credito(sessao, anterior: dict | None, hoje: date | None = None
                                       credito.ler_titulos_publicos(ms), isentas, ipca)
                 res = credito.resumir(ps, ipca)
                 linha_res = res
-                ultimo = (d, ps, res)
+                ps_antes = None
+                if vizinho and _vizinhos(vizinho[0], d, datas_gravadas):
+                    ps_antes = vizinho[1]
+                    variacao = credito.variacao_diaria(ps_antes, ps)
+                ultimo = (d, ps, res, ps_antes)
+                vizinho = (d, ps)
         except Exception as exc:                               # noqa: BLE001
             log.error("Debêntures de %s: FALHOU — %s", d, exc)
+            vizinho = None   # sem este dia, o seguinte não tem com quem comparar
         curva = None
         try:
             curva = credito.ler_curvas_credito(credito.baixar_curvas(d, sessao))
@@ -257,7 +330,7 @@ def coletar_credito(sessao, anterior: dict | None, hoje: date | None = None
         except Exception as exc:                               # noqa: BLE001
             log.error("Curva de crédito de %s: FALHOU — %s", d, exc)
         if linha_res or curva:
-            novos[d] = credito.linha_historico(linha_res, curva)
+            novos[d] = credito.linha_historico(linha_res, curva, variacao)
             if curva:
                 novos[d]["_curva"] = curva
 
@@ -269,7 +342,7 @@ def coletar_credito(sessao, anterior: dict | None, hoje: date | None = None
     if ultimo is None:
         raise RuntimeError("Nenhum arquivo de debêntures da ANBIMA nos últimos "
                            f"{credito.JANELA_DIAS} dias.")
-    d, ps, res = ultimo
+    d, ps, res, ps_antes = ultimo
     log.info("Debêntures de %s: %d papéis; " + ", ".join(
         f"{g} n={e['n']} mediana={e['mediana']}" for g, e in res["grupos"].items()),
         d, len(ps))
@@ -297,7 +370,7 @@ def coletar_credito(sessao, anterior: dict | None, hoje: date | None = None
                  "demo": False, "avisos": avisos},
         "hoje": {"data": d.isoformat(), **res},
         "curvas": curva_bloco,
-        "papeis": credito.papeis_para_tabela(ps),
+        "papeis": credito.papeis_para_tabela(ps, ps_antes),
         "historico": hist,
         "cadastro": cadastro,
     }, avisos
@@ -449,7 +522,7 @@ def main(argv=None) -> int:
     if not args.sem_juros:
         try:
             juros = coletar_juros(sessao, com_historico=not args.sem_historico,
-                                  avisos=avisos)
+                                  avisos=avisos, anterior=juros)
         except Exception as exc:                               # noqa: BLE001
             log.error("Curvas de juros: FALHOU — %s", exc)
             avisos.append(f"As curvas de juros não puderam ser atualizadas: {exc}")

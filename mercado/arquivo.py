@@ -19,6 +19,7 @@ from . import curvas, tesouro, treasury
 VERSAO = 1
 NOMES = {"hoje": "hoje", "semana": "1 semana atrás",
          "mes": "1 mês atrás", "semestre": "6 meses atrás"}
+FONTE_BR = {"anbima": "ANBIMA", "tesouro": "Tesouro Direto", "foto": "Tesouro Direto"}
 
 
 def _n(x, casas: int = 4):
@@ -35,9 +36,17 @@ def _pontos(vertices: list[tesouro.Vertice]) -> list[tuple[float, float]]:
     return [(v.prazo, v.taxa) for v in vertices]
 
 
-def montar_juros(td, us_nominal, us_real, hoje: date | None = None) -> dict:
-    """`td` é a tabela do Tesouro; `us_*` as do Treasury já lidas."""
+def montar_juros(td, us_nominal, us_real, hoje: date | None = None,
+                 fontes: dict[str, str] | None = None) -> dict:
+    """`td` é a tabela das curvas brasileiras (do Tesouro, do acervo da
+    ANBIMA ou das duas juntas — ver `titulos.juntar_com_tesouro`); `us_*` as
+    do Treasury já lidas. `fontes` diz de onde veio cada dia ("anbima",
+    "tesouro" ou "foto"); dia ausente é do Tesouro."""
+    from . import titulos
+
     datas = tesouro.fotos(td, hoje)
+    fim = datas.get("hoje")
+    fontes = fontes or {}
     series = {}
 
     for chave, dia in datas.items():
@@ -52,8 +61,9 @@ def montar_juros(td, us_nominal, us_real, hoje: date | None = None) -> dict:
         g_tips = curvas.na_grade(tips)
 
         series[chave] = {
-            "rotulo": NOMES.get(chave, chave),
+            "rotulo": titulos.rotulo(chave, fim, dia) if fim else NOMES.get(chave, chave),
             "dataBR": dia.isoformat(),
+            "fonteBR": FONTE_BR.get(fontes.get(dia.isoformat(), "tesouro"), "Tesouro Direto"),
             "dataEUA": (treasury.data_efetiva(us_nominal, dia) or dia).isoformat(),
             "pre": {"pontos": [v.como_dict() for v in pre],
                     "grade": [_n(x, 3) for x in g_pre],
@@ -116,8 +126,10 @@ def montar(juros: dict, pvp: dict, *, demo: bool = False,
             "demo": demo,
             "avisos": avisos or [],
             "fontes": {
-                "jurosBR": "Tesouro Transparente — taxas dos títulos ofertados "
-                           "pelo Tesouro Direto",
+                "jurosBR": "ANBIMA — taxas indicativas de LTN, NTN-F e NTN-B "
+                           "(msAAMMDD.txt), guardadas dia a dia no acervo; "
+                           "Tesouro Transparente — taxas do Tesouro Direto, "
+                           "para os dias que o acervo não tem",
                 "jurosEUA": "U.S. Department of the Treasury — daily par yield "
                             "curve (nominal e TIPS)",
                 "carteira": "B3 — carteira teórica do Ibovespa",

@@ -13,6 +13,7 @@ uma conta feita à parte, no navegador, sobre o arquivo inteiro da ANBIMA.
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 from pathlib import Path
 
@@ -315,10 +316,143 @@ def test_fundir_preserva_dias_que_sairam_da_janela():
 
 
 def test_dias_uteis_recentes_sem_fim_de_semana():
-    d = credito.dias_uteis_recentes(date(2026, 10, 1))
+    d = credito.dias_uteis_recentes(date(2026, 10, 1), janela=12)
     assert d[-1] == date(2026, 10, 1) and d[0] == date(2026, 9, 21)
     assert all(x.weekday() < 5 for x in d)
     assert date(2026, 9, 26) not in d          # sábado
+
+
+def test_janela_cobre_o_que_a_anbima_mantem_no_ar():
+    """Em 20/10/2026 os arquivos estavam no ar desde 14/09. Com a janela
+    antiga, de 12 dias, o robô deixava três semanas publicadas para trás."""
+    d = credito.dias_uteis_recentes(date(2026, 10, 20))
+    assert d[0] <= date(2026, 9, 14)
+
+
+# ---------------------------------------------------------------------------
+# Abertura e fechamento: a variação dos mesmos papéis
+# ---------------------------------------------------------------------------
+def _papel(codigo, spread, indexador="di", isenta=False, fora=None, bruto=None):
+    p = credito.Papel(codigo=codigo, emissor="EMISSOR", vencimento=None,
+                      indice="DI + 1%", indexador=indexador, taxa=spread,
+                      duracao_du=500, ref_ntnb=None, resgate=False, exercicio=False)
+    p.isenta, p.spread, p.fora, p.spread_bruto = isenta, spread, fora, bruto
+    return p
+
+
+def _dia(spreads, **kw):
+    return [_papel(f"P{i:03d}", s, **kw) for i, s in enumerate(spreads)]
+
+
+def test_variacao_nao_anda_com_a_troca_de_papeis():
+    """O caso que motivou a medida: papéis novos de spread alto entram, a
+    mediana sobe, e nenhum papel abriu."""
+    ontem = _dia([0.5 + 0.05 * i for i in range(12)])
+    hoje = _dia([0.5 + 0.05 * i for i in range(12)]) + [
+        _papel(f"NOVO{i}", 3.0) for i in range(8)]
+    med = lambda ps: credito.resumir(ps)["grupos"]["diSpread"]["mediana"]  # noqa: E731
+    assert med(hoje) > med(ontem) + 0.1
+    v = credito.variacao_diaria(ontem, hoje)["diSpread"]
+    assert v["var"] == 0 and v["n"] == 12
+    assert v["abriu"] == 0 and v["fechou"] == 0
+
+
+def test_variacao_mede_o_movimento_e_a_amplitude():
+    ontem = _dia([1.0] * 20)
+    hoje = _dia([1.10] * 15 + [0.95] * 5)          # 15 abriram 10, 5 fecharam 5
+    v = credito.variacao_diaria(ontem, hoje)["diSpread"]
+    assert v["var"] == pytest.approx(0.10)
+    assert v["abriu"] == 0.75 and v["fechou"] == 0.25
+
+
+def test_papel_parado_nao_conta_como_abertura():
+    ontem = _dia([1.0] * 20)
+    hoje = _dia([1.003] * 20)                     # menos de meio centésimo
+    v = credito.variacao_diaria(ontem, hoje)["diSpread"]
+    assert v["abriu"] == 0 and v["fechou"] == 0
+
+
+def test_papel_que_sai_do_grupo_nao_entra_na_conta():
+    """Resgate que ficou exercível: o spread de hoje mede outra coisa."""
+    ontem = _dia([1.0] * 12)
+    hoje = _dia([1.0] * 11) + [_papel("P011", 5.0, fora="resgateEmExercicio")]
+    v = credito.variacao_diaria(ontem, hoje)["diSpread"]
+    assert v["n"] == 11 and v["var"] == 0
+
+
+def test_variacao_por_grupo_e_do_bruto():
+    ontem = _dia([0.4] * 12, indexador="ipca", isenta=True, bruto=2.5)
+    hoje = _dia([0.5] * 12, indexador="ipca", isenta=True, bruto=2.62)
+    v = credito.variacao_diaria(ontem, hoje)
+    assert v["ipcaIsenta"]["var"] == pytest.approx(0.10)
+    assert v["ipcaIsentaBruta"]["var"] == pytest.approx(0.12)
+    assert "abriu" not in v["ipcaIsentaBruta"]
+    assert v["diSpread"] is None and v["ipcaNaoIsenta"] is None
+
+
+def test_poucos_pares_vira_lacuna():
+    v = credito.variacao_diaria(_dia([1.0] * 5), _dia([1.2] * 5))
+    assert v["diSpread"] is None
+
+
+# Recorte real de 13, 14 e 15/10/2026: 14 DI+ e 14 IPCA isentas, sorteadas
+# em ordem alfabética entre as que estavam válidas nos três dias, com as NTN-B
+# de referência delas. 14/10 foi o dia de maior abertura das isentas no mês
+# (+10 centésimos no mercado inteiro). Os números esperados saíram da conta
+# feita à parte no navegador, sobre os mesmos arquivos — não deste código.
+RECORTE_DI = ["AALM12", "AURE13", "CEEDA0", "CMGDB3", "CSANA2", "EEELA3", "EQPAA0",
+              "HAPV28", "LVTC22", "PALFA6", "RDORI6", "SBSPD3", "TEPA14", "UQFN15"]
+RECORTE_IPCA = ["ACRC21", "BCPSA7", "CEED15", "CMGDA4", "CPLDC0", "EEELA1", "ENERB4",
+                "ENMTF8", "FRAG14", "JALL14", "PALFB3", "RMSA12", "SRNA11", "TSSG21"]
+
+
+def _recorte(d):
+    isentas = {**{c: False for c in RECORTE_DI}, **{c: True for c in RECORTE_IPCA}}
+    return credito.calcular(credito.ler_debentures(_ler(f"anbima_db{d}_recorte.txt")),
+                            credito.ler_titulos_publicos(_ler(f"anbima_ms{d}_ntnb.txt")),
+                            isentas)
+
+
+@pytest.mark.parametrize("antes,depois,g,var,abriu,fechou", [
+    ("261013", "261014", "diSpread", 0.0064, 8 / 14, 2 / 14),
+    ("261013", "261014", "ipcaIsenta", 0.13265, 13 / 14, 1 / 14),
+    ("261014", "261015", "diSpread", 0.02805, 10 / 14, 3 / 14),
+    ("261014", "261015", "ipcaIsenta", 0.0494, 8 / 14, 2 / 14),
+])
+def test_variacao_no_recorte_real(antes, depois, g, var, abriu, fechou):
+    v = credito.variacao_diaria(_recorte(antes), _recorte(depois))[g]
+    assert v["n"] == 14
+    assert v["var"] == pytest.approx(var, abs=1e-6)
+    assert v["abriu"] == pytest.approx(abriu) and v["fechou"] == pytest.approx(fechou)
+
+
+def test_medianas_do_recorte_real():
+    esperado = {"261013": (0.8407, 0.8373), "261014": (0.8786, 0.9061),
+                "261015": (0.9021, 0.8896)}
+    for d, (di, ip) in esperado.items():
+        g = credito.resumir(_recorte(d))["grupos"]
+        assert g["diSpread"]["mediana"] == di and g["ipcaIsenta"]["mediana"] == ip
+
+
+def test_linha_do_historico_leva_a_variacao():
+    var = credito.variacao_diaria(_dia([1.0] * 20), _dia([1.10] * 15 + [0.95] * 5))
+    linha = credito.linha_historico(None, None, var)
+    assert linha["var_diSpread"] == pytest.approx(0.10)
+    assert linha["abriu_diSpread"] == 0.75 and linha["fechou_diSpread"] == 0.25
+    assert linha["var_ipcaIsenta"] is None and linha["diSpread"] is None
+    assert set(linha) == set(credito.chaves_historico())
+
+
+def test_tabela_de_papeis_leva_a_variacao_do_dia():
+    ontem = _dia([1.0, 2.0])
+    hoje = _dia([1.25, 2.0]) + [_papel("NOVO", 3.0)]
+    t = credito.papeis_para_tabela(hoje, ontem)
+    col = {c: i for i, c in enumerate(t["colunas"])}
+    por = {l[col["codigo"]]: l[col["variacao"]] for l in t["linhas"]}
+    assert por == {"P000": 0.25, "P001": 0.0, "NOVO": None}
+    # sem o dia anterior, a coluna existe e fica vazia
+    t = credito.papeis_para_tabela(hoje)
+    assert all(l[-1] is None for l in t["linhas"])
 
 
 # ---------------------------------------------------------------------------
@@ -411,6 +545,71 @@ def test_snd_cortado_nao_substitui_o_cadastro(coletar, monkeypatch):
     assert any("só 6 debêntures" in a for a in avisos)
 
 
+def _abrir_di(texto, quanto):
+    """O mesmo arquivo com as taxas das DI+ deslocadas — um dia de abertura."""
+    saida = []
+    for l in texto.splitlines():
+        f = l.split("@")
+        if (len(f) > 6 and f[3].strip().upper().startswith("DI +")
+                and re.fullmatch(r"-?\d+,\d+", f[6].strip())):
+            f[6] = f"{float(f[6].replace(',', '.')) + quanto:.4f}".replace(".", ",")
+        saida.append("@".join(f))
+    return "\n".join(saida)
+
+
+class _SessaoDoisDias(_Sessao):
+    """28/09 e 30/09 no ar; 30/09 com as DI+ cinco centésimos mais caras.
+    29/09 responde erro de servidor quando `falha_29` — nem 404 nem arquivo."""
+
+    def __init__(self, falha_29=False):
+        super().__init__()
+        self.falha_29 = falha_29
+        self.db30 = _abrir_di(self.db, 0.05)
+
+    def get(self, url, timeout=None, **kw):
+        if url.endswith("db260928.txt"):
+            return _Resp(200, self.db)
+        if url.endswith("ms260928.txt"):
+            return _Resp(200, self.ms)
+        if url.endswith("db260929.txt") and self.falha_29:
+            return _Resp(500)
+        if url.endswith("db260930.txt"):
+            return _Resp(200, self.db30)
+        return super().get(url, timeout, **kw)
+
+
+ANTERIOR_COMPLETO = {"cadastro": {"S": ["AEAB11", "AESLA7", "ALGE16"],
+                                  "N": ["AALM12", "ACOV15", "CASN14", "ASAB11", "CSMGB8"]}}
+
+
+def test_coleta_grava_a_variacao_entre_pregoes_vizinhos(coletar, monkeypatch):
+    monkeypatch.setattr(credito, "N_MINIMO_HISTORICO", 1)   # a amostra é pequena
+    dados, _ = coletar(_SessaoDoisDias(), ANTERIOR_COMPLETO, hoje=date(2026, 10, 1))
+    h = dados["historico"]
+    assert h["datas"] == ["2026-09-28", "2026-09-30"]
+    assert h["var_diSpread"][0] is None                 # primeiro dia: sem comparação
+    assert h["var_diSpread"][1] == pytest.approx(0.05)
+    assert h["abriu_diSpread"][1] == 1.0
+    assert h["var_ipcaIsenta"][1] == pytest.approx(0)   # as IPCA não mudaram
+    col = {c: i for i, c in enumerate(dados["papeis"]["colunas"])}
+    di = [l for l in dados["papeis"]["linhas"] if l[col["grupo"]] == "diSpread"]
+    assert di and all(l[col["variacao"]] == pytest.approx(0.05) for l in di)
+
+
+def test_nao_compara_por_cima_de_um_dia_gravado_que_falhou(coletar, monkeypatch):
+    """29/09 está no histórico de uma execução anterior e agora falhou. Comparar
+    30/09 com 28/09 contaria de novo o movimento de 29/09, que já está gravado."""
+    monkeypatch.setattr(credito, "N_MINIMO_HISTORICO", 1)
+    chaves = credito.chaves_historico()
+    anterior = {**ANTERIOR_COMPLETO, "historico": {
+        "datas": ["2026-09-29"], **{k: [None] for k in chaves}}}
+    anterior["historico"]["var_diSpread"] = [0.03]
+    dados, _ = coletar(_SessaoDoisDias(falha_29=True), anterior, hoje=date(2026, 10, 1))
+    h = dados["historico"]
+    assert h["datas"] == ["2026-09-28", "2026-09-29", "2026-09-30"]
+    assert h["var_diSpread"] == [None, 0.03, None]
+
+
 def test_sem_nenhum_arquivo_da_anbima_falha(coletar):
     class Vazia(_Sessao):
         def get(self, url, timeout=None, **kw):
@@ -474,6 +673,19 @@ def test_validador_pega_ratings_trocados(tmp_path):
     c = _credito_valido()
     c["curvas"]["AA"], c["curvas"]["A"] = c["curvas"]["A"], c["curvas"]["AA"]
     assert any("fora de ordem" in e for e in _conferir(tmp_path, c))
+
+
+def test_validador_pega_variacao_absurda(tmp_path):
+    c = _credito_valido()
+    c["historico"]["var_diSpread"] = [None, 8.5]       # taxa no lugar de variação
+    assert any("num dia só" in e for e in _conferir(tmp_path, c))
+
+
+def test_validador_pega_fracoes_que_nao_fecham(tmp_path):
+    c = _credito_valido()
+    c["historico"]["abriu_ipcaIsenta"] = [None, 0.8]
+    c["historico"]["fechou_ipcaIsenta"] = [None, 0.4]
+    assert any("não fecham" in e for e in _conferir(tmp_path, c))
 
 
 def test_validador_pega_grupo_cortado(tmp_path):

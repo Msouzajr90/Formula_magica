@@ -134,7 +134,17 @@ def baixar_csv(sessao=None, timeout: int = 300) -> str:
     r = s.get(url, timeout=timeout)
     r.raise_for_status()
     # O arquivo é windows-1252: tem "Prefixado" sem acento mas "Título" com.
-    return r.content.decode("windows-1252", errors="replace")
+    texto = r.content.decode("windows-1252", errors="replace")
+    # Desde 16/10/2026 o endereço devolve, às vezes com status 200, uma página
+    # "429 – Muitas Requisições" no lugar do CSV. Sem esta conferência o erro
+    # chegava como "Error tokenizing data … line 6", que não diz nada.
+    if texto.lstrip()[:1] == "<":
+        import re
+        m = re.search(r"<title>(.*?)</title>", texto, re.S | re.I)
+        titulo = re.sub(r"\s+", " ", m.group(1)).strip() if m else "sem título"
+        raise RuntimeError(f"O Tesouro devolveu uma página HTML ({titulo!r}, "
+                           f"status {r.status_code}) no lugar do CSV.")
+    return texto
 
 
 # ---------------------------------------------------------------------------

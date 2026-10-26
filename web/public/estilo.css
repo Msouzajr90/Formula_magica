@@ -227,3 +227,8 @@ th.ord[data-dir=asc]::after{content:' ▴'}
 /* Aba de crédito: a linha "todas" de cada grupo separa os blocos da tabela */
 tr.total td{border-top:1px solid var(--line-strong)}
 tr.total:first-child td{border-top:none}
+
+/* Aba de crédito: títulos internos do cartão de abertura e fechamento */
+.card h3.subtit{font-size:13.5px;margin:20px 0 6px;letter-spacing:-.005em}
+/* Quatro cartões curtos: dois por linha no celular, em vez de uma coluna alta */
+#faixaCreditoMov{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}

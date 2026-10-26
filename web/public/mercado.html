@@ -60,7 +60,7 @@
     <div class="warn">
       <b>Nenhum destes números é de tempo real.</b> Nenhuma fonte oficial
       gratuita publica curva de juros em tempo real: todas divulgam no
-      fechamento. O Tesouro publica de manhã o fechamento do dia anterior, e é
+      fechamento. A ANBIMA publica à noite as taxas do fechamento do dia, e é
       esse que está aqui — a data ao lado de cada gráfico diz exatamente qual.
     </div>
 
@@ -276,10 +276,12 @@
           <th class="l">Série</th><th class="l">Fonte</th><th class="l">O que é</th>
         </tr></thead><tbody>
           <tr><td class="l">Juro real e nominal brasileiro</td>
-              <td class="l">Tesouro Transparente</td>
-              <td class="l">Taxas do Tesouro Direto, todo dia útil desde dez/2004.
-                  São de varejo, não as indicativas da ANBIMA — ficam alguns
-                  pontos-base distantes.</td></tr>
+              <td class="l">ANBIMA e Tesouro Transparente</td>
+              <td class="l">As curvas do dia são as taxas indicativas da ANBIMA
+                  (LTN, NTN-F e NTN-B), guardadas pregão a pregão. Os dias que
+                  esse acervo ainda não tem, e a série desde dez/2004, vêm das
+                  taxas do Tesouro Direto, que são de varejo e ficam alguns
+                  pontos-base distantes. Cada foto diz de qual das duas veio.</td></tr>
           <tr><td class="l">Juro real e nominal americano</td>
               <td class="l">U.S. Treasury</td>
               <td class="l">Curvas diárias de par yield, nominal e TIPS.
@@ -366,16 +368,25 @@
       </div>
 
       <div class="card" style="margin-bottom:18px">
-        <h2>No tempo</h2>
-        <p class="note">A ANBIMA guarda só os últimos sete ou oito pregões, e não
-           há série gratuita para trás. Esta é <b>acumulada</b>, um ponto por dia,
-           desde que a aba entrou no ar — como a do P/VP. Um dia que o robô perder
-           é recuperado na execução seguinte, se ainda estiver na janela da ANBIMA.</p>
+        <h2>Abertura e fechamento</h2>
+        <p class="note">Spread subindo é <b>abertura</b>: o mercado passou a cobrar
+           mais das empresas, e quem já tem o papel perde no preço. Spread caindo é
+           <b>fechamento</b>. A linha cheia mede o movimento dos <b>mesmos papéis</b>
+           de um pregão para o seguinte, encadeado até hoje. A tracejada é a
+           mediana do dia, que também anda quando papéis entram ou saem da
+           precificação — emissão nova, vencimento, resgate — sem que nenhum
+           spread tenha mudado.</p>
         <div class="ctls" style="display:flex;gap:18px;flex-wrap:wrap;margin:0 0 14px">
-          <label>Mostrar:
+          <label>Série:
             <select id="ctlCreditoSerie">
-              <option value="grupos" selected>Isentas × não isentas (medianas)</option>
-              <option value="rating">Rating ANBIMA</option>
+              <option value="diSpread">DI + spread, não isentas</option>
+              <option value="ipcaIsenta" selected>IPCA + spread, isentas</option>
+              <option value="ipcaIsentaBruta">IPCA isentas — equivalente bruto</option>
+              <option value="ipcaNaoIsenta">IPCA + spread, não isentas</option>
+              <option value="AAA">Curva ANBIMA — AAA</option>
+              <option value="AA">Curva ANBIMA — AA</option>
+              <option value="A">Curva ANBIMA — A</option>
+              <option value="comparar">Comparar os três grupos</option>
             </select>
           </label>
           <label id="ctlCreditoVerticeBox" class="hidden">Prazo:
@@ -385,10 +396,36 @@
               <option value="5">5 anos</option>
             </select>
           </label>
+          <label id="ctlCreditoLimiarBox">Episódio a partir de:
+            <select id="ctlCreditoLimiar">
+              <option value="0.03">3 bps</option>
+              <option value="0.05" selected>5 bps</option>
+              <option value="0.1">10 bps</option>
+              <option value="0.2">20 bps</option>
+            </select>
+          </label>
         </div>
+        <div class="faixa" id="faixaCreditoMov"></div>
         <div class="legend" id="legCreditoHist"></div>
         <svg id="chCreditoHist" class="chart"></svg>
+        <div id="boxCreditoVar">
+          <h3 class="subtit">Variação de cada pregão</h3>
+          <svg id="chCreditoVar" class="chart"></svg>
+        </div>
         <p class="note muted" id="notaCreditoHist" style="margin:12px 0 0;font-size:12px"></p>
+        <div id="boxEpisodios">
+          <h3 class="subtit">Episódios</h3>
+          <p class="note">Um episódio termina quando o spread volta pelo menos o
+             mínimo escolhido acima a partir do ponto mais alto (ou mais baixo) do
+             movimento. Com 3 bps aparecem as idas e vindas de poucos dias; com
+             20 bps, só as tendências.</p>
+          <div class="scroll">
+            <table id="tbEpisodios"><thead><tr>
+              <th class="l">Movimento</th><th class="l">Período</th><th>Pregões</th>
+              <th>De</th><th>Para</th><th>Variação</th><th>Papéis abrindo por dia</th>
+            </tr></thead><tbody></tbody></table>
+          </div>
+        </div>
       </div>
 
       <div class="card" style="margin-bottom:18px">
@@ -405,6 +442,13 @@
               <option value="ipcaNaoIsenta">IPCA + spread, não isentas</option>
             </select>
           </label>
+          <label>Ordenar por:
+            <select id="ctlPapelOrdem">
+              <option value="spread" selected>Maior spread</option>
+              <option value="abriu">Mais abriram no último pregão</option>
+              <option value="fechou">Mais fecharam no último pregão</option>
+            </select>
+          </label>
           <label>Buscar:
             <input type="search" id="ctlPapelBusca" placeholder="código ou emissor"
                    style="width:100%;padding:7px 9px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface-1);color:var(--ink)">
@@ -415,7 +459,7 @@
           <table id="tbPapeis"><thead><tr>
             <th class="l">Código</th><th class="l">Emissor</th><th class="l">Remuneração</th>
             <th class="l">Grupo</th><th class="l">Vencimento</th><th>Duração</th>
-            <th>Taxa ANBIMA</th><th>NTN-B ref.</th><th>Spread</th><th>Equiv. bruto</th>
+            <th>Taxa ANBIMA</th><th>NTN-B ref.</th><th>Spread</th><th>No pregão</th><th>Equiv. bruto</th>
           </tr></thead><tbody></tbody></table>
         </div>
       </div>
@@ -435,6 +479,14 @@
                 <td class="l">ANBIMA, mercado secundário de títulos públicos</td>
                 <td class="l">Taxa indicativa da NTN-B no mesmo fechamento. ANBIMA
                     contra ANBIMA — não a taxa do Tesouro Direto, que é de varejo.</td></tr>
+            <tr><td class="l">Abertura e fechamento</td>
+                <td class="l">Calculado aqui, sobre os mesmos arquivos</td>
+                <td class="l">Para cada papel que estava no mesmo grupo nos dois
+                    pregões, o spread de hoje menos o de ontem; a mediana dessas
+                    diferenças é a variação do dia, e a fração que subiu ou caiu
+                    mais de meio ponto-base é a amplitude. A ANBIMA mantém no ar
+                    cerca de cinco semanas de arquivos; o resto é acumulado pelo
+                    robô, um pregão por dia.</td></tr>
             <tr><td class="l">Isenta ou não</td>
                 <td class="l">SND (debentures.com.br)</td>
                 <td class="l">Coluna "Deb. Incent. (Lei 12.431)" do cadastro. O
@@ -512,10 +564,14 @@
     <div class="card metodo">
       <h3>De onde vem cada número</h3>
       <ul>
-        <li><b>Curvas brasileiras</b> — Tesouro Transparente, arquivo de taxas dos
-          títulos ofertados pelo Tesouro Direto, atualizado todo dia útil de manhã
-          com o fechamento do dia anterior. A taxa de cada título é a média entre
-          compra e venda; quando o Tesouro não recompra o papel, só a de compra.</li>
+        <li><b>Curvas brasileiras</b> — ANBIMA, arquivo do mercado secundário de
+          títulos públicos, com a taxa indicativa de cada LTN, NTN-F e NTN-B no
+          fechamento. A ANBIMA deixa no ar só os últimos sete ou oito pregões,
+          então o robô guarda cada dia que baixa; as fotos de um mês e de seis
+          meses saem dessa guarda. Onde ela ainda não alcança, a foto usa o
+          arquivo do Tesouro Direto (Tesouro Transparente), com a média entre
+          compra e venda. Em 16/10/2026 esse arquivo parou de ser atualizado, e
+          foi isso que trouxe a ANBIMA para cá.</li>
         <li><b>Curvas americanas</b> — <i>daily par yield curve</i> do Tesouro dos
           Estados Unidos, nominal e de TIPS.</li>
         <li><b>Carteira do Ibovespa</b> — carteira teórica do dia, da B3, com a
@@ -602,9 +658,14 @@
         <li>A série histórica do P/VP usa a carteira atual do Ibovespa aplicada ao
           passado: empresas que saíram do índice não aparecem. É viés de
           sobrevivência, e ele empurra a série para cima.</li>
-        <li>As taxas brasileiras são as do Tesouro Direto, do varejo, não as
-          indicativas do mercado secundário da ANBIMA. Ficam alguns pontos-base
-          distantes.</li>
+        <li>As fotos que vêm do Tesouro Direto trazem taxas de varejo, não as
+          indicativas da ANBIMA: ficam alguns pontos-base distantes. Comparar
+          uma foto de cada fonte mistura essa diferença com o movimento do
+          mercado. Quando o pregão guardado mais próximo cai longe do alvo, o
+          nome da foto diz a distância de verdade ("5 semanas atrás") em vez de
+          "1 mês atrás".</li>
+        <li>A ANBIMA não publica a NTN-B sem cupom (o "Tesouro IPCA+"), então a
+          curva real das fotos da ANBIMA é feita só de títulos com cupom.</li>
         <li>Um vértice marcado como vindo de título com cupom traz a TIR do fluxo
           inteiro, não a taxa à vista daquele prazo. Onde havia título sem cupom,
           é o sem cupom que está no gráfico.</li>

@@ -6,8 +6,10 @@ Diferente do `fixture_spread.py`, quase tudo aqui é número de verdade:
   * as medianas, quartis e contagens de 01/10/2026, calculadas sobre o
     arquivo inteiro da ANBIMA (1.290 debêntures) e o cadastro do SND;
   * a curva de rating de 30/09/2026, lida da amostra em `tests/amostras/`;
-  * o histórico de 22/09 a 01/10/2026 — os sete pregões que a ANBIMA tinha
-    no ar no dia em que a aba foi escrita.
+  * o histórico de 14/09 a 19/10/2026 (`amostras/credito_historico_*.json`):
+    medianas, variação dos mesmos papéis e amplitude calculadas à parte, no
+    navegador, sobre os arquivos inteiros da ANBIMA, e as curvas de rating
+    do dia. O equivalente bruto usa o Focus fixo de 4,6232%.
 
 O que é parcial é a **tabela de papéis**: só os doze da amostra que entram
 na conta, não os 1.064 do dia. Por isso o arquivo sai com `"demo": true` —
@@ -79,38 +81,13 @@ HOJE = {
     "aliquotaIR": credito.ALIQUOTA_IR,
 }
 
-# [DI+, IPCA isenta, IPCA não isenta, isenta bruta, {vértice: [AAA, AA, A]}]
-HISTORICO = {
-    date(2026, 9, 22): [0.9053, 0.2277, 1.7205, 2.3743,
-                        {1: [0.3915, 0.6834, 1.7867], 3: [0.5869, 0.8788, 1.982],
-                         5: [0.7219, 1.0139, 2.1171]}],
-    date(2026, 9, 23): [0.9034, 0.2658, 1.7915, 2.4214,
-                        {1: [0.3784, 0.7463, 1.9319], 3: [0.5755, 0.9434, 2.129],
-                         5: [0.7061, 1.074, 2.2596]}],
-    date(2026, 9, 24): [0.8822, 0.3142, 1.7734, 2.4816,
-                        {1: [0.3944, 0.7398, 1.8813], 3: [0.5786, 0.9239, 2.0655],
-                         5: [0.7059, 1.0513, 2.1928]}],
-    date(2026, 9, 25): [0.8844, 0.3662, 1.8436, 2.5435,
-                        {1: [0.3939, 0.7352, 1.8627], 3: [0.5791, 0.9204, 2.048],
-                         5: [0.7072, 1.0485, 2.176]}],
-    date(2026, 9, 29): [0.8996, 0.4026, 1.7731, 2.5661,
-                        {1: [0.4045, 0.804, 1.8472], 3: [0.5864, 0.9859, 2.029],
-                         5: [0.7122, 1.1117, 2.1548]}],
-    date(2026, 9, 30): [0.8992, 0.4309, 1.7695, 2.5982,
-                        {1: [0.399, 0.7318, 1.7261], 3: [0.5864, 0.9193, 1.9136],
-                         5: [0.716, 1.0489, 2.0432]}],
-    date(2026, 10, 1): [0.9043, 0.4599, 1.802, 2.635, None],
-}
+HISTORICO = AMOSTRAS / "credito_historico_260914_261019.json"
 
 
 def montar() -> dict:
-    novos = {}
-    for d, (di, isen, nao, bruta, curva) in HISTORICO.items():
-        linha = {"diSpread": di, "ipcaIsenta": isen, "ipcaNaoIsenta": nao,
-                 "ipcaIsentaBruta": bruta}
-        for v, (a, aa, a1) in (curva or {}).items():
-            linha.update({f"AAA_{v}": a, f"AA_{v}": aa, f"A_{v}": a1})
-        novos[d] = linha
+    h = json.loads(HISTORICO.read_text(encoding="utf-8"))
+    novos = {date.fromisoformat(d): {k: h[k][i] for k in h if k != "datas"}
+             for i, d in enumerate(h["datas"])}
 
     curva = credito.ler_curvas_credito(
         (AMOSTRAS / "anbima_curvas_credito_260930.html").read_text(encoding="utf-8"))
