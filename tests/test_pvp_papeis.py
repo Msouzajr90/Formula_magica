@@ -191,3 +191,17 @@ def test_gerar_de_ponta_a_ponta_sem_rede(tmp_path, monkeypatch):
     assert d["datas"][-1] == "2026-10-23"
     assert d["papeis"]["CURY3"]["s"][-1] == pytest.approx(30 / 16.55, abs=0.01)
     assert d["papeis"]["B3SA3"]["s"][-1] == pytest.approx(3.0)
+
+
+def test_datas_em_resolucoes_diferentes():
+    """Regressão da primeira rodada real: o cache da CVM (parquet) devolve datas
+    em milissegundos, o Yahoo em microssegundos, e o merge_asof recusava."""
+    bpp = _bpp()
+    bpp["DT_REFER"] = bpp["DT_REFER"].astype("datetime64[ms]")
+    bpp["DT_RECEB"] = bpp["DT_RECEB"].astype("datetime64[ms]")
+    painel = pp.painel_controladores(bpp, C.DS_PATRIMONIO_LIQUIDO)
+    dias = pd.DatetimeIndex(pd.to_datetime(["2026-08-06", "2026-08-07"])).astype("datetime64[us]")
+    fech = pd.DataFrame({"CURY3": [30.0, 30.0]}, index=dias)
+    datas = pp.datas_semanais(fech.index)
+    r = pp.construir(painel, {"CURY3": {"cvm": 1, "acoes": 100.0, "fonte": "cvm"}}, fech, datas)
+    assert r["papeis"]["CURY3"]["s"] == [pytest.approx(30 / 16.55, abs=0.01)]

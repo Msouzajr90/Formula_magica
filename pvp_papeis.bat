@@ -7,6 +7,9 @@ REM  meados de maio, agosto e novembro): o robo do GitHub so move o
 REM  preco, balanco novo so entra por aqui.
 REM ===================================================================
 setlocal
+REM Acentos certos na janela: UTF-8 no console e na saida do Python.
+chcp 65001 >nul
+set PYTHONIOENCODING=utf-8
 cd /d "%~dp0"
 title Historico do P/VP por papel
 

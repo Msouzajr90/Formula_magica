@@ -1,0 +1,15 @@
+Universo: 191 papéis (site + Ibovespa)
+Resolução de nomes restrita a IPv4.
+B3: 3547 emissores -> 3205 prefixos com código CVM
+Consultando valor de mercado de 191 papéis no Yahoo (segunda fonte do nº de ações)…
+Valor de mercado obtido para 189 de 191 papéis
+Nº de ações resolvido para 184 de 191 papéis
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2026.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2026.zip
+Painel: 19533 balanços de 667 empresas
+Preços: 2942 pregões, 184 papéis -> 618 semanas
+5 papéis ficaram fora do histórico: ALUP11 (unit sem nº de ações confirmado pela CVM); BPAC11 (unit sem nº de ações confirmado pela CVM); BRBI11 (unit sem fator conhecido); ENGI11 (unit sem nº de ações confirmado pela CVM); SANB11 (unit sem nº de ações confirmado pela CVM)
+
+C:\Users\Administrador\Documents\GitHub\Formula_magica\web\public\pvp_papeis.json: 179 papéis, 618 semanas (2015-01-02 a 2026-10-27), 566 KB.
+Fora (12): ALUP11, ASAI3, BEEF3, BPAC11, BRAP4, BRBI11, BRKM5, ENGI11, PMAM3, RCSL4, SANB11, TIMS3
+Confira um papel antes de publicar: `python -m http.server` em web/public e abra mercado.html#pvp=PETR4.

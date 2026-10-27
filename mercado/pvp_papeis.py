@@ -62,6 +62,23 @@ def _ok(x) -> bool:
         and not math.isnan(x) and not math.isinf(x)
 
 
+def _ns(x):
+    """Datas sempre em nanossegundos.
+
+    O pandas 2+ guarda datas em resoluções diferentes conforme a origem: o
+    parquet do cache da CVM volta em milissegundos, o Yahoo em micro e um
+    `pd.Timestamp` digitado em nano. Comparar ou reindexar mistura sem erro,
+    mas o `merge_asof` recusa ("incompatible merge keys ... <M8[ms] and <M8[us]")
+    — foi o que derrubou a primeira rodada real. Padronizar na entrada de cada
+    função resolve a classe inteira.
+    """
+    import pandas as pd
+
+    if isinstance(x, pd.Series):
+        return pd.to_datetime(x, errors="coerce").astype("datetime64[ns]")
+    return pd.DatetimeIndex(pd.to_datetime(x, errors="coerce")).astype("datetime64[ns]")
+
+
 def eh_unit(ticker: str) -> bool:
     return str(ticker).upper().endswith("11")
 
@@ -129,14 +146,14 @@ def _vigente_por_data(painel_cvm, datas, folga_dias: int = 90):
         return pd.Series([float("nan")] * len(datas), index=datas), \
             pd.Series([None] * len(datas), index=datas)
     p = painel_cvm.copy()
-    p["DT_REFER"] = pd.to_datetime(p["DT_REFER"])
-    receb = pd.to_datetime(p["DT_RECEB"], errors="coerce")
+    p["DT_REFER"] = _ns(p["DT_REFER"])
+    receb = _ns(p["DT_RECEB"])
     p["_EFETIVA"] = receb.fillna(p["DT_REFER"] + pd.Timedelta(days=folga_dias))
     p = p.sort_values(["_EFETIVA", "DT_REFER"])
     p = p[p["DT_REFER"] >= p["DT_REFER"].cummax()]
     p = p.drop_duplicates(subset=["DT_REFER"], keep="last")
 
-    alvo = pd.DataFrame({"_DATA": pd.to_datetime(pd.Index(datas))}).sort_values("_DATA")
+    alvo = pd.DataFrame({"_DATA": _ns(pd.Index(datas))}).sort_values("_DATA")
     junta = pd.merge_asof(alvo, p[["_EFETIVA", "DT_REFER", "PATRIMONIO"]],
                           left_on="_DATA", right_on="_EFETIVA", direction="backward")
     junta.index = pd.Index(datas)
@@ -150,12 +167,12 @@ def datas_semanais(indice) -> list:
     """O último pregão de cada semana (segunda a domingo), em ordem."""
     import pandas as pd
 
-    idx = pd.DatetimeIndex(sorted(set(pd.to_datetime(indice)))).normalize()
+    idx = _ns(sorted(set(_ns(indice)))).normalize()
     if not len(idx):
         return []
     s = pd.Series(idx, index=idx)
     ultimos = s.groupby(idx.to_period("W-SUN")).max()
-    return list(pd.DatetimeIndex(ultimos.values))
+    return list(_ns(ultimos.values))
 
 
 def construir(painel, papeis: dict[str, dict], fechamentos, datas,
@@ -170,10 +187,10 @@ def construir(painel, papeis: dict[str, dict], fechamentos, datas,
     """
     import pandas as pd
 
-    datas = list(pd.DatetimeIndex(datas))
+    datas = list(_ns(datas))
     fech = fechamentos.copy()
-    fech.index = pd.to_datetime(fech.index).normalize()
-    fech = fech.reindex(pd.DatetimeIndex(datas))
+    fech.index = _ns(fech.index).normalize()
+    fech = fech.reindex(_ns(datas))
 
     saida: dict[str, dict] = {}
     fora: dict[str, str] = {}
