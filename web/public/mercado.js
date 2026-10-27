@@ -506,7 +506,8 @@ let H = null;                    // spread_historico.json, carregado sob demanda
 const estado = { pvpAnos: 0, spreadVertice: '10.0', spreadAnos: 0,
                  dolarModo: 'padronizado', selicAnos: 0,
                  creditoSerie: 'ipcaIsenta', creditoVertice: '3', creditoLimiar: 0.05,
-                 papelGrupo: '', papelBusca: '', papelOrdem: 'spread' };
+                 papelGrupo: '', papelBusca: '', papelOrdem: 'spread',
+                 pvpPapel: '', pvpPapelAnos: 0 };
 const FOTOS = ['hoje', 'semana', 'mes', 'semestre'];
 const CORES_FOTO = ['--t0', '--t1', '--t2', '--t3'];
 const ROTULO_CURTO = { hoje: 'hoje', semana: '1 sem', mes: '1 mês', semestre: '6 meses' };
@@ -1039,7 +1040,8 @@ function renderPvp() {
 
   const emp = bloco.empresas || [];
   el('contagemPvp').innerHTML = `<b>${emp.length}</b> papéis com preço e patrimônio.`;
-  el('tbPvp').querySelector('tbody').innerHTML = emp.map(e => `<tr>
+  el('tbPvp').querySelector('tbody').innerHTML = emp.map(e => `<tr class="clicavel" data-tk="${esc(e.ticker)}"
+        title="Ver o histórico de P/VP de ${esc(e.ticker)}">
       <td class="l tk">${esc(e.ticker)}</td>
       <td class="l cap" title="${esc(e.nome || '')}">${esc(e.nome || '—')}</td>
       <td class="num">${num(e.peso, 2)}%</td>
@@ -1049,6 +1051,244 @@ function renderPvp() {
       <td class="l muted">${dataBR(e.dtBalanco)}</td>
       <td class="l muted">${esc(e.fonteAcoes || '—')}</td>
     </tr>`).join('') || '<tr><td colspan="8" class="vazio">Sem empresas.</td></tr>';
+}
+
+// ===========================================================================
+// P/VP por papel
+// ===========================================================================
+// Arquivo próprio (`pvp_papeis.json`), baixado só quando a aba abre: são 170
+// séries semanais, e quem veio ver a curva de juros não precisa delas. O ponto
+// de HOJE vem do `dados.json` (o preço do dia dividido pelo VPA guardado), que
+// o robô atualiza todo dia; o histórico só ganha um ponto por semana.
+let PP = null, PRECOS = null, ppPromessa = null;
+
+function carregarPvpPapeis() {
+  if (ppPromessa) return ppPromessa;
+  ppPromessa = (async () => {
+    try {
+      const [r1, r2] = await Promise.all([
+        fetch('pvp_papeis.json?' + Date.now()), fetch('dados.json?' + Date.now())]);
+      if (!r1.ok) throw new Error(`pvp_papeis.json respondeu ${r1.status}`);
+      PP = await r1.json();
+      PRECOS = { _data: null };
+      if (r2.ok) {
+        const d = await r2.json();
+        PRECOS._data = String((d.meta || {}).geradoEm || '').slice(0, 10) || null;
+        [...(d.empresas || []), ...(d.excluidas || [])].forEach(e => {
+          if (e.ticker && e.preco > 0) PRECOS[e.ticker] = e.preco;
+        });
+      }
+    } catch (e) {
+      PP = { erro: e.message };
+    }
+    preencherListaPapeis();
+    renderPvpPapel();
+  })();
+  return ppPromessa;
+}
+
+function preencherListaPapeis() {
+  if (!PP || !PP.papeis) return;
+  const tks = Object.keys(PP.papeis).sort();
+  el('listaPvpPapeis').innerHTML = tks.map(t =>
+    `<option value="${esc(t)}">${esc(PP.papeis[t].nome || '')}</option>`).join('');
+  if (!estado.pvpPapel) estado.pvpPapel = PP.papeis.PETR4 ? 'PETR4' : tks[0];
+  el('ctlPvpPapel').value = estado.pvpPapel;
+}
+
+function escolherPapelPvp(t, rolar = false) {
+  t = String(t || '').trim().toUpperCase();
+  if (!t) return;
+  estado.pvpPapel = t;
+  el('ctlPvpPapel').value = t;
+  try { history.replaceState(null, '', '#pvp=' + encodeURIComponent(t)); } catch (e) { /* sem histórico */ }
+  renderPvpPapel();
+  if (rolar) el('cardPvpPapel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/** Quantil por interpolação linear (o "tipo 7" das planilhas). */
+function quantil(ordenados, q) {
+  if (!ordenados.length) return null;
+  const pos = (ordenados.length - 1) * q, i = Math.floor(pos), f = pos - i;
+  return ordenados[i] + (ordenados[Math.min(i + 1, ordenados.length - 1)] - ordenados[i]) * f;
+}
+
+function renderPvpPapel() {
+  const svg = el('chPvpPapel'), nota = el('notaPvpPapel'), vazio = el('pvpPapelVazio');
+  if (!svg) return;
+  const mostrar = (msg) => {
+    vazio.innerHTML = msg; vazio.classList.remove('hidden');
+    el('pvpPapelConteudo').classList.add('hidden');
+  };
+  if (!PP) { mostrar('Carregando o histórico…'); return; }
+  if (PP.erro) {
+    mostrar(`O histórico por papel ainda não foi gerado. Ele nasce no seu computador,
+      com <code>pvp_papeis.bat</code> (os balanços antigos vêm da CVM, que recusa o robô).
+      <br><span class="muted">${esc(PP.erro)}</span>`);
+    return;
+  }
+  const t = estado.pvpPapel, info = PP.papeis[t];
+  if (!info) {
+    const motivo = (PP.meta?.fora || {})[t];
+    mostrar(motivo
+      ? `<b>${esc(t)}</b> não tem histórico: ${esc(motivo)}.`
+      : `Não encontrei <b>${esc(t)}</b>. Digite um código da lista (ex.: PETR4).`);
+    return;
+  }
+  vazio.classList.add('hidden');
+  el('pvpPapelConteudo').classList.remove('hidden');
+
+  // Ponto de hoje: preço do dados.json ÷ VPA guardado. Só entra se for mais
+  // novo que a última semana gravada — senão repetiria o mesmo dia.
+  const preco = PRECOS && PRECOS[t];
+  let hoje = null;
+  if (preco > 0 && info.vpa > 0 && PRECOS._data && PRECOS._data > PP.datas[PP.datas.length - 1]) {
+    hoje = { data: PRECOS._data, valor: preco / info.vpa, preco };
+  }
+
+  // Começa no primeiro ponto do papel, não em 2015: uma ação que abriu capital
+  // em 2020 ficaria com cinco anos de eixo vazio, e "desde 2015" na nota mentiria.
+  let i0 = info.s.findIndex(v => v != null && isFinite(v));
+  if (i0 < 0) i0 = 0;
+  const r = recortar(PP.datas.slice(i0), [{ valores: info.s.slice(i0) }], estado.pvpPapelAnos);
+  const datas = r.datas, valores = r.series[0].valores;
+  const vivos = valores.map((v, i) => ({ v, i })).filter(x => x.v != null && isFinite(x.v));
+  const ord = vivos.map(x => x.v).sort((a, b) => a - b);
+  const est = {
+    mediana: quantil(ord, 0.5), p25: quantil(ord, 0.25), p75: quantil(ord, 0.75),
+    min: vivos.reduce((a, b) => (b.v < a.v ? b : a), vivos[0] || { v: null }),
+    max: vivos.reduce((a, b) => (b.v > a.v ? b : a), vivos[0] || { v: null }),
+  };
+  const ultimo = hoje || (vivos.length ? { data: datas[vivos[vivos.length - 1].i],
+                                          valor: vivos[vivos.length - 1].v } : null);
+  graficoPvpPapel(svg, datas, valores, est, hoje);
+
+  el('pvpPapelTitulo').textContent = `${t} · ${info.nome || ''}`;
+  if (!ultimo) { nota.textContent = ''; return; }
+  const abaixo = ord.filter(v => v < ultimo.valor).length;
+  const periodo = estado.pvpPapelAnos ? `nos últimos ${estado.pvpPapelAnos} anos`
+                                      : `desde ${dataBR(datas[0]).slice(3)}`;
+  nota.innerHTML =
+    `<b>P/VP ${hoje ? 'de hoje' : `de ${dataBR(ultimo.data)}`}: ${num(ultimo.valor, 2)}</b>${
+      hoje ? ` (preço de R$ ${num(hoje.preco, 2)} ÷ VPA de R$ ${num(info.vpa, 2)})` : ''}.
+     ${ord.length ? `Mediana ${periodo}: <b>${num(est.mediana, 2)}</b>; metade das semanas entre
+     ${num(est.p25, 2)} e ${num(est.p75, 2)}. O P/VP esteve abaixo do atual em
+     <b>${Math.round(100 * abaixo / ord.length)}%</b> das semanas.
+     Mínimo ${num(est.min.v, 2)} em ${dataBR(datas[est.min.i])}; máximo ${num(est.max.v, 2)}
+     em ${dataBR(datas[est.max.i])}.` : ''}
+     <br><span class="muted">Patrimônio dos controladores, balanço de ${dataBR(info.dtBalanco)}
+     (o robô só move o preço; balanço novo entra quando o histórico é refeito).
+     Nº de ações de hoje aplicado ao passado: emissões e recompras distorcem os anos
+     antigos.</span>`;
+}
+
+/** Uma série semanal com a faixa entre os quartis, a mediana e o ponto de hoje. */
+function graficoPvpPapel(svg, datas, valores, est, hoje) {
+  const h = 340, w = moldura(svg, h);
+  const estreito = w < 620;
+  const m = { t: 16, r: estreito ? 64 : 96, b: 40, l: estreito ? 40 : 50 };
+  const iw = w - m.l - m.r, ih = h - m.t - m.b;
+  const ts = datas.map(d => Date.parse(d));
+  if (hoje) ts.push(Date.parse(hoje.data));
+  const todos = valores.concat(hoje ? [hoje.valor] : []);
+  const e = escala(todos);
+  const t0 = ts[0], t1 = ts[ts.length - 1];
+  const px = (x) => m.l + ((x - t0) / (t1 - t0 || 1)) * iw;
+  const py = (v) => m.t + ih - ((v - e.min) / (e.max - e.min)) * ih;
+  const azul = css('--s1');
+
+  // Faixa dos quartis primeiro, para ficar atrás de tudo.
+  if (est.p25 != null && est.p75 != null) {
+    svg.appendChild(mk('rect', { x: m.l, y: py(est.p75), width: iw,
+      height: Math.max(py(est.p25) - py(est.p75), 1), fill: azul, opacity: 0.09 }));
+  }
+  for (let v = e.min; v <= e.max + 1e-9; v += e.passo) {
+    const y = py(v);
+    svg.appendChild(mk('line', { x1: m.l, x2: m.l + iw, y1: y, y2: y, class: 'gridline', 'stroke-width': 1 }));
+    const tx = mk('text', { x: m.l - 8, y: y + 4, 'text-anchor': 'end', 'font-size': 11 });
+    tx.textContent = num(v, e.passo < 1 ? (e.passo < 0.1 ? 2 : 1) : 0); svg.appendChild(tx);
+  }
+  const marcos = estreito ? 3 : 5;
+  for (let k = 0; k <= marcos; k++) {
+    const x = t0 + (t1 - t0) * k / marcos, d = new Date(x);
+    const tx = mk('text', { x: px(x), y: m.t + ih + 18, 'text-anchor': 'middle', 'font-size': 11 });
+    tx.textContent = (t1 - t0) > 3 * 365 * 864e5 ? d.getFullYear()
+      : d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+    svg.appendChild(tx);
+  }
+  if (e.min < 1 && e.max > 1) {
+    svg.appendChild(mk('line', { x1: m.l, x2: m.l + iw, y1: py(1), y2: py(1),
+      stroke: css('--line-strong'), 'stroke-width': 1, 'stroke-dasharray': '2 3' }));
+    const tx = mk('text', { x: m.l + 5, y: py(1) - 5, 'font-size': 10.5, fill: css('--ink-3') });
+    tx.textContent = 'P/VP = 1'; svg.appendChild(tx);
+  }
+  if (est.mediana != null) {
+    svg.appendChild(mk('line', { x1: m.l, x2: m.l + iw, y1: py(est.mediana), y2: py(est.mediana),
+      stroke: css('--ink-2'), 'stroke-width': 1.2, 'stroke-dasharray': '6 4' }));
+  }
+
+  let d = '', abriu = false, ultimo = -1;
+  for (let i = 0; i < datas.length; i++) {
+    const v = valores[i];
+    if (v == null || !isFinite(v)) { abriu = false; continue; }
+    d += (abriu ? 'L' : 'M') + px(ts[i]).toFixed(1) + ' ' + py(v).toFixed(1) + ' ';
+    abriu = true; ultimo = i;
+  }
+  svg.appendChild(mk('path', { d, fill: 'none', stroke: azul, 'stroke-width': 2,
+    'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+
+  // Rótulos à direita: mediana, faixa e hoje, afastados para não se cobrirem.
+  const marcas = [];
+  if (est.mediana != null) marcas.push({ x: m.l + iw, y: py(est.mediana), cor: css('--ink-2'),
+                                         texto: `mediana ${num(est.mediana, 2)}` });
+  if (hoje) {
+    const xh = px(Date.parse(hoje.data)), yh = py(hoje.valor);
+    if (ultimo >= 0) {
+      svg.appendChild(mk('line', { x1: px(ts[ultimo]), y1: py(valores[ultimo]), x2: xh, y2: yh,
+        stroke: azul, 'stroke-width': 1.5, 'stroke-dasharray': '3 3' }));
+    }
+    svg.appendChild(mk('circle', { cx: xh, cy: yh, r: 4.5, fill: azul,
+      stroke: css('--surface-1'), 'stroke-width': 2 }));
+    marcas.push({ x: m.l + iw, y: yh, cor: azul, texto: `hoje ${num(hoje.valor, 2)}`, forte: true });
+  } else if (ultimo >= 0) {
+    svg.appendChild(mk('circle', { cx: px(ts[ultimo]), cy: py(valores[ultimo]), r: 4, fill: azul }));
+    marcas.push({ x: m.l + iw, y: py(valores[ultimo]), cor: azul,
+                  texto: num(valores[ultimo], 2), forte: true });
+  }
+  afastar(marcas);
+  marcas.forEach(x => {
+    const tx = mk('text', { x: x.x + 8, y: x.y + 3.5, 'font-size': 11, fill: x.cor,
+      'font-weight': x.forte ? 600 : 400 });
+    tx.textContent = x.texto; svg.appendChild(tx);
+  });
+
+  const cursor = mk('line', { y1: m.t, y2: m.t + ih, stroke: css('--line-strong'),
+    'stroke-width': 1, 'stroke-dasharray': '3 3', opacity: 0 });
+  svg.appendChild(cursor);
+  const bola = mk('circle', { r: 4, fill: azul, stroke: css('--surface-1'), 'stroke-width': 2, opacity: 0 });
+  svg.appendChild(bola);
+  const area = mk('rect', { x: m.l, y: m.t, width: iw, height: ih, fill: 'transparent' });
+  svg.appendChild(area);
+  const n = datas.length;
+  area.addEventListener('mousemove', (ev) => {
+    const cx = ev.clientX - svg.getBoundingClientRect().left;
+    const fator = (svg.viewBox.baseVal.width || w) / svg.clientWidth;
+    const alvo = t0 + ((cx * fator - m.l) / iw) * (t1 - t0);
+    let lo = 0, hi = n - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (ts[mid] < alvo) lo = mid + 1; else hi = mid; }
+    if (lo > 0 && Math.abs(ts[lo - 1] - alvo) < Math.abs(ts[lo] - alvo)) lo--;
+    const v = valores[lo];
+    cursor.setAttribute('x1', px(ts[lo])); cursor.setAttribute('x2', px(ts[lo]));
+    cursor.setAttribute('opacity', 1);
+    if (v != null && isFinite(v)) {
+      bola.setAttribute('cx', px(ts[lo])); bola.setAttribute('cy', py(v)); bola.setAttribute('opacity', 1);
+    } else bola.setAttribute('opacity', 0);
+    mostrarTip(ev, `<b>semana de ${dataBR(datas[lo])}</b>
+      <div class="r"><span>P/VP</span><span>${num(v, 2)}</span></div>`);
+  });
+  area.addEventListener('mouseleave', () => {
+    cursor.setAttribute('opacity', 0); bola.setAttribute('opacity', 0); esconderTip();
+  });
 }
 
 // ===========================================================================
@@ -1550,6 +1790,7 @@ function render() {
   renderSpreadHistorico();
   renderCredito();
   renderPvp();
+  renderPvpPapel();
 }
 
 function trocarAba(nome) {
@@ -1559,6 +1800,7 @@ function trocarAba(nome) {
     el('p-' + p).classList.toggle('hidden', p !== nome));
   if (nome === 'spread') carregarHistorico();
   if (nome === 'credito') carregarCredito();
+  if (nome === 'pvp') carregarPvpPapeis();
   // Os gráficos das abas escondidas nascem com largura zero; redesenhar ao
   // abrir é o que evita o gráfico de 0 pixel que aparecia na primeira visita.
   render();
@@ -1633,10 +1875,33 @@ async function iniciar() {
     estado.papelBusca = e.target.value; renderPapeis();
   });
 
+  el('ctlPvpPapel').addEventListener('change', (e) => escolherPapelPvp(e.target.value));
+  el('ctlPvpPapel').addEventListener('input', (e) => {
+    // Escolha na lista (ou código completo digitado) já troca o gráfico.
+    const v = e.target.value.trim().toUpperCase();
+    if (PP && PP.papeis && PP.papeis[v]) escolherPapelPvp(v);
+  });
+  el('ctlPvpPapelAnos').addEventListener('change', (e) => {
+    estado.pvpPapelAnos = +e.target.value; renderPvpPapel();
+  });
+  el('tbPvp').addEventListener('click', (e) => {
+    const tr = e.target.closest('tr[data-tk]');
+    if (tr) escolherPapelPvp(tr.dataset.tk, true);
+  });
+
   let t = null;
   addEventListener('resize', () => { clearTimeout(t); t = setTimeout(render, 150); });
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render);
 
+  // Link direto para o gráfico de um papel: mercado.html#pvp=PETR4 (é o que o
+  // ranking da página principal usa).
+  const alvo = /^#pvp=([A-Za-z0-9]{4,6})$/.exec(location.hash || '');
+  if (alvo) {
+    estado.pvpPapel = alvo[1].toUpperCase();
+    trocarAba('pvp');
+    setTimeout(() => el('cardPvpPapel').scrollIntoView({ block: 'start' }), 50);
+    return;
+  }
   render();
 }
 

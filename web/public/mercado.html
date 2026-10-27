@@ -543,6 +543,39 @@
         <p class="note" id="notaPvp" style="margin:12px 0 0"></p>
       </div>
 
+      <div class="card" style="margin-bottom:18px" id="cardPvpPapel">
+        <h2>Histórico por papel</h2>
+        <p class="note">O P/VP de uma ação semana a semana, com a mediana do período e
+           a faixa onde ele passou metade do tempo. Escolha o papel na lista ou clique
+           numa linha da tabela abaixo.</p>
+        <div class="ctls" style="display:flex;gap:18px;flex-wrap:wrap;margin:0 0 14px">
+          <label>Papel:
+            <input id="ctlPvpPapel" list="listaPvpPapeis" placeholder="ex.: PETR4"
+                   autocomplete="off" spellcheck="false" style="width:9em;text-transform:uppercase">
+            <datalist id="listaPvpPapeis"></datalist>
+          </label>
+          <label>Período:
+            <select id="ctlPvpPapelAnos">
+              <option value="1">1 ano</option>
+              <option value="5">5 anos</option>
+              <option value="10">10 anos</option>
+              <option value="0" selected>Tudo</option>
+            </select>
+          </label>
+        </div>
+        <p class="note" id="pvpPapelVazio">Carregando o histórico…</p>
+        <div id="pvpPapelConteudo" class="hidden">
+          <h3 id="pvpPapelTitulo" style="margin:0 0 8px;font-size:15px"></h3>
+          <div class="legend">
+            <span><i class="linha" style="background:var(--s1)"></i>P/VP semanal</span>
+            <span><i style="background:var(--s1);opacity:.18"></i>metade das semanas (entre os quartis)</span>
+            <span><i class="linha" style="background:var(--ink-2)"></i>mediana do período</span>
+          </div>
+          <svg id="chPvpPapel" class="chart"></svg>
+          <p class="note" id="notaPvpPapel" style="margin:12px 0 0"></p>
+        </div>
+      </div>
+
       <div class="card">
         <h2>Empresa por empresa</h2>
         <p class="note">O P/VP de cada papel do índice e o peso com que entra na

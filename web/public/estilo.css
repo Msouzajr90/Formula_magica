@@ -233,3 +233,7 @@ tr.total:first-child td{border-top:none}
 /* Quatro cartões curtos: dois por linha no celular, em vez de uma coluna alta */
 #faixaCreditoMov{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .nota-exc{margin-top:4px;font-size:12px;line-height:1.45;color:var(--ink-2, inherit);max-width:60ch;white-space:normal}
+tr.clicavel{cursor:pointer}
+tr.clicavel:hover td{background:color-mix(in srgb, var(--s1) 6%, transparent)}
+a.tk-link{color:inherit;text-decoration:none;border-bottom:1px dotted var(--ink-3)}
+a.tk-link:hover{color:var(--s1);border-bottom-color:var(--s1)}

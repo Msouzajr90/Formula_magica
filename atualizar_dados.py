@@ -42,6 +42,11 @@ def _num(x):
     return None if (math.isnan(v) or math.isinf(v)) else round(v, 8)
 
 
+def _int(x):
+    v = _num(x)
+    return int(v) if v is not None else None
+
+
 def _texto(x):
     if x is None or (isinstance(x, float) and math.isnan(x)):
         return None
@@ -90,6 +95,9 @@ def montar_json(res, params: C.Params, pool: int,
             "dataBase": _texto(getattr(r, "DT_BASE", None))[:10]
                         if _texto(getattr(r, "DT_BASE", None)) else None,
             "selecionada": bool(r.SELECIONADA),
+            # Código CVM: liga o papel ao histórico de P/VP (pvp_papeis.json),
+            # que é montado a partir dos balanços da CVM.
+            "cvm": _int(getattr(r, "CD_CVM", None)),
         })
         # Só quando verdadeiro, para não engordar o arquivo com 150 "false":
         # concessionária com o intangível (a rodovia) somado ao capital.
@@ -111,6 +119,10 @@ def montar_json(res, params: C.Params, pool: int,
                 "nome": _texto(getattr(r, "DENOM_CIA", None)),
                 "setor": _texto(getattr(r, "SETOR", None)),
                 "motivo": _texto(getattr(r, "MOTIVO_EXCLUSAO", None)),
+                # Preço e código também nas excluídas: o gráfico de P/VP vale
+                # para elas (a B3, fora do ranking, é o caso óbvio).
+                "preco": _num(getattr(r, "PRECO", None)),
+                "cvm": _int(getattr(r, "CD_CVM", None)),
             })
             nota = _texto(getattr(r, "NOTA_EXCLUSAO", None))
             if nota:

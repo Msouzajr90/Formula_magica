@@ -407,6 +407,39 @@ em todo vértice (pega coluna trocada) e o alinhamento do histórico.
 ANBIMA Data, que exige token); letras financeiras; e, quando o histórico tiver
 alguns meses, o spread contra o ciclo da Selic.
 
+## P/VP por papel — `pvp_papeis.json`
+
+O gráfico "Histórico por papel", na aba P/VP, mostra o P/VP de uma ação semana
+a semana desde 2015, com a mediana do período, a faixa entre os quartis (onde
+o P/VP passou metade das semanas) e o ponto de hoje. Abre também pelo link do
+ticker no ranking da página principal (`mercado.html#pvp=PETR4`).
+
+**Quem gera o quê.**
+
+| Peça | Onde roda | Frequência |
+| --- | --- | --- |
+| `gerar_pvp_papeis.py` (`pvp_papeis.bat`) — refaz a série inteira com os balanços da CVM | no seu computador (a CVM recusa o robô) | depois de cada temporada de balanços: fim de março, meados de maio, agosto e novembro |
+| `atualizar_pvp_papeis.py` — grava o ponto da semana com o preço do `dados.json` e o VPA guardado | robô "Atualizar dados" | só às sextas |
+| Ponto de hoje | o navegador: preço do `dados.json` ÷ VPA guardado | a cada coleta diária |
+
+**A conta.** P/VP = fechamento × ações por papel ÷ (patrimônio dos
+controladores ÷ ações). Três escolhas, cada uma com o motivo no código
+(`mercado/pvp_papeis.py`):
+
+- *Controladores, não consolidado.* O consolidado inclui a parte dos
+  minoritários nas controladas. Na Cury (06/2026) são R$ 394 mi de
+  R$ 2.049 mi; com o consolidado, o P/VP dela sairia quase 20% menor.
+- *Point-in-time.* Cada semana usa o último balanço já entregue à CVM naquela
+  data. Uma reapresentação de balanço antigo não faz o PL voltar no tempo.
+- *Nº de ações de hoje.* O fechamento do Yahoo já vem ajustado por
+  desdobramento, então essa parte bate; emissões e recompras, não. É a mesma
+  aproximação do P/VP do índice, e a tela avisa.
+
+Units entram só com o fator de ações por unit conhecido
+(`ACOES_POR_UNIT_PAPEIS`) e nº de ações confirmado pela CVM. Quem fica de fora
+aparece em `meta.fora` com o motivo, e a tela mostra esse motivo quando alguém
+procura o papel.
+
 ## Histórico do P/VP — `gerar_pvp_historico.py`
 
 A série do P/VP é acumulada pelo robô, um ponto por dia, e por isso nasce

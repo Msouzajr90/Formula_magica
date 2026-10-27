@@ -714,7 +714,8 @@ function render() {
       fora ? ' class="fora" title="Abaixo do corte do grupo: fora da otimização"' : ''}>
       <td class="l num muted">${posDe.get(e.ticker)}${ehFin(e) ? ' <span class="tag">fin</span>' : ''}${
         e.concessao ? ' <span class="tag" title="Concessionária: intangível (a concessão) somado ao capital do ROIC">conc</span>' : ''}</td>
-      <td class="l tk" title="${rot.q} / ${rot.p}">${e.ticker}</td>
+      <td class="l tk" title="${rot.q} / ${rot.p} · clique para o histórico de P/VP"><a class="tk-link"
+        href="mercado.html#pvp=${encodeURIComponent(e.ticker)}">${e.ticker}</a></td>
       <td class="l cap" title="${e.nome || ''}">${e.nome || '—'}</td>
       <td class="l cap muted" title="${e.setor || ''}">${e.setor || '—'}</td>
       <td class="num">${pct(e.roic)}</td><td class="num">${pct(e.ey)}</td>
@@ -884,7 +885,8 @@ async function iniciar() {
   const esc = (t) => String(t ?? '').replace(/[&<>"]/g,
     c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   el('tbExc').querySelector('tbody').innerHTML = (D.excluidas || []).map(e =>
-    `<tr><td class="l tk">${esc(e.ticker) || '—'}</td>
+    `<tr><td class="l tk">${e.ticker ? `<a class="tk-link" href="mercado.html#pvp=${encodeURIComponent(e.ticker)}"
+        title="Histórico de P/VP">${esc(e.ticker)}</a>` : '—'}</td>
       <td class="l cap" title="${esc(e.nome)}">${esc(e.nome) || '—'}</td>
       <td class="l cap muted">${esc(e.setor) || '—'}</td>
       <td class="l muted">${esc(e.motivo) || '—'}${e.nota
