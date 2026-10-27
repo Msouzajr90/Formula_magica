@@ -232,3 +232,4 @@ tr.total:first-child td{border-top:none}
 .card h3.subtit{font-size:13.5px;margin:20px 0 6px;letter-spacing:-.005em}
 /* Quatro cartões curtos: dois por linha no celular, em vez de uma coluna alta */
 #faixaCreditoMov{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.nota-exc{margin-top:4px;font-size:12px;line-height:1.45;color:var(--ink-2, inherit);max-width:60ch;white-space:normal}

@@ -91,6 +91,11 @@ def montar_json(res, params: C.Params, pool: int,
                         if _texto(getattr(r, "DT_BASE", None)) else None,
             "selecionada": bool(r.SELECIONADA),
         })
+        # Só quando verdadeiro, para não engordar o arquivo com 150 "false":
+        # concessionária com o intangível (a rodovia) somado ao capital.
+        conc = getattr(r, "CONCESSAO", False)
+        if isinstance(conc, (bool, np.bool_)) and conc:
+            empresas[-1]["concessao"] = True
 
     # Só exporta estatísticas dos papéis que têm série de preços — na prática,
     # as selecionadas, que são as únicas cujo histórico o pipeline baixa.
@@ -107,6 +112,9 @@ def montar_json(res, params: C.Params, pool: int,
                 "setor": _texto(getattr(r, "SETOR", None)),
                 "motivo": _texto(getattr(r, "MOTIVO_EXCLUSAO", None)),
             })
+            nota = _texto(getattr(r, "NOTA_EXCLUSAO", None))
+            if nota:
+                excluidas[-1]["nota"] = nota
 
     return {
         "meta": {

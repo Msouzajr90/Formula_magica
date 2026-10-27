@@ -2,6 +2,7 @@
 
 ROIC  = EBIT / Capital Tangível Empregado
         Capital Tangível = Capital de Giro Líquido + Ativo Imobilizado Líquido
+                           (+ Investimentos; + Intangível nas concessionárias)
         Capital de Giro Líquido = (Ativo Circulante - Caixa - Aplicações Financeiras)
                                 - (Passivo Circulante - Empréstimos de curto prazo)
 
@@ -24,7 +25,8 @@ from . import config as C
 log = logging.getLogger(__name__)
 
 
-def capital_tangivel(bp: pd.DataFrame, incluir_investimentos: bool = True) -> pd.Series:
+def capital_tangivel(bp: pd.DataFrame, incluir_investimentos: bool = True,
+                     concessao=None) -> pd.Series:
     """Capital de giro líquido + imobilizado (+ investimentos), giro com piso em zero.
 
     `incluir_investimentos` soma a conta 1.02.02. Sem ela, empresas cujo ativo
@@ -32,6 +34,10 @@ def capital_tangivel(bp: pd.DataFrame, incluir_investimentos: bool = True) -> pd
     absurdo. Medido nos dados de 30/06/2026: a Allos tem R$ 0,11 bi de
     imobilizado e R$ 20,0 bi em Investimentos (os shoppings), o que produzia
     ROIC de 1.358%; incluindo a conta, cai para 7,5%. Na SYN, 7.622% -> 8,4%.
+
+    `concessao` (máscara booleana, ver `eh_concessao`) soma o intangível 1.02.04
+    nas linhas marcadas. É o mesmo problema dos shoppings com outra conta: na
+    concessionária o ativo operacional — a rodovia — está no intangível.
     """
     ac = bp.get(C.CD_ATIVO_CIRCULANTE, 0.0)
     caixa = bp.get(C.CD_CAIXA, 0.0)
@@ -43,7 +49,50 @@ def capital_tangivel(bp: pd.DataFrame, incluir_investimentos: bool = True) -> pd
 
     giro = (ac - caixa - aplic) - (pc - div_cp)
     giro = giro.clip(lower=0) if isinstance(giro, pd.Series) else max(giro, 0.0)
-    return giro + imob + invest
+    total = giro + imob + invest
+    if concessao is not None:
+        intang = pd.to_numeric(bp.get(C.CD_INTANGIVEL, 0.0), errors="coerce")
+        if isinstance(intang, pd.Series):
+            intang = intang.fillna(0.0)
+        mask = pd.Series(concessao, index=bp.index).fillna(False).astype(bool)
+        total = total + np.where(mask, intang, 0.0)
+    return total
+
+
+def _texto_setorial(df: pd.DataFrame, campos=("SETOR", "SEGMENTO")) -> pd.Series:
+    campos = [c for c in campos if c in df.columns]
+    if not campos:
+        return pd.Series("", index=df.index)
+    texto = df[campos[0]].fillna("").astype(str)
+    for c in campos[1:]:
+        texto = texto + " | " + df[c].fillna("").astype(str)
+    return texto
+
+
+def eh_concessao(df: pd.DataFrame, padroes: tuple[str, ...] = C.SETORES_CONCESSAO
+                 ) -> pd.Series:
+    """Concessionária cujo ativo operacional está no intangível (ICPC 01).
+
+    Duas condições, as duas necessárias: setor de concessão (transporte ou
+    utilidade pública, pelo SETOR da CVM) e intangível maior que imobilizado +
+    investimentos. A segunda separa a rodovia (intangível = a própria estrada)
+    da locadora do mesmo setor (intangível = ágio, que continua fora).
+    """
+    if df.empty:
+        return pd.Series(dtype=bool)
+    texto = _texto_setorial(df, ("SETOR",))
+    padrao = "|".join(f"(?:{x})" for x in padroes)
+    do_setor = texto.str.contains(padrao, case=False, na=False, regex=True)
+
+    def _conta(cd):
+        v = df.get(cd)
+        if v is None:
+            return pd.Series(0.0, index=df.index)
+        return pd.to_numeric(v, errors="coerce").fillna(0.0)
+
+    intang = _conta(C.CD_INTANGIVEL)
+    fixo = _conta(C.CD_IMOBILIZADO) + _conta(C.CD_INVESTIMENTOS)
+    return do_setor & (intang > 0) & (intang > fixo)
 
 
 def eh_financeira(df: pd.DataFrame, padroes: tuple[str, ...] = C.SETORES_FINANCEIROS
@@ -112,7 +161,14 @@ def montar_indicadores(
             f"mercado={len(mercado)}, CD_CVM em comum={len(comuns)}). "
             "Verifique se o mapeamento CD_CVM <-> ticker da B3 está atualizado.")
 
-    df["CAPITAL_TANGIVEL"] = capital_tangivel(df, params.incluir_investimentos)
+    df["CONCESSAO"] = (eh_concessao(df) if params.incluir_intangivel_concessao
+                       else pd.Series(False, index=df.index))
+    if df["CONCESSAO"].any():
+        log.info("intangível somado ao capital de %d concessionárias: %s",
+                 int(df["CONCESSAO"].sum()),
+                 ", ".join(df.loc[df["CONCESSAO"], "TICKER"].astype(str).head(20)))
+    df["CAPITAL_TANGIVEL"] = capital_tangivel(df, params.incluir_investimentos,
+                                              concessao=df["CONCESSAO"])
     df["DIVIDA_BRUTA"] = divida_bruta(df)
     df["CAIXA"] = caixa_total(df)
     df["DIVIDA_LIQUIDA"] = df["DIVIDA_BRUTA"] - df["CAIXA"]
@@ -237,6 +293,17 @@ def aplicar_filtros(df: pd.DataFrame, params: C.Params) -> tuple[pd.DataFrame, p
             fora["MOTIVO_EXCLUSAO"] = motivo
             motivos.append(fora)
         return df[~mask]
+
+    # Exclusões caso a caso (config.EXCLUSOES_MANUAIS) vêm antes de tudo, para
+    # que o motivo registrado seja a decisão de método, e não um filtro
+    # genérico que por acaso também a pegaria.
+    if C.EXCLUSOES_MANUAIS and "TICKER" in df.columns and not df.empty:
+        for pfx, (motivo, nota) in C.EXCLUSOES_MANUAIS.items():
+            prefixo = df["TICKER"].astype(str).str.upper().str[:4]
+            mask = prefixo == pfx.upper()
+            if mask.any():
+                df.loc[mask, "NOTA_EXCLUSAO"] = nota
+                df = corta(mask, motivo)
 
     # Cada grupo tem a sua própria chave. Antes as duas exclusões estavam
     # amarradas no mesmo `if`, o que tornava impossível pedir bancos sem pedir

@@ -712,7 +712,8 @@ function render() {
     const rot = rotulos(e.tipo);
     return `<tr${dentro ? ' style="background:color-mix(in srgb, var(--s1) 7%, transparent)"' : ''}${
       fora ? ' class="fora" title="Abaixo do corte do grupo: fora da otimização"' : ''}>
-      <td class="l num muted">${posDe.get(e.ticker)}${ehFin(e) ? ' <span class="tag">fin</span>' : ''}</td>
+      <td class="l num muted">${posDe.get(e.ticker)}${ehFin(e) ? ' <span class="tag">fin</span>' : ''}${
+        e.concessao ? ' <span class="tag" title="Concessionária: intangível (a concessão) somado ao capital do ROIC">conc</span>' : ''}</td>
       <td class="l tk" title="${rot.q} / ${rot.p}">${e.ticker}</td>
       <td class="l cap" title="${e.nome || ''}">${e.nome || '—'}</td>
       <td class="l cap muted" title="${e.setor || ''}">${e.setor || '—'}</td>
@@ -880,12 +881,24 @@ async function iniciar() {
     : `${D.empresas.length} empresas no universo`;
   el('dadosDemo').classList.toggle('hidden', !dadosSinteticos);
 
+  const esc = (t) => String(t ?? '').replace(/[&<>"]/g,
+    c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   el('tbExc').querySelector('tbody').innerHTML = (D.excluidas || []).map(e =>
-    `<tr><td class="l tk">${e.ticker || '—'}</td>
-      <td class="l cap" title="${e.nome || ''}">${e.nome || '—'}</td>
-      <td class="l cap muted">${e.setor || '—'}</td>
-      <td class="l muted">${e.motivo || '—'}</td></tr>`).join('')
+    `<tr><td class="l tk">${esc(e.ticker) || '—'}</td>
+      <td class="l cap" title="${esc(e.nome)}">${esc(e.nome) || '—'}</td>
+      <td class="l cap muted">${esc(e.setor) || '—'}</td>
+      <td class="l muted">${esc(e.motivo) || '—'}${e.nota
+        ? `<div class="nota-exc">${esc(e.nota)}</div>` : ''}</td></tr>`).join('')
     || '<tr><td colspan="4" class="l muted">Nenhuma empresa excluída.</td></tr>';
+
+  // Exclusões por decisão de método (config.EXCLUSOES_MANUAIS) não podem ficar
+  // escondidas numa aba: quem procura a B3 no ranking precisa ver ali mesmo
+  // por que ela não está.
+  const manuais = (D.excluidas || []).filter(e => e.nota);
+  el('avisoManual').classList.toggle('hidden', manuais.length === 0);
+  el('avisoManual').innerHTML = manuais.map(e =>
+    `<p style="margin:0 0 6px"><b>${esc(e.ticker)} está fora do ranking.</b> ${esc(e.nota)}</p>`).join('');
+  el('notaConc').classList.toggle('hidden', !D.empresas.some(e => e.concessao));
 
   const nFin = D.empresas.filter(ehFin).length;
   el('avisoFin').classList.toggle('hidden', nFin === 0);

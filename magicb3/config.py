@@ -61,7 +61,10 @@ SETORES_FINANCEIROS = (
     r"arrendamento mercantil",
     r"securitiza",
     r"cr[ée]dito imobili[áa]rio",
-    r"bolsa de valores|valores mobili[áa]rios",
+    # "Bolsas", no plural: é como a CVM grafa o setor da B3 S.A. ("Bolsas de
+    # Valores/Mercadorias e Futuros"). Com "bolsa de valores" no singular o
+    # padrão nunca casou, e a B3 entrava no ranking como empresa operacional.
+    r"bolsas? de valores|valores mobili[áa]rios",
 )
 
 # Concessionárias. Greenblatt as exclui junto das financeiras, mas por outro
@@ -78,6 +81,40 @@ SETORES_UTILIDADE_PUBLICA = (
 )
 
 SETORES_EXCLUIDOS_PADRAO = SETORES_FINANCEIROS + SETORES_UTILIDADE_PUBLICA
+
+# Concessões de infraestrutura. Pela ICPC 01, a rodovia, o aeroporto ou a rede
+# de água de uma concessão não vão para o imobilizado: são registrados como
+# INTANGÍVEL (direito de cobrar do usuário). A fórmula do livro, que só olha
+# imobilizado, enxerga então uma concessionária sem ativo — a Ecorodovias, com
+# R$ 29 bi de rodovias no intangível e R$ 0,8 bi de imobilizado, saía com ROIC
+# de 529% em 06/2026; com a concessão no capital, 14%.
+#
+# O setor sozinho não basta: "Serviços Transporte e Logística" também abriga
+# locadoras e operadores logísticos, cujo intangível é ágio de aquisição — e
+# ágio continua fora, como manda Greenblatt. Por isso a regra exige também que
+# o intangível seja o maior ativo de longo prazo (maior que imobilizado +
+# investimentos). Medido em 06/2026: Ecorodovias 73% x 2% do ativo, Motiva
+# 50% x 3%; Rumo 12% x 49%, Localiza 10% x 62%, Tegma 14% x 31% (ficam fora).
+SETORES_CONCESSAO = (
+    r"transporte",
+    r"rodovi|ferrovi|aeroport|portu[áa]ri",
+) + SETORES_UTILIDADE_PUBLICA
+
+# Exclusões caso a caso, por prefixo de negociação. São decisões de método,
+# não filtros automáticos: cada uma carrega um motivo curto (vai para a coluna
+# "Motivo" das excluídas) e uma nota que o site mostra junto do ranking.
+EXCLUSOES_MANUAIS: dict[str, tuple[str, str]] = {
+    "B3SA": (
+        "fora do ranking por decisão de método (ver nota)",
+        "A B3 opera com sistemas, marca e efeito de rede, não com capital "
+        "tangível: o imobilizado é uma fração mínima do que ela usa, e mais da "
+        "metade do ativo é o ágio da fusão com a Cetip, que a fórmula exclui. "
+        "O ROIC do livro fica na casa das centenas por cento e garante o 1º "
+        "lugar sem dizer nada sobre a qualidade do negócio em relação às "
+        "demais. Além disso, pela CVM ela é do setor de bolsas de valores, que "
+        "o filtro de financeiras já pretendia tirar.",
+    ),
+}
 
 CACHE_DIR = Path.home() / ".magicb3_cache"
 
@@ -98,6 +135,7 @@ class Params:
     n_acoes_ranking: int = 30                     # Greenblatt sugere 20-30
     base_roic: Literal["capital_tangivel", "ativo_total", "patrimonio_liquido"] = "capital_tangivel"
     incluir_investimentos: bool = True   # soma 1.02.02 ao capital tangível
+    incluir_intangivel_concessao: bool = True  # soma 1.02.04 nas concessionárias
     base_ey: Literal["ebit_ev", "lucro_preco", "lpa_original_tcc"] = "ebit_ev"
     usar_ltm: bool = True                         # 12 meses móveis (DFP + ITR)
 
