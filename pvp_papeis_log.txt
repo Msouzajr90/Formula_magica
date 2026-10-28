@@ -1,16 +1,42 @@
-Universo: 191 papéis (site + Ibovespa)
+Universo: 192 papéis (site + Ibovespa)
 Resolução de nomes restrita a IPv4.
 B3: 3547 emissores -> 3205 prefixos com código CVM
-Consultando valor de mercado de 191 papéis no Yahoo (segunda fonte do nº de ações)…
-Valor de mercado obtido para 189 de 191 papéis
-Nº de ações resolvido para 191 de 191 papéis
+Consultando valor de mercado de 192 papéis no Yahoo (segunda fonte do nº de ações)…
+Valor de mercado obtido para 190 de 192 papéis
+Nº de ações resolvido para 192 de 192 papéis
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2014.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2015.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2016.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2017.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2018.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2019.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2020.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2021.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2022.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2023.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2024.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2025.zip
 Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2026.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/dfp_cia_aberta_2026.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2014.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2015.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2016.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2017.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2018.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2019.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2020.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2021.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2022.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2023.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2024.zip
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2025.zip
 Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2026.zip
-Painel: 19533 balanços de 667 empresas
+Baixando https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr_cia_aberta_2026.zip
+Painel: 19864 balanços de 667 empresas
 Pulando 0 símbolos já conhecidos como inexistentes.
-Preços: 2942 pregões, 191 papéis -> 618 semanas
+Preços: 2942 pregões, 192 papéis -> 618 semanas
 6 papéis ficaram fora do histórico: ALUP11 (unit sem nº de ações confirmado pela CVM); BPAC11 (unit sem nº de ações confirmado pela CVM); BRBI11 (unit sem fator conhecido); ENGI11 (unit sem nº de ações confirmado pela CVM); RCSL4 (sem patrimônio positivo no período); SANB11 (unit sem nº de ações confirmado pela CVM)
 
-C:\Users\Administrador\Documents\GitHub\Formula_magica\web\public\pvp_papeis.json: 185 papéis, 618 semanas (2015-01-02 a 2026-10-27), 585 KB.
+C:\Users\Administrador\Documents\GitHub\Formula_magica\web\public\pvp_papeis.json: 186 papéis, 618 semanas (2015-01-02 a 2026-10-27), 588 KB.
 Fora (6): ALUP11, BPAC11, BRBI11, ENGI11, RCSL4, SANB11
 Confira um papel antes de publicar: `python -m http.server` em web/public e abra mercado.html#pvp=PETR4.
