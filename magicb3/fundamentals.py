@@ -281,6 +281,55 @@ def escala_por_patrimonio(bruto, preco, patrimonio):
     return viaveis[0] if len(viaveis) == 1 else np.nan
 
 
+# Patrimônio por ação que uma companhia da B3 de fato tem, em R$. Larga de
+# propósito, como a faixa de P/VP acima: só separa duas hipóteses mil vezes
+# distantes.
+VPA_MINIMO, VPA_MAXIMO = 0.01, 3000.0
+
+
+def escala_por_vpa(bruto, patrimonio):
+    """A mesma decisão de `escala_por_patrimonio`, sem precisar do preço.
+
+    Serve a `cvm.composicao_capital`, que roda antes de haver cotação. Bancos
+    entregam o lucro por ação zerado nos arquivos estruturados (BTG e
+    Santander, DFP 2025), e sem o LPA a escala não era confirmada: as duas
+    units ficavam sem nº de ações e fora do P/VP. Das hipóteses "unidades" e
+    "milhares", vale a única que dá um nº de ações e um patrimônio por ação
+    possíveis; as duas possíveis (ou nenhuma) devolvem NaN.
+
+    BTG: 11,6 bi de ações em unidades dá VPA de R$ 5,9; em milhares seriam 11,6
+    trilhões de ações. Santander: 7,5 mi "em unidades" daria VPA de R$ 16 mil;
+    em milhares, R$ 16.
+    """
+    vals = [pd.to_numeric(x, errors="coerce") for x in (bruto, patrimonio)]
+    bruto, patrimonio = vals
+    if any(v is None or pd.isna(v) for v in vals) or bruto <= 0 or patrimonio <= 0:
+        return np.nan
+    viaveis = [c for c in (float(bruto), float(bruto) * 1000.0)
+               if ACOES_MINIMO <= c <= ACOES_MAXIMO
+               and VPA_MINIMO <= patrimonio / c <= VPA_MAXIMO]
+    return viaveis[0] if len(viaveis) == 1 else np.nan
+
+
+def valor_de_mercado_units(tickers: pd.Series, preco: pd.Series, acoes: pd.Series,
+                           acoes_da_cvm: pd.Series) -> pd.Series:
+    """Valor de mercado com as units corrigidas.
+
+    Para ação comum é preço × ações. Para unit, o preço é o de várias ações,
+    então divide pelo fator (`config.ACOES_POR_UNIT`) — mas só quando o nº de
+    ações é o TOTAL da companhia, que é o que a CVM informa. Unit sem fator
+    conhecido, ou com nº de ações vindo do Yahoo (que não diz se conta units
+    ou ações), fica sem valor de mercado e sai do ranking com o motivo.
+    """
+    t = tickers.astype(str).str.upper().str.replace(".SA", "", regex=False)
+    vm = preco * acoes
+    unit = t.str.endswith("11")
+    fator = t.map(C.ACOES_POR_UNIT)
+    ok = unit & fator.notna() & acoes_da_cvm.fillna(False).astype(bool)
+    vm = vm.where(~ok, preco * acoes / fator)
+    return vm.where(~unit | ok, np.nan)
+
+
 def aplicar_filtros(df: pd.DataFrame, params: C.Params) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Remove o que Greenblatt manda remover. Devolve (aprovados, rejeitados+motivo)."""
     df = df.copy()

@@ -54,7 +54,7 @@ _NAO_CONTROLADOR = re.compile(r"n[ãa]o[\s-]*controlador", re.IGNORECASE)
 # aparecem no ranking. Unit fora da lista fica fora do gráfico — dividir o
 # patrimônio de uma ação pelo preço de uma unit daria um número várias vezes
 # maior, e plausível o bastante para ninguém desconfiar.
-ACOES_POR_UNIT_PAPEIS = {**ACOES_POR_UNIT, "ALUP11": 3}   # Alupar: 1 ON + 2 PN
+ACOES_POR_UNIT_PAPEIS = ACOES_POR_UNIT
 
 
 def _ok(x) -> bool:
@@ -132,6 +132,13 @@ def painel_controladores(bpp, ds_patrimonio: str):
     return out
 
 
+# Balanço mais velho que isto não vale para a data: é empresa que parou de
+# publicar no formato lido (a Sendas deixou de consolidar em 2021, a Bradespar
+# em 2023) e o último PL ficaria valendo para sempre. Quinze meses cobrem o
+# prazo da DFP (três meses) sobre um ano inteiro sem ITR.
+IDADE_MAXIMA_DIAS = 460
+
+
 def _vigente_por_data(painel_cvm, datas, folga_dias: int = 90):
     """Para cada data, o PL do último balanço já entregue até ali.
 
@@ -156,8 +163,10 @@ def _vigente_por_data(painel_cvm, datas, folga_dias: int = 90):
     alvo = pd.DataFrame({"_DATA": _ns(pd.Index(datas))}).sort_values("_DATA")
     junta = pd.merge_asof(alvo, p[["_EFETIVA", "DT_REFER", "PATRIMONIO"]],
                           left_on="_DATA", right_on="_EFETIVA", direction="backward")
+    velho = (junta["_DATA"] - junta["DT_REFER"]) > pd.Timedelta(days=IDADE_MAXIMA_DIAS)
+    junta.loc[velho, ["PATRIMONIO", "DT_REFER"]] = pd.NA
     junta.index = pd.Index(datas)
-    return junta["PATRIMONIO"], junta["DT_REFER"]
+    return pd.to_numeric(junta["PATRIMONIO"], errors="coerce"), junta["DT_REFER"]
 
 
 # ---------------------------------------------------------------------------

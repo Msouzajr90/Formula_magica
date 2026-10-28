@@ -85,33 +85,59 @@ def mapa_prefixos(tickers, cvm_conhecido: dict[str, int]) -> dict[str, int]:
 
 def acoes_por_ticker(tickers, mapa: dict[str, int], nomes: dict[str, str]
                      ) -> dict[str, dict]:
-    """{ticker: {cvm, acoes, fonte, nome}} pela mesma conciliação do índice."""
+    """{ticker: {cvm, acoes, fonte, nome}} pela mesma conciliação do índice.
+
+    Só o NÚMERO DE AÇÕES sai daqui; o patrimônio vem do painel, data a data.
+    Por isso não se usa `pvp.vpa_por_prefixo`, que descarta a empresa sem
+    patrimônio positivo no fundamentos.json: a Minerva sumia do gráfico porque
+    o arquivo trazia o PL dela de 03/2025, negativo, embora o de 06/2026 seja
+    R$ 1,6 bi. Empresa ausente do fundamentos (Assaí, Bradespar) também fica,
+    com o nº de ações implícito no valor de mercado.
+    """
     from mercado import acoes as mod_acoes, pvp
 
-    if not FUNDAMENTOS.exists():
-        raise FileNotFoundError(
-            f"{FUNDAMENTOS} não existe. O nº de ações da CVM sai dele; gere com "
-            "`baixar_fundamentos.py`.")
-    empresas = json.loads(FUNDAMENTOS.read_text(encoding="utf-8")).get("empresas") or []
+    empresas = []
+    if FUNDAMENTOS.exists():
+        empresas = json.loads(FUNDAMENTOS.read_text(encoding="utf-8")).get("empresas") or []
+    else:
+        log.warning("%s não existe; o nº de ações virá só do valor de mercado "
+                    "(units ficam de fora).", FUNDAMENTOS.name)
+    cvm_acoes = {}
+    for e in empresas:
+        try:
+            cvm_acoes[int(e["cvm"])] = (e.get("acoes"), e.get("nome"))
+        except (KeyError, TypeError, ValueError):
+            continue
+
     log.info("Consultando valor de mercado de %d papéis no Yahoo (segunda fonte "
              "do nº de ações)…", len(tickers))
     implicitas = mod_acoes.implicitas_por_prefixo(mod_acoes.valor_de_mercado(list(tickers)))
-    vpas = pvp.vpa_por_prefixo(empresas, mapa, implicitas)
 
     saida = {}
     for t in tickers:
-        info = vpas.get(t[:4])
-        if not info or t[:4] not in mapa:
+        cvm = mapa.get(t[:4])
+        if cvm is None:
             continue
-        saida[t] = {"cvm": mapa[t[:4]], "acoes": info["acoes"],
-                    "fonte": "cvm" if info.get("fonteAcoes") == "cvm" else "mercado",
-                    "nome": nomes.get(t) or info.get("nome")}
+        acoes_cvm, nome_cvm = cvm_acoes.get(cvm, (None, None))
+        n, fonte = pvp.acoes_da_empresa(acoes_cvm, implicitas.get(t[:4]))
+        if n is None:
+            continue
+        saida[t] = {"cvm": cvm, "acoes": n,
+                    "fonte": "cvm" if fonte == "cvm" else "mercado",
+                    "nome": nomes.get(t) or nome_cvm}
     log.info("Nº de ações resolvido para %d de %d papéis", len(saida), len(tickers))
     return saida
 
 
-def baixar_painel(anos: list[int], pasta_zips=None):
-    """Patrimônio dos controladores por empresa e data, de DFP e ITR."""
+def baixar_painel(anos: list[int], pasta_zips=None, cvms: set[int] | None = None):
+    """Patrimônio dos controladores por empresa e data, de DFP e ITR.
+
+    Consolidado primeiro; o individual só para quem não publica consolidado.
+    Em 2026, 222 companhias abertas entregam só o individual — entre elas a
+    Sendas (ASAI3), a Bradespar (BRAP4) e a Sanepar. Lendo só o consolidado,
+    elas ficavam com o último balanço consolidado que tinham (2021 e 2023) e
+    um P/VP calculado sobre patrimônio de anos atrás.
+    """
     import pandas as pd
 
     from magicb3 import config as C, cvm
@@ -123,17 +149,32 @@ def baixar_painel(anos: list[int], pasta_zips=None):
         for ano in anos:
             # O ano corrente sempre do zero: o cache de setembro não tem o ITR
             # de novembro, e o arquivo da CVM é o mesmo nome o ano todo.
-            # Sem filtro de contas, de propósito: é o mesmo cache que o
-            # `gerar_pvp_historico.py` já deixou no seu computador, então os
-            # anos fechados não são baixados de novo. Um ano por vez cabe na
-            # memória.
+            # Consolidado sem filtro de contas, de propósito: é o mesmo cache
+            # que o `gerar_pvp_historico.py` já deixou no seu computador.
             bruto = cvm.carregar_demonstracoes([ano], tipo=tipo, pasta_zips=pasta_zips,
                                                usar_cache=(ano < ano_corrente))
             bpp = bruto.get("BPP")
-            if bpp is None or bpp.empty:
-                log.warning("%s %d: nenhum BPP", tipo.upper(), ano)
+            con = (pvp_papeis.painel_controladores(bpp, C.DS_PATRIMONIO_LIQUIDO)
+                   if bpp is not None and not bpp.empty else None)
+            if con is not None and not con.empty:
+                partes.append(con)
+
+            # Individual: só o passivo até o 3º nível ("2.0*"), onde está o PL
+            # em qualquer plano de contas, e só das empresas que interessam.
+            ind = cvm.carregar_demonstracoes([ano], tipo=tipo, pasta_zips=pasta_zips,
+                                             consolidado=False, contas={"2.0*"},
+                                             usar_cache=(ano < ano_corrente)).get("BPP")
+            if ind is None or ind.empty:
                 continue
-            partes.append(pvp_papeis.painel_controladores(bpp, C.DS_PATRIMONIO_LIQUIDO))
+            if cvms is not None:
+                ind = ind[ind["CD_CVM"].isin(cvms)]
+            if con is not None and not con.empty:
+                tem = set(zip(con["CD_CVM"], pd.to_datetime(con["DT_REFER"])))
+                chave = list(zip(ind["CD_CVM"], pd.to_datetime(ind["DT_REFER"])))
+                ind = ind[[k not in tem for k in chave]]
+            if not ind.empty:
+                # No individual a conta se chama só "Patrimônio Líquido".
+                partes.append(pvp_papeis.painel_controladores(ind, "patrimônio líquido"))
     if not partes:
         raise RuntimeError("Nenhum patrimônio líquido foi lido da CVM.")
     todo = pd.concat(partes, ignore_index=True)
@@ -152,7 +193,8 @@ def gerar(desde: int, pasta_zips=None) -> dict:
     papeis = acoes_por_ticker(tickers, mapa, nomes)
 
     fim = date.today()
-    painel = baixar_painel(list(range(desde - 1, fim.year + 1)), pasta_zips)
+    painel = baixar_painel(list(range(desde - 1, fim.year + 1)), pasta_zips,
+                           cvms={int(i["cvm"]) for i in papeis.values()})
     log.info("Painel: %d balanços de %d empresas", len(painel), painel["CD_CVM"].nunique())
 
     blocos = prices.baixar_historico([t + ".SA" for t in papeis],

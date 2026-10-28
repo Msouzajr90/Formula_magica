@@ -205,3 +205,54 @@ def test_datas_em_resolucoes_diferentes():
     datas = pp.datas_semanais(fech.index)
     r = pp.construir(painel, {"CURY3": {"cvm": 1, "acoes": 100.0, "fonte": "cvm"}}, fech, datas)
     assert r["papeis"]["CURY3"]["s"] == [pytest.approx(30 / 16.55, abs=0.01)]
+
+
+def test_numero_de_acoes_nao_depende_do_pl_do_fundamentos(tmp_path, monkeypatch):
+    """Regressão da Minerva: PL negativo (e velho) no fundamentos.json tirava o
+    papel do gráfico. E empresa ausente do fundamentos (Assaí) entra com o nº
+    de ações implícito no valor de mercado."""
+    import gerar_pvp_papeis as g
+    from mercado import acoes
+
+    fund = tmp_path / "fundamentos.json"
+    fund.write_text(json.dumps({"empresas": [
+        {"cvm": 20931, "pl": -63.8e6, "acoes": 985.4e6, "nome": "MINERVA S.A."}]}),
+        encoding="utf-8")
+    monkeypatch.setattr(g, "FUNDAMENTOS", fund)
+    monkeypatch.setattr(acoes, "valor_de_mercado", lambda ts, **k: {
+        "BEEF3": (3.27e9, 3.32), "ASAI3": (9.0e9, 6.66)})
+    r = g.acoes_por_ticker(["BEEF3", "ASAI3"], {"BEEF": 20931, "ASAI": 25372}, {})
+    assert r["BEEF3"]["acoes"] == pytest.approx(985.4e6) and r["BEEF3"]["fonte"] == "cvm"
+    assert r["ASAI3"]["fonte"] == "mercado"
+    assert r["ASAI3"]["acoes"] == pytest.approx(9.0e9 / 6.66)
+
+
+def test_balanco_velho_demais_nao_vale():
+    """A Sendas parou de consolidar em 2021: sem a trava, o PL de 09/2021
+    valia para 2026 inteiro e o P/VP saía de um patrimônio de anos atrás."""
+    bpp = pd.DataFrame([_linha(7, "2021-09-30", "2021-11-10", "2.03",
+                               "Patrimônio Líquido Consolidado", 1000.0)])
+    painel = pp.painel_controladores(bpp, C.DS_PATRIMONIO_LIQUIDO)
+    datas = pd.to_datetime(["2022-06-03", "2026-10-23"])
+    r = pp.construir(painel, {"ASAI3": {"cvm": 7, "acoes": 100.0, "fonte": "cvm"}},
+                     _fech(datas, ASAI3=[20.0, 6.0]), datas)
+    assert r["papeis"]["ASAI3"]["s"] == [pytest.approx(2.0), None]
+    assert r["papeis"]["ASAI3"]["vpa"] is None
+
+
+def test_individual_cobre_quem_nao_consolida(monkeypatch):
+    import gerar_pvp_papeis as g
+    from magicb3 import cvm
+
+    con = pd.DataFrame([_linha(1, "2026-06-30", "2026-08-05", "2.03",
+                               "Patrimônio Líquido Consolidado", 2049.0)])
+    ind = pd.DataFrame([
+        _linha(1, "2026-06-30", "2026-08-05", "2.03", "Patrimônio Líquido", 1600.0),
+        _linha(25372, "2026-06-30", "2026-08-06", "2.03", "Patrimônio Líquido", 6346.0),
+        _linha(99999, "2026-06-30", "2026-08-06", "2.03", "Patrimônio Líquido", 1.0)])
+    monkeypatch.setattr(cvm, "carregar_demonstracoes",
+                        lambda anos, consolidado=True, **k: {"BPP": con if consolidado else ind})
+    p = g.baixar_painel([2026], cvms={1, 25372}).set_index("CD_CVM")
+    assert p.loc[1, "PATRIMONIO"] == pytest.approx(2049.0)        # o consolidado manda
+    assert p.loc[25372, "PATRIMONIO"] == pytest.approx(6346.0)    # o individual cobre
+    assert 99999 not in p.index                                   # fora do universo

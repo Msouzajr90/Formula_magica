@@ -430,3 +430,85 @@ def test_cache_da_cvm_muda_de_nome_quando_o_filtro_de_contas_muda(tmp_path, monk
     n2 = cvm._cache_path(f"itr_con_2026_{cvm._marca_das_contas(largo)}.parquet")
     n1.write_bytes(b"cache podado com o filtro antigo")
     assert not n2.exists(), "o filtro novo nao pode reaproveitar o cache do antigo"
+
+
+def test_patrimonio_liquido_usa_o_balanco_mais_recente():
+    """Regressão: o first() depois de ordenar por data crescente devolvia o
+    balanço MAIS ANTIGO da janela. A Minerva saía com o PL de 03/2025
+    (negativo) em vez do de 06/2026 (R$ 2,2 bi)."""
+    import pandas as pd
+    from magicb3 import cvm
+
+    bpp = pd.DataFrame({
+        "CD_CVM": [20931, 20931, 20931],
+        "DT_REFER": pd.to_datetime(["2025-03-31", "2026-06-30", "2026-06-30"]),
+        "CD_CONTA": ["2.03", "2.03", "2.03.10"],
+        "DS_CONTA": ["Patrimônio Líquido Consolidado"] * 2
+                    + ["Patrimônio Líquido Consolidado Atribuído ao Controlador"],
+        "VL_CONTA": [-63.779e6, 2182.311e6, 1579.0e6],
+    })
+    pl = cvm.patrimonio_liquido(bpp).set_index("CD_CVM")
+    assert pl.loc[20931, "PATRIMONIO"] == 2182.311e6
+    assert pl.loc[20931, "CD_CONTA_PL"] == "2.03"
+
+
+def test_escala_pelo_patrimonio_quando_o_banco_zera_o_lpa(tmp_path):
+    """BTG e Santander entregam o lucro por ação zerado na DFP estruturada.
+    Sem LPA a escala não se confirmava e as duas units ficavam fora do P/VP;
+    o patrimônio do mesmo zip decide: BTG em unidades, Santander em milhares."""
+    import zipfile
+    from magicb3 import cvm
+
+    pasta = _zip_com_capital(
+        tmp_path,
+        ["30.306.294/0001-45;2025-12-31;2;BCO BTG PACTUAL S.A.;7298813414;4371250052;"
+         "11670063466;27469600;54939200;82408800",
+         "90.400.888/0001-42;2025-12-31;2;BCO SANTANDER (BRASIL) S.A.;3818695;3679836;"
+         "7498531;13666;13665;27331"],
+        ["30.306.294/0001-45;2025-12-31;1;BTG;22616;DF Consolidado;REAL;MIL;ÚLTIMO;"
+         "2025-01-01;2025-12-31;3.09;Lucro/Prejuízo Consolidado do Período;16663803;S",
+         "30.306.294/0001-45;2025-12-31;1;BTG;22616;DF Consolidado;REAL;MIL;ÚLTIMO;"
+         "2025-01-01;2025-12-31;3.99.01;Lucro Básico por Ação;0;S",
+         "90.400.888/0001-42;2025-12-31;1;SANT;20532;DF Consolidado;REAL;MIL;ÚLTIMO;"
+         "2025-01-01;2025-12-31;3.11;Lucro ou Prejuízo Líquido Consolidado do Período;12965123;S"],
+    )
+    cab = ("CNPJ_CIA;DT_REFER;VERSAO;DENOM_CIA;CD_CVM;GRUPO_DFP;MOEDA;ESCALA_MOEDA;"
+           "ORDEM_EXERC;DT_FIM_EXERC;CD_CONTA;DS_CONTA;VL_CONTA;ST_CONTA_FIXA")
+    bpp = [cab,
+           "30.306.294/0001-45;2025-12-31;1;BTG;22616;DF Consolidado;REAL;MIL;ÚLTIMO;"
+           "2025-12-31;2.07;Patrimônio Líquido Consolidado;68794384;S",
+           "90.400.888/0001-42;2025-12-31;1;SANT;20532;DF Consolidado;REAL;MIL;ÚLTIMO;"
+           "2025-12-31;2.07;Patrimônio Líquido Consolidado;121946441;S"]
+    with zipfile.ZipFile(pasta / "dfp_cia_aberta_2025.zip", "a") as z:
+        z.writestr("dfp_cia_aberta_BPP_con_2025.csv", "\n".join(bpp).encode("ISO-8859-1"))
+
+    out = cvm.composicao_capital([2025], pasta_zips=pasta).set_index("CNPJ_CIA")
+    assert out.loc["30.306.294/0001-45", "ACOES"] == pytest.approx(11670063466 - 82408800)
+    assert out.loc["90.400.888/0001-42", "ACOES"] == pytest.approx((7498531 - 27331) * 1000)
+    assert out["ESCALA_CONFIRMADA"].all()
+
+
+def test_escala_por_vpa_recusa_o_ambiguo():
+    from magicb3.fundamentals import escala_por_vpa
+    assert escala_por_vpa(11.6e9, 68.8e9) == pytest.approx(11.6e9)
+    assert escala_por_vpa(7.47e6, 121.9e9) == pytest.approx(7.47e9)
+    # 5 mi (ou 5 bi) de ações e PL de R$ 1 bi: VPA de R$ 200 ou de R$ 0,20 —
+    # as duas existem na bolsa, então não decide.
+    assert pd.isna(escala_por_vpa(5e6, 1e9))
+    assert pd.isna(escala_por_vpa(5000, -1e9))
+
+
+def test_valor_de_mercado_das_units():
+    """KLBN11 valia cinco vezes o real: preço de uma unit vezes o nº total de
+    ações, sem dividir pelas cinco ações que cada unit carrega."""
+    from magicb3.fundamentals import valor_de_mercado_units
+    t = pd.Series(["KLBN11.SA", "BPAC11.SA", "BRBI11.SA", "PETR4.SA", "SANB11.SA"])
+    preco = pd.Series([18.81, 60.0, 13.0, 53.88, 26.3])
+    acoes = pd.Series([6.135e9, 11.588e9, 1.0e8, 13.04e9, 7.47e9])
+    da_cvm = pd.Series([True, True, True, True, False])
+    vm = valor_de_mercado_units(t, preco, acoes, da_cvm)
+    assert vm[0] == pytest.approx(18.81 * 6.135e9 / 5)
+    assert vm[1] == pytest.approx(60.0 * 11.588e9 / 3)
+    assert pd.isna(vm[2])             # unit sem fator conhecido
+    assert vm[3] == pytest.approx(53.88 * 13.04e9)
+    assert pd.isna(vm[4])             # nº de ações do Yahoo: units ou ações?

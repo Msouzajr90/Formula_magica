@@ -116,6 +116,22 @@ EXCLUSOES_MANUAIS: dict[str, tuple[str, str]] = {
     ),
 }
 
+# Quantas ações formam uma unit. O preço de uma unit é o de várias ações; com o
+# nº TOTAL de ações da companhia, o valor de mercado é preço × ações ÷ fator.
+# Sem isto a KLBN11 valia R$ 115 bi em vez de R$ 23 bi (cinco vezes) e a
+# BPAC11 R$ 700 bi em vez de R$ 232 bi. Não há fonte pública desses fatores
+# num arquivo só, e eles mudam raramente; unit fora da lista fica sem valor de
+# mercado — o erro silencioso é pior que o buraco declarado.
+ACOES_POR_UNIT = {
+    "ALUP11": 3,    # Alupar:      1 ON + 2 PN
+    "BPAC11": 3,    # BTG Pactual: 1 ON + 2 PN
+    "ENGI11": 5,    # Energisa:    1 ON + 4 PN
+    "IGTI11": 3,    # Iguatemi:    1 ON + 2 PN
+    "KLBN11": 5,    # Klabin:      1 ON + 4 PN
+    "SANB11": 2,    # Santander:   1 ON + 1 PN
+    "TAEE11": 3,    # Taesa:       1 ON + 2 PN
+}
+
 CACHE_DIR = Path.home() / ".magicb3_cache"
 
 

@@ -77,14 +77,9 @@ def prefixo(ticker: str) -> str:
 # de 2. Não há fonte pública desses fatores num arquivo só, e eles mudam
 # raramente; ficam aqui, e uma unit fora da lista é EXCLUÍDA em vez de tratada
 # como ação — o erro silencioso é pior que o buraco declarado.
-ACOES_POR_UNIT = {
-    "BPAC11": 3,    # BTG Pactual: 1 ON + 2 PN
-    "ENGI11": 5,    # Energisa:    1 ON + 4 PN
-    "IGTI11": 3,    # Iguatemi:    1 ON + 2 PN
-    "KLBN11": 5,    # Klabin:      1 ON + 4 PN
-    "SANB11": 2,    # Santander:   1 ON + 1 PN
-    "TAEE11": 3,    # Taesa:       1 ON + 2 PN
-}
+# A lista mora em `magicb3.config`, porque o ranking também precisa dela (o
+# valor de mercado de uma unit é preço × ações ÷ fator).
+from magicb3.config import ACOES_POR_UNIT  # noqa: E402
 
 # P/VP individual fora desta faixa não é notícia, é erro de escala. A Vivara
 # apareceu com 2.016 na primeira execução real — o nº de ações vinha mil vezes

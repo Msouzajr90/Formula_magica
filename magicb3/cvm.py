@@ -457,7 +457,12 @@ def composicao_capital(anos: list[int], *, consolidado: bool = True,
         else:
             cap["ACOES_IMPLICITO"] = np.nan
 
-        linhas.append(cap[["CNPJ_CIA", "DT_REFER", "ACOES_BRUTO", "ACOES_IMPLICITO"]])
+        # Segunda referência, para quem não traz o LPA (os bancos o entregam
+        # zerado): o patrimônio líquido do mesmo arquivo. Ver
+        # `fundamentals.escala_por_vpa`.
+        cap["PL_REF"] = _patrimonio_por_cnpj(zf, suf, ano).reindex(cap["CNPJ_CIA"]).to_numpy()
+        linhas.append(cap[["CNPJ_CIA", "DT_REFER", "ACOES_BRUTO", "ACOES_IMPLICITO",
+                           "PL_REF"]])
 
     if not linhas:
         return pd.DataFrame(columns=["CNPJ_CIA", "ACOES", "ACOES_BRUTO",
@@ -472,7 +477,15 @@ def composicao_capital(anos: list[int], *, consolidado: bool = True,
 
     df["ACOES"] = np.where(unidades, df["ACOES_BRUTO"],
                     np.where(milhares, df["ACOES_BRUTO"] * 1000.0, np.nan))
-    df["ESCALA_CONFIRMADA"] = unidades | milhares
+    sem_lpa = df["ACOES"].isna() & df["ACOES_BRUTO"].notna()
+    if "PL_REF" in df.columns and sem_lpa.any():
+        from .fundamentals import escala_por_vpa
+        pelo_pl = df.loc[sem_lpa].apply(
+            lambda r: escala_por_vpa(r["ACOES_BRUTO"], r["PL_REF"]), axis=1)
+        df.loc[sem_lpa, "ACOES"] = pelo_pl
+        log.info("composição do capital: escala resolvida pelo patrimônio em %d "
+                 "empresas sem lucro por ação", int(pelo_pl.notna().sum()))
+    df["ESCALA_CONFIRMADA"] = df["ACOES"].notna()
     df.loc[df["ACOES"] <= 0, "ACOES"] = np.nan
 
     log.info("composição do capital: %d empresas, %d com escala confirmada "
@@ -480,6 +493,23 @@ def composicao_capital(anos: list[int], *, consolidado: bool = True,
              len(df), int(df["ESCALA_CONFIRMADA"].sum()),
              int(unidades.sum()), int(milhares.sum()))
     return df[["CNPJ_CIA", "ACOES", "ACOES_BRUTO", "ESCALA_CONFIRMADA"]]
+
+
+def _patrimonio_por_cnpj(zf: zipfile.ZipFile, suf: str, ano: int) -> pd.Series:
+    """{CNPJ -> patrimônio líquido} do balanço mais recente no zip da DFP."""
+    nome = _achar_membro(zf, "dfp", "BPP", suf, ano)
+    if nome is None:
+        return pd.Series(dtype=float)
+    # "2.0*" = o passivo até o 3º nível: o PL está em 2.03 nas empresas e em
+    # 2.07/2.08 nos bancos, e é achado pela descrição em qualquer um deles.
+    bpp = _normalizar(_ler_membro(zf, nome, {"2.0*"}))
+    pl = patrimonio_liquido(bpp)
+    if pl.empty or "CNPJ_CIA" not in bpp.columns:
+        return pd.Series(dtype=float)
+    cnpj = bpp.drop_duplicates("CD_CVM").set_index("CD_CVM")["CNPJ_CIA"]
+    serie = pd.Series(pl["PATRIMONIO"].to_numpy(),
+                      index=pl["CD_CVM"].map(cnpj).to_numpy()).dropna()
+    return serie[~serie.index.duplicated(keep="last")]
 
 
 def _sem_acento(serie: pd.Series) -> pd.Series:
@@ -563,9 +593,17 @@ def patrimonio_liquido(bpp: pd.DataFrame) -> pd.DataFrame:
     pl = bpp[ds.str.startswith(C.DS_PATRIMONIO_LIQUIDO, na=False)].copy()
     if pl.empty:
         return pd.DataFrame(columns=["CD_CVM", "PATRIMONIO", "CD_CONTA_PL"])
-    # entre "Consolidado" e "Atribuído ao Controlador", fica o de código mais curto
+    # O balanço MAIS RECENTE de cada empresa e, nele, entre "Consolidado" e
+    # "Atribuído ao Controlador", o de código mais curto.
+    #
+    # Até 27/10/2026 a ordenação era só ["DT_REFER", "_prof"], crescente, e o
+    # `first()` pegava o balanço MAIS ANTIGO da janela lida — até 15 meses de
+    # atraso. Em 175 das 438 empresas do fundamentos.json o PL divergia mais de
+    # 20% do atual; a Minerva aparecia com PL negativo (o de 03/2025) e sumia
+    # do P/VP, embora o de 06/2026 fosse R$ 2,2 bi. Afetava o ROE dos bancos
+    # no ranking e o P/VP do Ibovespa.
     pl["_prof"] = pl["CD_CONTA"].astype(str).str.count(r"\.")
-    pl = pl.sort_values(["DT_REFER", "_prof"])
+    pl = pl.sort_values(["CD_CVM", "DT_REFER", "_prof"], ascending=[True, False, True])
     pl = pl.groupby("CD_CVM", as_index=False).first()
     return pl.rename(columns={"VL_CONTA": "PATRIMONIO",
                               "CD_CONTA": "CD_CONTA_PL"})[

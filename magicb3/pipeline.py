@@ -190,7 +190,9 @@ def montar_universo(params: C.Params, *, anos: list[int] | None = None,
 
     mercado["ACOES"] = mercado["ACOES_CVM"].fillna(
         mercado["TICKER"].map(n_yahoo) if len(n_yahoo) else np.nan)
-    mercado["VALOR_MERCADO"] = mercado["PRECO"] * mercado["ACOES"]
+    mercado["VALOR_MERCADO"] = fundamentals.valor_de_mercado_units(
+        mercado["TICKER"], mercado["PRECO"], mercado["ACOES"],
+        mercado["ACOES_CVM"].notna())
 
     n_cvm = int(mercado["ACOES_CVM"].notna().sum())
     n_tot = int(mercado["ACOES"].notna().sum())
