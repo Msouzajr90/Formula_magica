@@ -1,6 +1,13 @@
 name: Atualizar mercado
 on:
   workflow_dispatch:
+  # Roda sozinho quando o atualizar_tudo.bat publica balanço novo: assim um
+  # clique no seu computador basta. Só o fundamentos.json dispara; os
+  # arquivos que os próprios robôs gravam não (e push do robô não dispara
+  # workflow de qualquer jeito).
+  push:
+    branches: [main]
+    paths: [web/public/fundamentos.json]
   schedule:
     # 00h10 UTC = 21h10 em Brasilia, de segunda a sexta (por isso 2-6 em UTC:
     # a segunda-feira brasileira cai na terca-feira UTC). Meia hora depois dos
