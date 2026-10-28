@@ -256,3 +256,16 @@ def test_individual_cobre_quem_nao_consolida(monkeypatch):
     assert p.loc[1, "PATRIMONIO"] == pytest.approx(2049.0)        # o consolidado manda
     assert p.loc[25372, "PATRIMONIO"] == pytest.approx(6346.0)    # o individual cobre
     assert 99999 not in p.index                                   # fora do universo
+
+
+def test_unit_aceita_a_cvm_quando_o_yahoo_conta_units():
+    """ENGI11: o Yahoo deu valor de mercado = preço × units, o implícito saiu
+    5x menor que o total da CVM e a unit ficava fora. Com o fator, a CVM vale;
+    o erro de mil continua barrado."""
+    from mercado import pvp
+    n, fonte = pvp.acoes_da_empresa(2.514e9, 2.514e9 / 5, fator_unit=5)
+    assert (n, fonte) == (pytest.approx(2.514e9), "cvm")
+    n, fonte = pvp.acoes_da_empresa(2.514e9, 2.514e9 / 5)          # sem fator: como antes
+    assert fonte.startswith("mercado")
+    n, fonte = pvp.acoes_da_empresa(2.514e12, 2.514e9 / 5, fator_unit=5)
+    assert fonte.startswith("mercado")                             # mil vezes: CVM perde

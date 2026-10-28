@@ -119,7 +119,8 @@ def acoes_por_ticker(tickers, mapa: dict[str, int], nomes: dict[str, str]
         if cvm is None:
             continue
         acoes_cvm, nome_cvm = cvm_acoes.get(cvm, (None, None))
-        n, fonte = pvp.acoes_da_empresa(acoes_cvm, implicitas.get(t[:4]))
+        n, fonte = pvp.acoes_da_empresa(acoes_cvm, implicitas.get(t[:4]),
+                                        pvp.FATOR_POR_PREFIXO.get(t[:4]))
         if n is None:
             continue
         saida[t] = {"cvm": cvm, "acoes": n,

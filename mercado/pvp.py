@@ -81,6 +81,8 @@ def prefixo(ticker: str) -> str:
 # valor de mercado de uma unit é preço × ações ÷ fator).
 from magicb3.config import ACOES_POR_UNIT  # noqa: E402
 
+FATOR_POR_PREFIXO = {t[:4]: f for t, f in ACOES_POR_UNIT.items()}
+
 # P/VP individual fora desta faixa não é notícia, é erro de escala. A Vivara
 # apareceu com 2.016 na primeira execução real — o nº de ações vinha mil vezes
 # maior que o verdadeiro. Um papel assim entra na soma e desloca o índice.
@@ -91,7 +93,8 @@ PVP_PLAUSIVEL = (0.02, 100.0)
 DIVERGENCIA_MAXIMA = 2.0
 
 
-def acoes_da_empresa(acoes_cvm, acoes_implicitas) -> tuple[float | None, str]:
+def acoes_da_empresa(acoes_cvm, acoes_implicitas,
+                     fator_unit: int | None = None) -> tuple[float | None, str]:
     """Escolhe o nº TOTAL de ações da companhia e diz de onde ele veio.
 
     Duas fontes, cada uma com o seu defeito:
@@ -109,6 +112,13 @@ def acoes_da_empresa(acoes_cvm, acoes_implicitas) -> tuple[float | None, str]:
     Então: vale a da CVM quando as duas concordam; vale a implícita quando
     discordam por mais de duas vezes, ou quando a da CVM não existe. Duas
     fontes concordando é a maneira barata de saber que nenhuma errou por mil.
+
+    `fator_unit` (ações por unit, quando a empresa negocia units): o Yahoo às
+    vezes calcula o valor de mercado da unit como preço × UNITS, e o implícito
+    sai dividido pelo fator. Na Energisa (unit de 5 ações) a divergência dava
+    5x, a CVM perdia, e a ENGI11 ficava fora do P/VP — embora o número da CVM
+    estivesse certo. Para essas, a CVM vale se concordar com o implícito OU
+    com o implícito × fator. A trava contra o erro de mil continua.
     """
     tem_cvm = _ok(acoes_cvm) and acoes_cvm > 0
     tem_imp = _ok(acoes_implicitas) and acoes_implicitas > 0
@@ -116,6 +126,10 @@ def acoes_da_empresa(acoes_cvm, acoes_implicitas) -> tuple[float | None, str]:
         razao = max(acoes_cvm, acoes_implicitas) / min(acoes_cvm, acoes_implicitas)
         if razao <= DIVERGENCIA_MAXIMA:
             return float(acoes_cvm), "cvm"
+        if fator_unit:
+            em_acoes = acoes_implicitas * fator_unit
+            if max(acoes_cvm, em_acoes) / min(acoes_cvm, em_acoes) <= DIVERGENCIA_MAXIMA:
+                return float(acoes_cvm), "cvm"
         return float(acoes_implicitas), f"mercado (a da CVM divergia {razao:.0f}x)"
     if tem_cvm:
         return float(acoes_cvm), "cvm"
@@ -152,7 +166,8 @@ def vpa_por_prefixo(empresas: list[dict], mapa_prefixo: dict[str, int],
         base = por_cvm.get(cvm)
         if base is None:
             continue
-        acoes, fonte = acoes_da_empresa(base["acoesCvm"], implicitas.get(pref))
+        acoes, fonte = acoes_da_empresa(base["acoesCvm"], implicitas.get(pref),
+                                        FATOR_POR_PREFIXO.get(pref))
         if acoes is None:
             continue
         saida[pref] = {"vpa": base["pl"] / acoes, "pl": base["pl"],
