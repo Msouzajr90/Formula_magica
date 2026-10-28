@@ -33,18 +33,27 @@ jobs:
         run: python atualizar_dados.py --pool 80
       - name: Conferir o resultado
         run: python validar_dados.py
+      - name: Ponto semanal do P/VP por papel
+        # So as sextas grava alguma coisa; nos outros dias sai sem tocar no arquivo.
+        continue-on-error: true
+        run: python atualizar_pvp_papeis.py
       - name: Publicar
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           test -f web/public/dados.json || (echo "Arquivo nao foi gerado." && exit 1)
           cp web/public/dados.json /tmp/gerado.json
+          if [ -f web/public/pvp_papeis.json ]; then cp web/public/pvp_papeis.json /tmp/pvp_papeis.json; fi
           for tentativa in 1 2 3 4 5; do
             git fetch origin main
             git reset --hard origin/main
             mkdir -p $(dirname web/public/dados.json)
             cp /tmp/gerado.json web/public/dados.json
             git add web/public/dados.json
+            if [ -f /tmp/pvp_papeis.json ]; then
+              cp /tmp/pvp_papeis.json web/public/pvp_papeis.json
+              git add web/public/pvp_papeis.json
+            fi
             if git diff --staged --quiet; then
               echo "Nada mudou."
               exit 0
