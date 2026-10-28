@@ -269,3 +269,29 @@ def test_unit_aceita_a_cvm_quando_o_yahoo_conta_units():
     assert fonte.startswith("mercado")
     n, fonte = pvp.acoes_da_empresa(2.514e12, 2.514e9 / 5, fator_unit=5)
     assert fonte.startswith("mercado")                             # mil vezes: CVM perde
+
+
+def _btg(com_original: bool):
+    linhas = [
+        ("2022-12-31", "2024-11-29", "2023-02-13", 49567.0),
+        ("2023-03-31", "2024-11-29", "2023-05-08", 51491.0),
+    ]
+    df = pd.DataFrame([{"CD_CVM": 22616, "DT_REFER": pd.Timestamp(r),
+                        "DT_RECEB": pd.Timestamp(v), "DT_RECEB_ORIGINAL": pd.Timestamp(o),
+                        "PATRIMONIO": pl * 1e6} for r, v, o, pl in linhas])
+    return df if com_original else df.drop(columns=["DT_RECEB_ORIGINAL"])
+
+
+def test_reapresentacao_nao_apaga_o_balanco_do_passado():
+    """O BTG reapresentou em 29/11/2024 os balanços de 2021 a 2024. Com a data
+    da última versão, o P/VP dele sumia de jan/2023 a nov/2024."""
+    datas = pd.to_datetime(["2023-06-02", "2023-07-14"])
+    fech = _fech(datas, BPAC11=[24.0, 24.0])
+    for com_original, esperado in ((True, [51491, 51491]), (False, [49567, 51491])):
+        r = pp.construir(_btg(com_original),
+                         {"BPAC11": {"cvm": 22616, "acoes": 11.6e9, "fonte": "cvm"}},
+                         fech, datas)
+        s = r["papeis"]["BPAC11"]["s"]
+        assert all(v is not None for v in s), (com_original, s)
+        vpa = [24.0 / v for v in s]                       # VPA implícito por unit
+        assert vpa == [pytest.approx(pl * 1e6 * 3 / 11.6e9, rel=0.01) for pl in esperado]

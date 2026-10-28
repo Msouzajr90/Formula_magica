@@ -161,8 +161,16 @@ def _normalizar(df: pd.DataFrame, dt_receb: pd.DataFrame | None = None) -> pd.Da
 
     if dt_receb is not None and not dt_receb.empty:
         df = df.merge(dt_receb, on=["CD_CVM", "DT_REFER", "VERSAO"], how="left")
+        # A data da PRIMEIRA entrega do período, além da da versão usada. O BTG
+        # reapresentou em 29/11/2024 todos os balanços de 2021 a 2024; com a
+        # data da última versão, o balanço de 03/2023 só "existia" em 12/2024,
+        # e o P/VP dele sumia de 2023 inteiro.
+        primeira = (dt_receb.groupby(["CD_CVM", "DT_REFER"], as_index=False)["DT_RECEB"]
+                    .min().rename(columns={"DT_RECEB": "DT_RECEB_ORIGINAL"}))
+        df = df.merge(primeira, on=["CD_CVM", "DT_REFER"], how="left")
     else:
         df["DT_RECEB"] = pd.NaT
+        df["DT_RECEB_ORIGINAL"] = pd.NaT
     return df
 
 

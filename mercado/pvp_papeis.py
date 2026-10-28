@@ -41,7 +41,7 @@ import math
 import re
 from datetime import date
 
-from .pvp import ACOES_POR_UNIT, PVP_PLAUSIVEL, painel_patrimonio
+from .pvp import ACOES_POR_UNIT, PVP_PLAUSIVEL, data_efetiva, painel_patrimonio
 
 log = logging.getLogger(__name__)
 
@@ -154,8 +154,7 @@ def _vigente_por_data(painel_cvm, datas, folga_dias: int = 90):
             pd.Series([None] * len(datas), index=datas)
     p = painel_cvm.copy()
     p["DT_REFER"] = _ns(p["DT_REFER"])
-    receb = _ns(p["DT_RECEB"])
-    p["_EFETIVA"] = receb.fillna(p["DT_REFER"] + pd.Timedelta(days=folga_dias))
+    p["_EFETIVA"] = _ns(data_efetiva(p, folga_dias))
     p = p.sort_values(["_EFETIVA", "DT_REFER"])
     p = p[p["DT_REFER"] >= p["DT_REFER"].cummax()]
     p = p.drop_duplicates(subset=["DT_REFER"], keep="last")

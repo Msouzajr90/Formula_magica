@@ -311,10 +311,36 @@ def painel_patrimonio(bpp, ds_patrimonio: str):
 
     cols = {"VL_CONTA": "PATRIMONIO"}
     pl = pl.rename(columns=cols)
-    if "DT_RECEB" not in pl.columns:
-        pl["DT_RECEB"] = pd.NaT
-    return pl[["CD_CVM", "DT_REFER", "DT_RECEB", "PATRIMONIO"]].sort_values(
+    for c in ("DT_RECEB", "DT_RECEB_ORIGINAL"):
+        if c not in pl.columns:
+            pl[c] = pd.NaT
+    return pl[["CD_CVM", "DT_REFER", "DT_RECEB", "DT_RECEB_ORIGINAL", "PATRIMONIO"]].sort_values(
         ["CD_CVM", "DT_REFER"]).reset_index(drop=True)
+
+
+# Prazo além do qual uma entrega não é a original, e sim reapresentação: o ITR
+# vence em 45 dias e a DFP em 90. Usado só quando o painel não traz a data da
+# primeira entrega (os caches gravados antes de 28/10/2026 não trazem).
+PRAZO_ENTREGA_DIAS = 100
+
+
+def data_efetiva(painel, folga_dias: int = 90):
+    """Quando o balanço de cada linha passou a ser público.
+
+    A primeira entrega do período, não a da versão reapresentada. Sem a data
+    da primeira entrega, a de recebimento limitada a `PRAZO_ENTREGA_DIAS`
+    depois da referência; sem data nenhuma, referência + `folga_dias`.
+    """
+    import pandas as pd
+
+    ref = pd.to_datetime(painel["DT_REFER"])
+    receb = pd.to_datetime(painel.get("DT_RECEB"), errors="coerce") \
+        if "DT_RECEB" in painel else pd.Series(pd.NaT, index=painel.index)
+    orig = pd.to_datetime(painel.get("DT_RECEB_ORIGINAL"), errors="coerce") \
+        if "DT_RECEB_ORIGINAL" in painel else pd.Series(pd.NaT, index=painel.index)
+    teto = ref + pd.Timedelta(days=PRAZO_ENTREGA_DIAS)
+    receb = receb.where(receb.isna() | (receb <= teto), teto)
+    return orig.fillna(receb).fillna(ref + pd.Timedelta(days=folga_dias))
 
 
 def patrimonio_vigente(painel, cvm: int, quando, folga_dias: int = 90):
@@ -331,8 +357,7 @@ def patrimonio_vigente(painel, cvm: int, quando, folga_dias: int = 90):
     if sub.empty:
         return None
     quando = pd.Timestamp(quando)
-    entrega = sub["DT_RECEB"].fillna(
-        sub["DT_REFER"] + pd.Timedelta(days=folga_dias))
+    entrega = data_efetiva(sub, folga_dias)
     sub = sub[entrega <= quando]
     if sub.empty:
         return None
