@@ -6,3 +6,7 @@ fiinfra_pendentes.txt
 sondagem_fundos*.txt
 sondagem_fip.txt
 fundos_fechados.txt
+
+# Logs dos .bat (atualizar_tudo, pvp, fundamentos)
+*_log.txt
+pvp_diagnostico.txt
