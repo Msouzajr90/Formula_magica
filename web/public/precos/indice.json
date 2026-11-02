@@ -1,6 +1,6 @@
 {
  "v": 1,
- "geradoEm": "2026-11-02 11:29",
+ "geradoEm": "2026-11-02 14:10",
  "demo": false,
  "escala": 1000000,
  "corteLiquidez": 1000000.0,
@@ -18,12 +18,22 @@
    "nome": "CDI",
    "arquivo": "_CDI.json",
    "i0": 1,
-   "n": 4171,
+   "n": 4172,
    "esc": 100000000
   }
  },
  "avisos": [],
  "ativos": [
+  {
+   "t": "5PRE11",
+   "nome": "It Now prefixado 5 anos",
+   "classe": "etf",
+   "i0": 4001,
+   "n": 172,
+   "liqMax": 2872150,
+   "liq": 2371039,
+   "neg": 1.0
+  },
   {
    "t": "AAZQ11",
    "nome": "AZ QUEST SOLE FIAGRO - IMOBILIÁRIO",
@@ -46,7 +56,7 @@
   },
   {
    "t": "ACWI11",
-   "nome": "iShares MSCI ACWI (em reais)",
+   "nome": "Trend mundo (ACWI)",
    "classe": "etf",
    "i0": 2738,
    "n": 1435,
@@ -62,6 +72,16 @@
    "n": 689,
    "liqMax": 1536734,
    "liq": 889726,
+   "neg": 1.0
+  },
+  {
+   "t": "AGRI11",
+   "nome": "BB agronegócio",
+   "classe": "etf",
+   "i0": 3064,
+   "n": 1109,
+   "liqMax": 1159409,
+   "liq": 76988,
    "neg": 1.0
   },
   {
@@ -122,6 +142,16 @@
    "n": 4172,
    "liqMax": 142579698,
    "liq": 37950504,
+   "neg": 1.0
+  },
+  {
+   "t": "ALUG11",
+   "nome": "Investo imobiliário global",
+   "classe": "etf",
+   "i0": 2925,
+   "n": 1248,
+   "liqMax": 1573148,
+   "liq": 275819,
    "neg": 1.0
   },
   {
@@ -272,7 +302,7 @@
    "classe": "acao",
    "i0": 1,
    "n": 4172,
-   "liqMax": 10349662,
+   "liqMax": 10576974,
    "liq": 10349662,
    "neg": 1.0,
    "saltos": [
@@ -441,8 +471,18 @@
    ]
   },
   {
+   "t": "B5MB11",
+   "nome": "Bradesco IMA-B 5+",
+   "classe": "etf",
+   "i0": 2460,
+   "n": 1713,
+   "liqMax": 14407182,
+   "liq": 14381875,
+   "neg": 1.0
+  },
+  {
    "t": "B5P211",
-   "nome": "It Now IMA-B5 (NTN-B até 5 anos)",
+   "nome": "It Now IMA-B 5",
    "classe": "etf",
    "i0": 2690,
    "n": 1483,
@@ -497,6 +537,16 @@
    "neg": 1.0
   },
   {
+   "t": "BBOV11",
+   "nome": "BB Ibovespa",
+   "classe": "etf",
+   "i0": 2667,
+   "n": 1506,
+   "liqMax": 58566691,
+   "liq": 21052059,
+   "neg": 1.0
+  },
+  {
    "t": "BBSE3",
    "nome": "BB SEGURIDADE PARTICIPAÇÕES S.A.",
    "classe": "acao",
@@ -524,6 +574,16 @@
    "n": 2249,
    "liqMax": 2670423,
    "liq": 383288,
+   "neg": 1.0
+  },
+  {
+   "t": "BDEF11",
+   "nome": "Morningstar setores defensivos",
+   "classe": "etf",
+   "i0": 3248,
+   "n": 925,
+   "liqMax": 1264051,
+   "liq": 1263803,
    "neg": 1.0
   },
   {
@@ -587,6 +647,22 @@
    "neg": 1.0
   },
   {
+   "t": "BITI11",
+   "nome": "It Now bitcoin",
+   "classe": "etf",
+   "i0": 3181,
+   "n": 992,
+   "liqMax": 3049889,
+   "liq": 475757,
+   "neg": 1.0,
+   "saltos": [
+    [
+     "2026-01-22",
+     -0.6715
+    ]
+   ]
+  },
+  {
    "t": "BLAU3",
    "nome": "BLAU FARMACÊUTICA S.A.",
    "classe": "acao",
@@ -594,6 +670,16 @@
    "n": 1382,
    "liqMax": 17913246,
    "liq": 3243980,
+   "neg": 1.0
+  },
+  {
+   "t": "BLFT11",
+   "nome": "B-Index LFT curto prazo",
+   "classe": "etf",
+   "i0": 3916,
+   "n": 257,
+   "liqMax": 6459230,
+   "liq": 1165642,
    "neg": 1.0
   },
   {
@@ -634,6 +720,26 @@
    "n": 4172,
    "liqMax": 1296957043,
    "liq": 975659438,
+   "neg": 1.0
+  },
+  {
+   "t": "BOVB11",
+   "nome": "Bradesco Ibovespa",
+   "classe": "etf",
+   "i0": 2343,
+   "n": 1830,
+   "liqMax": 47490982,
+   "liq": 9571917,
+   "neg": 1.0
+  },
+  {
+   "t": "BOVS11",
+   "nome": "Safra Ibovespa",
+   "classe": "etf",
+   "i0": 2823,
+   "n": 1350,
+   "liqMax": 2040616,
+   "liq": 493159,
    "neg": 1.0
   },
   {
@@ -795,6 +901,16 @@
    "neg": 1.0
   },
   {
+   "t": "BRXC11",
+   "nome": "BTG Teva IABR selector",
+   "classe": "etf",
+   "i0": 3897,
+   "n": 276,
+   "liqMax": 1450022,
+   "liq": 581624,
+   "neg": 1.0
+  },
+  {
    "t": "BTLG11",
    "nome": "BTGP LOGISTICA FII",
    "classe": "fii",
@@ -823,6 +939,16 @@
    "liqMax": 26721331,
    "liq": 6830209,
    "neg": 1.0
+  },
+  {
+   "t": "CAPE11",
+   "nome": "iShares Ibovespa BR+ Cap 5%",
+   "classe": "etf",
+   "i0": 3847,
+   "n": 326,
+   "liqMax": 2049605,
+   "liq": 1039697,
+   "neg": 0.81
   },
   {
    "t": "CASH3",
@@ -871,6 +997,22 @@
    ]
   },
   {
+   "t": "CHIP11",
+   "nome": "Investo semicondutores",
+   "classe": "etf",
+   "i0": 3897,
+   "n": 276,
+   "liqMax": 6057460,
+   "liq": 4778654,
+   "neg": 1.0,
+   "saltos": [
+    [
+     "2025-12-23",
+     -0.8336
+    ]
+   ]
+  },
+  {
    "t": "CLIN11",
    "nome": "CLAVE INDICES FII RL",
    "classe": "fii",
@@ -888,6 +1030,16 @@
    "n": 3663,
    "liqMax": 2211890,
    "liq": 1700078,
+   "neg": 1.0
+  },
+  {
+   "t": "CMDB11",
+   "nome": "BTG Teva ações commodities",
+   "classe": "etf",
+   "i0": 2944,
+   "n": 1229,
+   "liqMax": 1794021,
+   "liq": 361921,
    "neg": 1.0
   },
   {
@@ -935,6 +1087,16 @@
      0.8182
     ]
    ]
+  },
+  {
+   "t": "COIN11",
+   "nome": "Buena Vista bitcoin high income",
+   "classe": "etf",
+   "i0": 3706,
+   "n": 467,
+   "liqMax": 7231674,
+   "liq": 2654742,
+   "neg": 1.0
   },
   {
    "t": "CPFE3",
@@ -1136,12 +1298,22 @@
   },
   {
    "t": "DEBB11",
-   "nome": "BTG debêntures incentivadas",
+   "nome": "BTG debêntures DI",
    "classe": "etf",
    "i0": 3084,
    "n": 1089,
    "liqMax": 9181154,
    "liq": 7389504,
+   "neg": 1.0
+  },
+  {
+   "t": "DEFI11",
+   "nome": "Hashdex DeFi",
+   "classe": "etf",
+   "i0": 3000,
+   "n": 1173,
+   "liqMax": 1127324,
+   "liq": 342262,
    "neg": 1.0
   },
   {
@@ -1175,13 +1347,43 @@
    "neg": 1.0
   },
   {
+   "t": "DIVD11",
+   "nome": "It Now IDIV Renda (distribui)",
+   "classe": "etf",
+   "i0": 3575,
+   "n": 598,
+   "liqMax": 3118672,
+   "liq": 1883841,
+   "neg": 1.0
+  },
+  {
    "t": "DIVO11",
-   "nome": "It Now IDIV (dividendos)",
+   "nome": "It Now IDIV",
    "classe": "etf",
    "i0": 516,
    "n": 3657,
    "liqMax": 41055943,
    "liq": 41055943,
+   "neg": 1.0
+  },
+  {
+   "t": "DOLA11",
+   "nome": "BB dólar futuro",
+   "classe": "etf",
+   "i0": 3897,
+   "n": 276,
+   "liqMax": 5479696,
+   "liq": 5479696,
+   "neg": 1.0
+  },
+  {
+   "t": "DOLB11",
+   "nome": "BTG cambial",
+   "classe": "etf",
+   "i0": 3897,
+   "n": 276,
+   "liqMax": 1681671,
+   "liq": 1528502,
    "neg": 1.0
   },
   {
@@ -1247,6 +1449,16 @@
    "neg": 1.0
   },
   {
+   "t": "ELAS11",
+   "nome": "Safra mulheres na liderança",
+   "classe": "etf",
+   "i0": 3010,
+   "n": 1163,
+   "liqMax": 1579741,
+   "liq": 136361,
+   "neg": 1.0
+  },
+  {
    "t": "EMBJ3",
    "nome": "EMBRAER S.A.",
    "classe": "acao",
@@ -1284,6 +1496,16 @@
    "n": 4172,
    "liqMax": 563779131,
    "liq": 563779131,
+   "neg": 1.0
+  },
+  {
+   "t": "ESGB11",
+   "nome": "BTG S&P/B3 Brazil ESG",
+   "classe": "etf",
+   "i0": 2661,
+   "n": 1512,
+   "liqMax": 1135813,
+   "liq": 9924,
    "neg": 1.0
   },
   {
@@ -1404,7 +1626,7 @@
   },
   {
    "t": "FIXA11",
-   "nome": "Mirae prefixado",
+   "nome": "BB prefixado (futuro de DI 3 anos)",
    "classe": "etf",
    "i0": 2150,
    "n": 2023,
@@ -1489,6 +1711,16 @@
    "neg": 1.0
   },
   {
+   "t": "GENB11",
+   "nome": "BTG S&P/B3 Ingenius",
+   "classe": "etf",
+   "i0": 2858,
+   "n": 1315,
+   "liqMax": 1283744,
+   "liq": 112678,
+   "neg": 1.0
+  },
+  {
    "t": "GFSA3",
    "nome": "GAFISA S.A.",
    "classe": "acao",
@@ -1547,6 +1779,16 @@
    "neg": 1.0
   },
   {
+   "t": "GLDX11",
+   "nome": "Investo ouro",
+   "classe": "etf",
+   "i0": 3837,
+   "n": 336,
+   "liqMax": 1514491,
+   "liq": 1118048,
+   "neg": 1.0
+  },
+  {
    "t": "GMAT3",
    "nome": "GRUPO MATEUS S.A.",
    "classe": "acao",
@@ -1584,6 +1826,36 @@
    "n": 1465,
    "liqMax": 67436956,
    "liq": 27747566,
+   "neg": 1.0
+  },
+  {
+   "t": "GOVE11",
+   "nome": "It Now governança",
+   "classe": "etf",
+   "i0": 457,
+   "n": 3716,
+   "liqMax": 1544341,
+   "liq": 60060,
+   "neg": 1.0
+  },
+  {
+   "t": "GPCA11",
+   "nome": "Grão Tesouro IPCA 2 anos",
+   "classe": "etf",
+   "i0": 4096,
+   "n": 77,
+   "liqMax": 5175347,
+   "liq": 5175347,
+   "neg": 1.0
+  },
+  {
+   "t": "GPUS11",
+   "nome": "Investo GP S&P 500",
+   "classe": "etf",
+   "i0": 3897,
+   "n": 276,
+   "liqMax": 2051571,
+   "liq": 2036747,
    "neg": 1.0
   },
   {
@@ -1638,7 +1910,7 @@
   },
   {
    "t": "HASH11",
-   "nome": "Hashdex cripto",
+   "nome": "Hashdex Nasdaq Crypto",
    "classe": "etf",
    "i0": 2795,
    "n": 1378,
@@ -1747,6 +2019,26 @@
    "neg": 1.0
   },
   {
+   "t": "HIGH11",
+   "nome": "Nu Ibov smart high beta",
+   "classe": "etf",
+   "i0": 3644,
+   "n": 529,
+   "liqMax": 6596995,
+   "liq": 6596995,
+   "neg": 1.0
+  },
+  {
+   "t": "HODL11",
+   "nome": "Investo bitcoin",
+   "classe": "etf",
+   "i0": 3897,
+   "n": 276,
+   "liqMax": 5098545,
+   "liq": 1507917,
+   "neg": 1.0
+  },
+  {
    "t": "HSAF11",
    "nome": "HSI ATIVOS FINANCEIROS FUNDO DE INVESTIMENTO IMOBILIÁRIO",
    "classe": "fii",
@@ -1762,7 +2054,7 @@
    "classe": "fii",
    "i0": 3487,
    "n": 686,
-   "liqMax": 10806979,
+   "liqMax": 15378187,
    "liq": 1337333,
    "neg": 1.0
   },
@@ -1798,12 +2090,22 @@
   },
   {
    "t": "IB5M11",
-   "nome": "It Now IMA-B5+ (NTN-B longas)",
+   "nome": "It Now IMA-B 5+",
    "classe": "etf",
    "i0": 2405,
    "n": 1768,
    "liqMax": 3600843,
    "liq": 3095871,
+   "neg": 1.0
+  },
+  {
+   "t": "IBOB11",
+   "nome": "BTG Ibovespa",
+   "classe": "etf",
+   "i0": 2858,
+   "n": 1315,
+   "liqMax": 10686576,
+   "liq": 10686576,
    "neg": 1.0
   },
   {
@@ -1814,6 +2116,16 @@
    "n": 676,
    "liqMax": 1522150,
    "liq": 676313,
+   "neg": 1.0
+  },
+  {
+   "t": "IDKA11",
+   "nome": "It Now IRF-M P3",
+   "classe": "etf",
+   "i0": 3897,
+   "n": 276,
+   "liqMax": 3198796,
+   "liq": 2983904,
    "neg": 1.0
   },
   {
@@ -1872,12 +2184,22 @@
   },
   {
    "t": "IMAB11",
-   "nome": "It Now IMA-B (NTN-B)",
+   "nome": "It Now IMA-B",
    "classe": "etf",
    "i0": 2316,
    "n": 1857,
    "liqMax": 17873737,
    "liq": 16960272,
+   "neg": 1.0
+  },
+  {
+   "t": "IMBB11",
+   "nome": "Bradesco IMA-B",
+   "classe": "etf",
+   "i0": 2460,
+   "n": 1713,
+   "liqMax": 11117097,
+   "liq": 10300910,
    "neg": 1.0
   },
   {
@@ -1902,7 +2224,7 @@
   },
   {
    "t": "IRFM11",
-   "nome": "It Now IRF-M (prefixados)",
+   "nome": "It Now IRF-M",
    "classe": "etf",
    "i0": 2405,
    "n": 1768,
@@ -1992,12 +2314,22 @@
   },
   {
    "t": "IVVB11",
-   "nome": "iShares S&P 500 (em reais)",
+   "nome": "iShares S&P 500",
    "classe": "etf",
    "i0": 1068,
    "n": 3105,
    "liqMax": 188943469,
    "liq": 81467978,
+   "neg": 1.0
+  },
+  {
+   "t": "IWMI11",
+   "nome": "Buena Vista Russell 2000 high income",
+   "classe": "etf",
+   "i0": 3706,
+   "n": 467,
+   "liqMax": 3426210,
+   "liq": 181023,
    "neg": 1.0
   },
   {
@@ -2018,6 +2350,16 @@
    "n": 4172,
    "liqMax": 116376531,
    "liq": 53084035,
+   "neg": 1.0
+  },
+  {
+   "t": "JOGO11",
+   "nome": "Investo games e e-sports",
+   "classe": "etf",
+   "i0": 2956,
+   "n": 1217,
+   "liqMax": 3308470,
+   "liq": 142176,
    "neg": 1.0
   },
   {
@@ -2249,12 +2591,42 @@
    "neg": 1.0
   },
   {
+   "t": "LFIN11",
+   "nome": "BTG letras financeiras",
+   "classe": "etf",
+   "i0": 3922,
+   "n": 251,
+   "liqMax": 4952580,
+   "liq": 4952580,
+   "neg": 1.0
+  },
+  {
+   "t": "LFIX11",
+   "nome": "Investo letra financeira S1",
+   "classe": "etf",
+   "i0": 3994,
+   "n": 179,
+   "liqMax": 8833457,
+   "liq": 8004549,
+   "neg": 1.0
+  },
+  {
+   "t": "LFTB11",
+   "nome": "Investo Treasury 760 dias",
+   "classe": "etf",
+   "i0": 3897,
+   "n": 276,
+   "liqMax": 78926338,
+   "liq": 78926338,
+   "neg": 1.0
+  },
+  {
    "t": "LFTS11",
    "nome": "Investo Tesouro Selic",
    "classe": "etf",
    "i0": 3180,
    "n": 993,
-   "liqMax": 45214435,
+   "liqMax": 45220409,
    "liq": 39235729,
    "neg": 1.0
   },
@@ -2276,6 +2648,16 @@
    "n": 4172,
    "liqMax": 80116292,
    "liq": 13926840,
+   "neg": 1.0
+  },
+  {
+   "t": "LIQB11",
+   "nome": "BTG Teva target 750",
+   "classe": "etf",
+   "i0": 4116,
+   "n": 57,
+   "liqMax": 1379919,
+   "liq": 1360587,
    "neg": 1.0
   },
   {
@@ -2325,6 +2707,16 @@
    "neg": 1.0
   },
   {
+   "t": "LVOL11",
+   "nome": "Nu Ibov smart low volatility",
+   "classe": "etf",
+   "i0": 3644,
+   "n": 529,
+   "liqMax": 2066819,
+   "liq": 2066819,
+   "neg": 1.0
+  },
+  {
    "t": "LWSA3",
    "nome": "LWSA S/A",
    "classe": "acao",
@@ -2332,6 +2724,16 @@
    "n": 1676,
    "liqMax": 268680280,
    "liq": 18867061,
+   "neg": 1.0
+  },
+  {
+   "t": "MARG11",
+   "nome": "BTG debêntures ultra qualidade",
+   "classe": "etf",
+   "i0": 3897,
+   "n": 276,
+   "liqMax": 1762931,
+   "liq": 1229137,
    "neg": 1.0
   },
   {
@@ -2437,6 +2839,16 @@
    ]
   },
   {
+   "t": "MILL11",
+   "nome": "It Now estilo de vida digital",
+   "classe": "etf",
+   "i0": 2831,
+   "n": 1342,
+   "liqMax": 1829888,
+   "liq": 27138,
+   "neg": 0.984
+  },
+  {
    "t": "MILS3",
    "nome": "MILLS LOCAÇÃO, SERVIÇOS E LOGÍSTICA S.A.",
    "classe": "acao",
@@ -2540,7 +2952,7 @@
   },
   {
    "t": "NASD11",
-   "nome": "Trend Nasdaq-100 (em reais)",
+   "nome": "Trend Nasdaq-100",
    "classe": "etf",
    "i0": 2815,
    "n": 1358,
@@ -2569,6 +2981,16 @@
    ]
   },
   {
+   "t": "NDIV11",
+   "nome": "Nu Renda Ibov Smart Dividendos",
+   "classe": "etf",
+   "i0": 3404,
+   "n": 769,
+   "liqMax": 5418844,
+   "liq": 1535711,
+   "neg": 1.0
+  },
+  {
    "t": "NEWL11",
    "nome": "NEWPORT LOGISTICA FII",
    "classe": "fii",
@@ -2576,6 +2998,36 @@
    "n": 1703,
    "liqMax": 2980170,
    "liq": 331236,
+   "neg": 1.0
+  },
+  {
+   "t": "NSDV11",
+   "nome": "Nu Ibov Smart Dividendos",
+   "classe": "etf",
+   "i0": 3404,
+   "n": 769,
+   "liqMax": 2970232,
+   "liq": 2090724,
+   "neg": 1.0
+  },
+  {
+   "t": "NTNS11",
+   "nome": "Investo Tesouro IPCA+ 0-4 anos",
+   "classe": "etf",
+   "i0": 3331,
+   "n": 842,
+   "liqMax": 1459650,
+   "liq": 1109249,
+   "neg": 1.0
+  },
+  {
+   "t": "NUCL11",
+   "nome": "Investo urânio e nuclear",
+   "classe": "etf",
+   "i0": 2956,
+   "n": 1217,
+   "liqMax": 6525655,
+   "liq": 338910,
    "neg": 1.0
   },
   {
@@ -2632,6 +3084,36 @@
    "n": 2249,
    "liqMax": 1166087,
    "liq": 593785,
+   "neg": 1.0
+  },
+  {
+   "t": "PACB11",
+   "nome": "BTG Tesouro IPCA ultralongo",
+   "classe": "etf",
+   "i0": 3753,
+   "n": 420,
+   "liqMax": 3003170,
+   "liq": 3003170,
+   "neg": 1.0
+  },
+  {
+   "t": "PACC11",
+   "nome": "BTG IMA-B 5",
+   "classe": "etf",
+   "i0": 3897,
+   "n": 276,
+   "liqMax": 3937510,
+   "liq": 3332532,
+   "neg": 1.0
+  },
+  {
+   "t": "PACG11",
+   "nome": "BTG IMA-B",
+   "classe": "etf",
+   "i0": 3897,
+   "n": 276,
+   "liqMax": 3032088,
+   "liq": 2391283,
    "neg": 1.0
   },
   {
@@ -2894,6 +3376,46 @@
    "n": 1337,
    "liqMax": 15646107,
    "liq": 3139279,
+   "neg": 1.0
+  },
+  {
+   "t": "QETH11",
+   "nome": "QR ethereum",
+   "classe": "etf",
+   "i0": 2864,
+   "n": 1309,
+   "liqMax": 7629821,
+   "liq": 432280,
+   "neg": 1.0
+  },
+  {
+   "t": "QQQI11",
+   "nome": "Buena Vista Nasdaq-100 high income",
+   "classe": "etf",
+   "i0": 3897,
+   "n": 276,
+   "liqMax": 3273230,
+   "liq": 2609230,
+   "neg": 1.0
+  },
+  {
+   "t": "QQQQ11",
+   "nome": "Buena Vista V (Nasdaq-100)",
+   "classe": "etf",
+   "i0": 3710,
+   "n": 463,
+   "liqMax": 2400813,
+   "liq": 117912,
+   "neg": 1.0
+  },
+  {
+   "t": "QSOL11",
+   "nome": "QR solana",
+   "classe": "etf",
+   "i0": 3632,
+   "n": 541,
+   "liqMax": 3928770,
+   "liq": 436902,
    "neg": 1.0
   },
   {
@@ -3368,7 +3890,7 @@
    "classe": "acao",
    "i0": 1,
    "n": 4172,
-   "liqMax": 5045980,
+   "liqMax": 6121817,
    "liq": 3959539,
    "neg": 1.0
   },
@@ -3378,7 +3900,7 @@
    "classe": "acao",
    "i0": 1,
    "n": 4172,
-   "liqMax": 5770026,
+   "liqMax": 6513919,
    "liq": 5046975,
    "neg": 1.0
   },
@@ -3465,6 +3987,16 @@
    "neg": 1.0
   },
   {
+   "t": "SMAC11",
+   "nome": "It Now Small Caps",
+   "classe": "etf",
+   "i0": 2493,
+   "n": 1680,
+   "liqMax": 35697865,
+   "liq": 4751349,
+   "neg": 1.0
+  },
+  {
    "t": "SMAL11",
    "nome": "iShares Small Cap",
    "classe": "etf",
@@ -3535,8 +4067,28 @@
    "neg": 1.0
   },
   {
+   "t": "SOLH11",
+   "nome": "Hashdex solana",
+   "classe": "etf",
+   "i0": 3702,
+   "n": 471,
+   "liqMax": 4210556,
+   "liq": 1377450,
+   "neg": 1.0
+  },
+  {
+   "t": "SPXB11",
+   "nome": "BTG S&P 500",
+   "classe": "etf",
+   "i0": 2896,
+   "n": 1277,
+   "liqMax": 1860385,
+   "liq": 836224,
+   "neg": 1.0
+  },
+  {
    "t": "SPXI11",
-   "nome": "It Now S&P 500 (em reais)",
+   "nome": "It Now S&P 500",
    "classe": "etf",
    "i0": 1257,
    "n": 2916,
@@ -3551,6 +4103,16 @@
    ]
   },
   {
+   "t": "SPXR11",
+   "nome": "It Now S&P 500 quanto (sem câmbio)",
+   "classe": "etf",
+   "i0": 3897,
+   "n": 276,
+   "liqMax": 26208509,
+   "liq": 26208509,
+   "neg": 1.0
+  },
+  {
    "t": "SPXS11",
    "nome": "SPX REAL ESTATE FII",
    "classe": "fii",
@@ -3561,6 +4123,16 @@
    "neg": 1.0
   },
   {
+   "t": "SPYI11",
+   "nome": "Buena Vista S&P 500 high income",
+   "classe": "etf",
+   "i0": 3497,
+   "n": 676,
+   "liqMax": 5287523,
+   "liq": 3460212,
+   "neg": 1.0
+  },
+  {
    "t": "SUZB3",
    "nome": "SUZANO S.A.",
    "classe": "acao",
@@ -3568,6 +4140,16 @@
    "n": 4172,
    "liqMax": 627308381,
    "liq": 361778010,
+   "neg": 1.0
+  },
+  {
+   "t": "SVAL11",
+   "nome": "Investo S&P SmallCap 600 value",
+   "classe": "etf",
+   "i0": 3098,
+   "n": 1075,
+   "liqMax": 1858501,
+   "liq": 449094,
    "neg": 1.0
   },
   {
@@ -3697,6 +4279,16 @@
    ]
   },
   {
+   "t": "TECK11",
+   "nome": "It Now NYSE FANG+",
+   "classe": "etf",
+   "i0": 2797,
+   "n": 1376,
+   "liqMax": 19899847,
+   "liq": 12399771,
+   "neg": 1.0
+  },
+  {
    "t": "TEND3",
    "nome": "CONSTRUTORA TENDA S.A.",
    "classe": "acao",
@@ -3793,6 +4385,16 @@
    "neg": 1.0
   },
   {
+   "t": "TRIG11",
+   "nome": "Trígono Teva mid/small caps",
+   "classe": "etf",
+   "i0": 2933,
+   "n": 1240,
+   "liqMax": 1741830,
+   "liq": 477482,
+   "neg": 1.0
+  },
+  {
    "t": "TRIS3",
    "nome": "TRISUL S.A.",
    "classe": "acao",
@@ -3818,7 +4420,7 @@
    "classe": "fii",
    "i0": 2487,
    "n": 1686,
-   "liqMax": 38180769,
+   "liqMax": 38448476,
    "liq": 38180769,
    "neg": 1.0
   },
@@ -3883,6 +4485,16 @@
    "neg": 1.0
   },
   {
+   "t": "USDB11",
+   "nome": "Renda fixa EUA (em reais)",
+   "classe": "etf",
+   "i0": 3099,
+   "n": 1074,
+   "liqMax": 2349858,
+   "liq": 1159591,
+   "neg": 1.0
+  },
+  {
    "t": "USIM3",
    "nome": "USINAS SID DE MINAS GERAIS S.A.-USIMINAS",
    "classe": "acao",
@@ -3900,6 +4512,26 @@
    "n": 4172,
    "liqMax": 450336533,
    "liq": 83355634,
+   "neg": 1.0
+  },
+  {
+   "t": "USTK11",
+   "nome": "Investo EUA tecnologia",
+   "classe": "etf",
+   "i0": 2860,
+   "n": 1313,
+   "liqMax": 2079954,
+   "liq": 191258,
+   "neg": 1.0
+  },
+  {
+   "t": "UTEC11",
+   "nome": "Trend EUA tecnologia",
+   "classe": "etf",
+   "i0": 3061,
+   "n": 1112,
+   "liqMax": 3279805,
+   "liq": 2975324,
    "neg": 1.0
   },
   {
@@ -4130,7 +4762,7 @@
   },
   {
    "t": "WRLD11",
-   "nome": "Investo mundo (em reais)",
+   "nome": "Investo FTSE global",
    "classe": "etf",
    "i0": 2917,
    "n": 1256,
@@ -4150,7 +4782,7 @@
   },
   {
    "t": "XINA11",
-   "nome": "Trend China (em reais)",
+   "nome": "Trend China",
    "classe": "etf",
    "i0": 2713,
    "n": 1460,
@@ -4225,6 +4857,16 @@
    ]
   },
   {
+   "t": "XRPH11",
+   "nome": "Hashdex XRP",
+   "classe": "etf",
+   "i0": 3897,
+   "n": 276,
+   "liqMax": 1398550,
+   "liq": 663313,
+   "neg": 1.0
+  },
+  {
    "t": "YDUQ3",
    "nome": "YDUQS PARTICIPACOES S.A.",
    "classe": "acao",
@@ -4236,6 +4878,11 @@
   }
  ],
  "recusados": {
+  "5GTK11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
   "ABEV11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -4323,6 +4970,10 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "AREA11": {
+   "liqMax": 545236,
+   "em": "2026-11-02"
+  },
   "ARML11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -4339,6 +4990,11 @@
    "motivo": "sem cotação"
   },
   "ASAI4": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
+  "ASIA11": {
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
@@ -4388,6 +5044,11 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "B3BR11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
   "B3SA11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -4421,6 +5082,14 @@
    "liqMax": 720156,
    "em": "2026-11-02"
   },
+  "BBOI11": {
+   "liqMax": 305763,
+   "em": "2026-11-02"
+  },
+  "BBSD11": {
+   "liqMax": 649320,
+   "em": "2026-11-02"
+  },
   "BBSE11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -4430,6 +5099,18 @@
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
+  },
+  "BCIC11": {
+   "liqMax": 840819,
+   "em": "2026-11-02"
+  },
+  "BDAP11": {
+   "liqMax": 98542,
+   "em": "2026-11-02"
+  },
+  "BDOM11": {
+   "liqMax": 796903,
+   "em": "2026-11-02"
   },
   "BEEF11": {
    "liqMax": null,
@@ -4451,6 +5132,10 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "BIZD11": {
+   "liqMax": 358233,
+   "em": "2026-11-02"
+  },
   "BLAU11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -4464,6 +5149,11 @@
   "BLMG11": {
    "liqMax": 818521,
    "em": "2026-11-02"
+  },
+  "BLOK11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
   },
   "BMEB11": {
    "liqMax": null,
@@ -4484,6 +5174,10 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "BMMT11": {
+   "liqMax": 472280,
+   "em": "2026-11-02"
+  },
   "BMOB11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -4493,6 +5187,10 @@
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
+  },
+  "BNDX11": {
+   "liqMax": 428056,
+   "em": "2026-11-02"
   },
   "BPAC3": {
    "liqMax": 863470,
@@ -4518,6 +5216,10 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "BRAZ11": {
+   "liqMax": 122146,
+   "em": "2026-11-02"
+  },
   "BRBI3": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -4527,6 +5229,10 @@
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
+  },
+  "BREW11": {
+   "liqMax": 708550,
+   "em": "2026-11-02"
   },
   "BRKM11": {
    "liqMax": null,
@@ -4552,8 +5258,22 @@
    "liqMax": 723206,
    "em": "2026-11-02"
   },
+  "BTEK11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
   "BTRA11": {
    "liqMax": 841543,
+   "em": "2026-11-02"
+  },
+  "BULZ11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
+  "BXPO11": {
+   "liqMax": 522361,
    "em": "2026-11-02"
   },
   "CAML11": {
@@ -4565,6 +5285,10 @@
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
+  },
+  "CASA11": {
+   "liqMax": 365926,
+   "em": "2026-11-02"
   },
   "CASH11": {
    "liqMax": null,
@@ -4595,6 +5319,10 @@
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
+  },
+  "CLOB11": {
+   "liqMax": 5160,
+   "em": "2026-11-02"
   },
   "CLSC11": {
    "liqMax": null,
@@ -4630,6 +5358,10 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "CORN11": {
+   "liqMax": 109283,
+   "em": "2026-11-02"
+  },
   "CPFE11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -4649,6 +5381,10 @@
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
+  },
+  "CRPT11": {
+   "liqMax": 435750,
+   "em": "2026-11-02"
   },
   "CSAN11": {
    "liqMax": null,
@@ -4763,6 +5499,15 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "DNAI11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
+  "DVER11": {
+   "liqMax": 553892,
+   "em": "2026-11-02"
+  },
   "DXCO11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -4803,6 +5548,11 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "EMEG11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
   "ENEV11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -4827,6 +5577,21 @@
    "motivo": "sem cotação"
   },
   "EQTL4": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
+  "ESGD11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
+  "ESGE11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
+  "ESGU11": {
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
@@ -4894,12 +5659,25 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "FIXX11": {
+   "liqMax": 127847,
+   "em": "2026-11-02"
+  },
   "FLRY11": {
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
   "FLRY4": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
+  "FOMO11": {
+   "liqMax": 191373,
+   "em": "2026-11-02"
+  },
+  "FOOD11": {
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
@@ -4943,6 +5721,10 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "GICP11": {
+   "liqMax": 149595,
+   "em": "2026-11-02"
+  },
   "GMAT11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -4952,6 +5734,10 @@
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
+  },
+  "GOAT11": {
+   "liqMax": 752159,
+   "em": "2026-11-02"
   },
   "GOAU11": {
    "liqMax": null,
@@ -4971,6 +5757,11 @@
   "GRUL11": {
    "liqMax": 590214,
    "em": "2026-11-02"
+  },
+  "GURU11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
   },
   "HAPV11": {
    "liqMax": null,
@@ -5012,8 +5803,16 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "HERT11": {
+   "liqMax": 337351,
+   "em": "2026-11-02"
+  },
   "HREC11": {
    "liqMax": 969600,
+   "em": "2026-11-02"
+  },
+  "HTEK11": {
+   "liqMax": 780922,
    "em": "2026-11-02"
   },
   "HYPE11": {
@@ -5057,6 +5856,10 @@
   },
   "ISAE3": {
    "liqMax": 185239,
+   "em": "2026-11-02"
+  },
+  "ISUS11": {
+   "liqMax": 335617,
    "em": "2026-11-02"
   },
   "ITSA11": {
@@ -5144,6 +5947,10 @@
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
+  },
+  "LFTX11": {
+   "liqMax": 583798,
+   "em": "2026-11-02"
   },
   "LIGT11": {
    "liqMax": null,
@@ -5245,6 +6052,10 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "META11": {
+   "liqMax": 227345,
+   "em": "2026-11-02"
+  },
   "MGLU11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -5345,6 +6156,15 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "NBOV11": {
+   "liqMax": 714836,
+   "em": "2026-11-02"
+  },
+  "NFTS11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
   "OBTC11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -5385,6 +6205,10 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "OURO11": {
+   "liqMax": 624750,
+   "em": "2026-11-02"
+  },
   "PCAR11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -5399,6 +6223,10 @@
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
+  },
+  "PEVC11": {
+   "liqMax": 320799,
+   "em": "2026-11-02"
   },
   "PFRM11": {
    "liqMax": null,
@@ -5427,6 +6255,10 @@
   },
   "PINE3": {
    "liqMax": 143456,
+   "em": "2026-11-02"
+  },
+  "PKIN11": {
+   "liqMax": 207889,
    "em": "2026-11-02"
   },
   "PLPL11": {
@@ -5517,6 +6349,10 @@
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
+  },
+  "QDFI11": {
+   "liqMax": 499987,
+   "em": "2026-11-02"
   },
   "QUAL11": {
    "liqMax": null,
@@ -5615,6 +6451,10 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "REVE11": {
+   "liqMax": 334282,
+   "em": "2026-11-02"
+  },
   "RIAA11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -5647,9 +6487,18 @@
    "liqMax": 907209,
    "em": "2026-11-02"
   },
+  "RVDI11": {
+   "liqMax": null,
+   "em": "2026-11-02"
+  },
   "RZAT11": {
    "liqMax": 905813,
    "em": "2026-11-02"
+  },
+  "SAET11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
   },
   "SAPI11": {
    "liqMax": 399028,
@@ -5685,12 +6534,21 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "SCVB11": {
+   "liqMax": 368604,
+   "em": "2026-11-02"
+  },
   "SEER11": {
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
   "SEER4": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
+  "SHOT11": {
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
@@ -5723,6 +6581,10 @@
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
+  },
+  "SMAB11": {
+   "liqMax": 353521,
+   "em": "2026-11-02"
   },
   "SMFT11": {
    "liqMax": null,
@@ -5762,6 +6624,14 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "SPUB11": {
+   "liqMax": 470912,
+   "em": "2026-11-02"
+  },
+  "SPVT11": {
+   "liqMax": 308535,
+   "em": "2026-11-02"
+  },
   "SUZB11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -5786,6 +6656,15 @@
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
+  },
+  "TECB11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
+  "TECX11": {
+   "liqMax": 373379,
+   "em": "2026-11-02"
   },
   "TEND11": {
    "liqMax": null,
@@ -5826,6 +6705,10 @@
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
+  },
+  "TIRB11": {
+   "liqMax": 112919,
+   "em": "2026-11-02"
   },
   "TOTS11": {
    "liqMax": null,
@@ -5887,12 +6770,27 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "URET11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
+  "USAL11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
   "USIM11": {
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
   "USIM4": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
+  "UTIL11": {
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
@@ -5999,6 +6897,10 @@
    "em": "2026-11-02",
    "motivo": "sem cotação"
   },
+  "WEB311": {
+   "liqMax": 961794,
+   "em": "2026-11-02"
+  },
   "WEGE11": {
    "liqMax": null,
    "em": "2026-11-02",
@@ -6019,6 +6921,20 @@
    "motivo": "sem cotação"
   },
   "WIZC4": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
+  "XFIX11": {
+   "liqMax": 662460,
+   "em": "2026-11-02"
+  },
+  "XMAL11": {
+   "liqMax": null,
+   "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
+  "YDRO11": {
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
