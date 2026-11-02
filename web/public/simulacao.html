@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulação de carteira</title>
+<meta name="description" content="Monte uma carteira com os ativos que quiser e veja o backtest desde 2010: retorno, risco, drawdown, beta e alfa contra o Ibovespa e o CDI.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='54'>🧪</text></svg>">
+<link rel="stylesheet" href="estilo.css">
+<style>
+  .seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden}
+  .seg button{background:var(--surface-0);border:0;border-right:1px solid var(--line-strong);white-space:nowrap;
+              padding:7px 12px;font:inherit;font-size:13px;color:var(--ink-2);cursor:pointer}
+  .seg button:last-child{border-right:0}
+  .seg button[aria-pressed=true]{background:var(--s1);color:#fff}
+  .entrada{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .entrada input{flex:1 1 260px;max-width:420px;padding:8px 10px;border:1px solid var(--line-strong);
+                 border-radius:8px;background:var(--surface-0);color:var(--ink);font:inherit;
+                 text-transform:uppercase}
+  .entrada input::placeholder{text-transform:none}
+  #tbAtivos td{vertical-align:middle}
+  #tbAtivos input[type=number]{width:84px;text-align:right;padding:5px 7px}
+  .rm{background:none;border:0;color:var(--ink-3);font-size:17px;cursor:pointer;padding:0 6px;line-height:1}
+  .rm:hover{color:var(--bad)}
+  .msg{font-size:12.5px;color:var(--ink-2);margin:6px 0 0}
+  .msg.ruim{color:var(--bad)}
+  .grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px 22px;margin-top:16px}
+  .grade .ctl label{display:block;font-size:12px;color:var(--ink-2);margin-bottom:7px;font-weight:500}
+  .grade input[type=date]{width:100%;padding:6px 8px;border:1px solid var(--line-strong);border-radius:8px;
+                          background:var(--surface-0);color:var(--ink);font:inherit}
+  .atalhos{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+  .atalhos button{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;
+                  font:inherit;font-size:11.5px;padding:2px 8px;cursor:pointer;color:var(--ink-2)}
+  .acoes{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px}
+  .status{font-size:12.5px;color:var(--ink-3)}
+  .tiles .tile .h b{color:var(--ink-2);font-weight:500}
+  .classe{font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3)}
+  .salto{font-size:11px;color:var(--s2);cursor:help;white-space:nowrap}
+  td.nm{max-width:260px;overflow:hidden;text-overflow:ellipsis;color:var(--ink-2)}
+  .up{color:var(--good)} .down{color:var(--bad)}
+  .mapa td{text-align:center;font-size:11.5px;padding:5px 6px;font-variant-numeric:tabular-nums;
+           border:2px solid var(--surface-1)}
+  .mapa th{text-align:center}
+  .mapa td.l, .mapa th.l{text-align:left}
+  #tbMetricas td:nth-child(n+2), #tbMetricas th:nth-child(n+2){min-width:96px}
+  #tbMetricas tr.sep td{border-top:1px solid var(--line-strong)}
+  #tbMetricas td.l{white-space:normal}
+  #tbMetricas td.l small{display:block;color:var(--ink-3);font-size:11px;max-width:52ch}
+  #tbMensal td{padding:5px 7px;font-size:12px}
+  #tbMensal td.ano{font-weight:600;border-left:1px solid var(--line-strong)}
+  .legend i.linha{width:16px;height:3px;border-radius:2px}
+  .sub2{font-size:13px;color:var(--ink-2);margin:0 0 12px;max-width:76ch}
+  .duas{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:900px){.duas{grid-template-columns:1fr}}
+  .card h3{font-size:14px;margin:0 0 4px}
+  /* no celular a tabela da carteira fica só com o que se edita */
+  #rodapeAtivos,#somaPesos{white-space:normal}
+  @media(max-width:640px){ #tbAtivos .opc{display:none} #tbAtivos td,#tbAtivos th{padding:7px 6px} #tbAtivos input[type=number]{width:62px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="nav">
+  <a href="index.html">Ações</a>
+  <a href="fiis.html">Fundos imobiliários</a>
+  <a href="fundos.html">Fundos fechados</a>
+  <a href="mercado.html">Indicadores de mercado</a>
+  <a href="simulacao.html" aria-current="page">Simulação</a>
+</nav>
+
+<header>
+  <h1>Simulação de carteira</h1>
+  <p class="sub">Você escolhe os ativos; o site refaz o passado. Preços diários
+     ajustados por proventos desde 2010, comparados com o Ibovespa e o CDI —
+     tudo calculado no seu navegador.</p>
+  <div class="stamp">
+    <span><span class="dot"></span>Preços até <b id="stamp">—</b></span>
+    <span id="stampBase"></span>
+  </div>
+</header>
+
+<div class="warn hidden" id="baseDemo"
+     style="border-left-color:var(--bad);background:color-mix(in srgb, var(--bad) 8%, transparent)">
+  <b>⚠ Não use esta tela para decidir nada.</b> A base de preços está em modo
+  demonstração: os códigos são reais, mas os retornos foram sorteados. Rode a
+  ação <code>Atualizar preços</code> no GitHub para trocar por dados de verdade.
+</div>
+
+<div id="loading" class="load">Carregando a base de preços…</div>
+<div id="erro" class="load hidden"></div>
+
+<main id="app" class="hidden">
+
+  <section class="card">
+    <h2 style="margin:0 0 10px">Carteira</h2>
+    <div class="entrada">
+      <input id="novo" list="lista" autocomplete="off" spellcheck="false"
+             placeholder="Códigos — ex.: PETR4, HGLG11, IVVB11"
+             title="Pode colar vários de uma vez, separados por vírgula ou espaço">
+      <datalist id="lista"></datalist>
+      <button class="btn" id="btAdd">Adicionar</button>
+    </div>
+    <div id="msgEntrada" class="msg hidden"></div>
+
+    <div class="scroll" id="caixaAtivos">
+      <table id="tbAtivos"><thead><tr>
+        <th class="l">Ativo</th><th class="l opc">Nome</th><th>Com preço de</th><th class="opc">Liquidez hoje</th>
+        <th class="colPeso">Peso (%)</th><th></th>
+      </tr></thead><tbody></tbody>
+      <tfoot><tr><td class="l" colspan="4" id="rodapeAtivos"></td>
+        <td class="num colPeso" id="somaPesos"></td><td></td></tr></tfoot></table>
+    </div>
+    <div id="vazio" class="vazio">Nenhum ativo ainda. Digite um código acima.</div>
+
+    <div class="grade">
+      <div class="ctl">
+        <label>Pesos</label>
+        <div class="seg" id="segModo">
+          <button data-v="manual" aria-pressed="true">Informados por mim</button>
+          <button data-v="markowitz">Markowitz</button>
+        </div>
+      </div>
+      <div class="ctl soMk hidden">
+        <label>Carteira da fronteira</label>
+        <select id="selAlvo">
+          <option value="minvar">Mínima variância</option>
+          <option value="maxsharpe">Máximo Sharpe</option>
+          <option value="volalvo">Volatilidade-alvo</option>
+        </select>
+      </div>
+      <div class="ctl soMk soVol hidden">
+        <label for="inVol">Volatilidade-alvo (% ao ano)</label>
+        <input type="number" id="inVol" min="1" max="80" step="0.5" value="15">
+      </div>
+      <div class="ctl soMk hidden">
+        <label for="inTeto">Peso máximo por ativo (%)</label>
+        <input type="number" id="inTeto" min="1" max="100" step="1" value="15">
+      </div>
+      <div class="ctl">
+        <label for="selReb">Rebalanceamento</label>
+        <select id="selReb">
+          <option value="nenhum">Comprar e segurar</option>
+          <option value="mensal">Mensal</option>
+          <option value="trimestral">Trimestral</option>
+          <option value="anual">Anual</option>
+        </select>
+      </div>
+      <div class="ctl">
+        <label for="inCusto">Custo por ponta (bps)</label>
+        <input type="number" id="inCusto" min="0" max="500" step="1" value="15">
+      </div>
+      <div class="ctl">
+        <label for="inDe">De</label>
+        <input type="date" id="inDe">
+        <div class="atalhos" id="atalhos">
+          <button data-a="1">1 ano</button><button data-a="3">3</button>
+          <button data-a="5">5</button><button data-a="10">10</button>
+          <button data-a="0">máx.</button>
+        </div>
+      </div>
+      <div class="ctl">
+        <label for="inAte">Até</label>
+        <input type="date" id="inAte">
+      </div>
+    </div>
+    <p class="msg soMk hidden" style="margin-top:12px">No Markowitz os pesos de cada data
+      saem só dos <b>12 meses anteriores</b> a ela (covariância de Ledoit-Wolf,
+      retorno esperado por média exponencial), e são recalculados a cada
+      rebalanceamento. O backtest nunca usa informação que não existia no dia.</p>
+
+    <div class="acoes">
+      <button class="btn sec" id="btLink">Copiar link desta simulação</button>
+      <span class="status" id="status"></span>
+    </div>
+  </section>
+
+  <div id="resultado" class="hidden" style="margin-top:26px">
+    <div class="warn hidden" id="avisos"></div>
+    <div class="tiles" id="tiles"></div>
+
+    <section class="card">
+      <h2>Quanto rendeu</h2>
+      <p class="sub2" id="subEvolucao"></p>
+      <div class="legend" id="legEvolucao"></div>
+      <svg class="chart" id="chEvolucao" role="img" aria-label="Retorno acumulado da carteira, do Ibovespa e do CDI"></svg>
+      <h3 style="margin-top:18px">Queda desde o pico anterior</h3>
+      <p class="sub2">Quanto a carteira estava abaixo do maior valor que já tinha atingido, em cada dia.</p>
+      <div class="legend" id="legDrawdown"></div>
+      <svg class="chart" id="chDrawdown" role="img" aria-label="Drawdown da carteira e do Ibovespa"></svg>
+    </section>
+
+    <section class="card" style="margin-top:22px">
+      <h2>Métricas</h2>
+      <p class="sub2">Mesmo período para as três colunas. Sharpe, Sortino e alfa usam o CDI do
+        período como taxa livre de risco.</p>
+      <div class="scroll">
+        <table id="tbMetricas"><thead><tr><th class="l">Indicador</th>
+          <th>Carteira</th><th>Ibovespa</th><th>CDI</th></tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:22px">
+      <h2>Por ativo</h2>
+      <p class="sub2">Contribuição ao retorno: quanto cada ativo somou ao patrimônio, em pontos
+        percentuais do capital inicial — a soma, menos os custos, é o retorno total.
+        Contribuição ao risco: a parte da variância da carteira que vem de cada um, com o peso
+        médio do período.</p>
+      <div class="scroll">
+        <table id="tbPorAtivo"><thead><tr>
+          <th class="l">Ativo</th><th>Peso inicial</th><th>Peso médio</th><th>Peso final</th>
+          <th>Contrib. retorno</th><th>Contrib. risco</th>
+          <th>Retorno a.a.</th><th>Volatilidade</th><th>Beta</th><th>Queda máx.</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+      <div class="duas" style="margin-top:22px">
+        <div>
+          <h3>Contribuição ao retorno</h3>
+          <p class="sub2">p.p. do capital inicial</p>
+          <svg class="chart" id="chContrib" role="img" aria-label="Contribuição de cada ativo ao retorno"></svg>
+        </div>
+        <div>
+          <h3>Contribuição ao risco</h3>
+          <p class="sub2">% da variância da carteira</p>
+          <svg class="chart" id="chRisco" role="img" aria-label="Contribuição de cada ativo ao risco"></svg>
+        </div>
+      </div>
+      <h3 style="margin-top:22px" id="titPesos">Pesos ao longo do tempo</h3>
+      <p class="sub2" id="subPesos"></p>
+      <div class="scroll"><table class="mapa" id="tbPesos"></table></div>
+      <h3 style="margin-top:22px">Correlação dos retornos diários</h3>
+      <p class="sub2">Correlação dos retornos, não dos preços: duas séries que sobem juntas
+        por tendência dariam correlação alta de preço sem relação nenhuma.</p>
+      <div class="scroll"><table class="mapa" id="tbCorr"></table></div>
+    </section>
+
+    <section class="card" style="margin-top:22px">
+      <h2>Mês a mês</h2>
+      <p class="sub2">Retorno da carteira em cada mês; à direita, o ano da carteira, do Ibovespa e do CDI.
+        Ano incompleto (o primeiro e o último) é o retorno só dos meses simulados.</p>
+      <div class="scroll"><table id="tbMensal"></table></div>
+    </section>
+
+    <section class="card" style="margin-top:22px">
+      <h2>Janelas de 12 meses</h2>
+      <p class="sub2">Em cada dia, o que a carteira tinha feito nos 252 pregões anteriores.
+        Mostra se o resultado do período inteiro veio de um ano só.</p>
+      <div class="duas">
+        <div><h3>Retorno em 12 meses</h3><div class="legend" id="legMovel"></div>
+          <svg class="chart" id="chRet12" role="img" aria-label="Retorno em janelas de 12 meses"></svg></div>
+        <div><h3>Volatilidade em 12 meses</h3><div class="legend" id="legMovel2"></div>
+          <svg class="chart" id="chVol12" role="img" aria-label="Volatilidade em janelas de 12 meses"></svg></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card metodo" style="margin-top:26px">
+    <h2 style="margin-top:0">Como a simulação é feita</h2>
+    <h3>Os preços</h3>
+    <p>Retorno diário total — preço mais proventos — do preço ajustado do Yahoo
+      Finance; Ibovespa da B3; CDI do Banco Central (série 12 do SGS). Entra na
+      base todo ativo que negociou mais de <b id="txCorte">R$ 1 milhão</b> por dia, na
+      média de 3 meses, em algum momento desde 2010 — e quem entra não sai, para
+      que uma ação que foi líquida em 2014 e deixou de ser possa ser testada em 2014.</p>
+    <h3>A compra e o rebalanceamento</h3>
+    <p>A compra é feita no fechamento do primeiro pregão do período; o primeiro
+      retorno é o do pregão seguinte. Rebalancear é voltar aos pesos-alvo no
+      fechamento do primeiro pregão de cada mês, trimestre ou ano. Entre um
+      rebalanceamento e outro os pesos andam com os preços. Custo sobre o valor
+      negociado: compra inicial, cada rebalanceamento e a venda no fim.</p>
+    <h3>O que não está aqui</h3>
+    <ul>
+      <li><b>Imposto de renda</b> — nem sobre o ganho nas vendas dos rebalanceamentos,
+        nem sobre proventos. Rebalancear com frequência parece melhor aqui do que é.</li>
+      <li><b>Ativos que sumiram antes de entrar na base.</b> A base guarda quem passou pelo
+        corte enquanto existia no Yahoo; empresas que fecharam capital antes da
+        primeira coleta não estão. Se a ação deixou de ser negociada no meio do
+        período, a simulação termina no último pregão dela, com aviso.</li>
+      <li><b>Variações diárias acima de 40%</b> ficam marcadas ao lado do ativo. Podem
+        ser verdade (Americanas em 2023) ou um desdobramento que o Yahoo não ajustou —
+        vale conferir a data.</li>
+    </ul>
+  </section>
+
+</main>
+
+<footer class="note" style="margin:34px 0 60px;color:var(--ink-3)">
+  Fontes: Yahoo Finance (preços ajustados), B3 (Ibovespa), Banco Central (CDI).
+  Resultado passado, calculado com dados públicos — não é promessa nem recomendação.
+</footer>
+
+</div>
+<div class="tip" id="tip"></div>
+<script src="simulacao_motor.js"></script>
+<script src="simulacao.js"></script>
+</body>
+</html>

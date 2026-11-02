@@ -42,6 +42,13 @@ Nenhum número dela é de tempo real, e não é escolha: ANBIMA, B3 e Tesouro
 publicam no fechamento, e o acesso gratuito aos arquivos da ANBIMA saiu do ar.
 A aba mostra a data do fechamento ao lado de cada número.
 
+E uma aba de **simulação**: você escolhe os ativos (ações, FIIs, ETFs) e os
+pesos — ou deixa o Markowitz decidir com os 12 meses anteriores a cada data —
+e o site faz o backtest desde 2010 contra o Ibovespa e o CDI, com
+rebalanceamento, custos e as métricas de risco. O cálculo roda no navegador; a
+base de preços (`web/public/precos/`) é mantida pelo robô `Atualizar preços`,
+inteiro na nuvem. Documentada em **`SIMULACAO.md`**.
+
 ## Começar (Windows)
 
 Dê **duplo clique em `iniciar.bat`**. Na primeira vez ele instala tudo, roda a

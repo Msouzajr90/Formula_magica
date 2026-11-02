@@ -1,0 +1,13 @@
+# Papéis que você quer na base de preços da Simulação e que as outras abas não
+# conhecem: BDRs, uma ação pequena, um ETF novo.
+#
+# Uma linha por papel:  TICKER  [classe]  [nome]
+# classe: acao, fii, etf, bdr ou outro (se omitir, vale acao)
+#
+# Quem entra de fato ainda passa pelo corte de liquidez (R$ 1 milhão/dia em
+# algum momento desde 2010). Depois de salvar e publicar, o papel aparece na
+# próxima execução do robô "Atualizar preços".
+#
+# Exemplos (tire o # para valer):
+# AAPL34  bdr  Apple
+# MSFT34  bdr  Microsoft

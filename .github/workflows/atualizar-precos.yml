@@ -1,0 +1,85 @@
+name: Atualizar precos
+on:
+  workflow_dispatch:
+    inputs:
+      completo:
+        description: "Rebaixar o historico inteiro desde 2010 (so quando o validador pedir)"
+        type: boolean
+        required: false
+        default: false
+  schedule:
+    # 00h40 UTC = 21h40 em Brasilia, de segunda a sexta (2-6 em UTC: a
+    # segunda-feira brasileira cai na terca-feira UTC). Meia hora depois do
+    # robo de mercado, para nao brigarem pelo push.
+    - cron: "40 0 * * 2-6"
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar o repositorio
+        uses: actions/checkout@v4
+      - name: Instalar o Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+      - name: Recuperar o que ja foi baixado
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.magicb3_cache
+          key: magicb3-precos-${{ github.run_id }}
+          restore-keys: magicb3-
+
+      - name: Rodar os testes
+        run: python -m pytest tests -q
+
+      - name: Gerar a base de precos
+        run: |
+          if [ "${{ inputs.completo }}" = "true" ]; then
+            python atualizar_precos.py --completo
+          else
+            python atualizar_precos.py
+          fi
+
+      - name: Conferir a base
+        run: python validar_precos.py
+
+      - name: Publicar
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          test -f web/public/precos/indice.json || (echo "Base nao foi gerada." && exit 1)
+          rm -rf /tmp/precos && cp -r web/public/precos /tmp/precos
+          for tentativa in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            # A base e acumulativa: o que esta na pasta gerada E a base inteira.
+            # Copiar por cima (sem apagar a pasta) nunca tira um papel antigo.
+            mkdir -p web/public/precos
+            cp /tmp/precos/*.json web/public/precos/
+            git add web/public/precos
+            if git diff --staged --quiet; then
+              echo "Nada mudou."
+              exit 0
+            fi
+            git commit -q -m "Atualizacao automatica da base de precos"
+            if git push; then
+              echo "Publicado na tentativa $tentativa."
+              exit 0
+            fi
+            echo "Alguem publicou antes; refazendo em cima do main atual."
+            sleep 5
+          done
+          echo "Nao consegui publicar depois de 5 tentativas."
+          exit 1
+
+      - name: Guardar o progresso mesmo se falhar
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.magicb3_cache
+          key: magicb3-precos-${{ github.run_id }}
