@@ -185,7 +185,7 @@ def datas_semanais(indice) -> list:
 
 def construir(painel, papeis: dict[str, dict], fechamentos, datas,
               folga_dias: int = 90, casas: int = 2) -> dict[str, dict]:
-    """{ticker -> {nome, cvm, s: [P/VP por data], vpa, dtBalanco, fonteAcoes}}.
+    """{ticker -> {nome, cvm, s: [P/VP por data], v: degraus do VPA, vpa, dtBalanco, fonteAcoes}}.
 
     `papeis` = {ticker: {"cvm", "acoes", "fonte", "nome"}}; `fechamentos` =
     DataFrame de fechamentos (colunas = tickers sem .SA); `datas` = as datas da
@@ -237,6 +237,7 @@ def construir(painel, papeis: dict[str, dict], fechamentos, datas,
         pl_fim = pl.iloc[-1] if len(pl) else None
         ref_fim = ref.iloc[-1] if len(ref) else None
         saida[ticker] = {
+            "v": degraus_vpa(pl, acoes, fator),
             "nome": info.get("nome"),
             "cvm": int(info["cvm"]),
             "s": valores,
@@ -250,6 +251,24 @@ def construir(painel, papeis: dict[str, dict], fechamentos, datas,
         log.info("%d papéis ficaram fora do histórico: %s", len(fora),
                  "; ".join(f"{k} ({v})" for k, v in list(fora.items())[:30]))
     return {"papeis": saida, "fora": fora}
+
+
+def degraus_vpa(pl, acoes: float, fator: float = 1) -> list:
+    """O patrimônio por papel como degraus: [[índice da data, VPA], ...].
+
+    Um degrau a cada balanço novo (ou quando o PL some ou volta). É o que
+    deixa a aba Oportunidades separar um salto do P/VP que veio do PREÇO — o
+    que ela procura — de um que veio do PATRIMÔNIO: aumento de capital (com o
+    nº de ações de hoje aplicado ao passado), baixa contábil, fusão. Só o
+    segundo mistura dois regimes na média.
+    """
+    out, ultimo = [], "inicio"
+    for i, v in enumerate(list(pl)):
+        vpa = round(v / acoes * fator, 4) if _ok(v) and v > 0 else None
+        if vpa != ultimo:
+            out.append([i, vpa])
+            ultimo = vpa
+    return out
 
 
 def montar_arquivo(resultado: dict, datas, desde: int,

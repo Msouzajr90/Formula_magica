@@ -49,6 +49,12 @@ rebalanceamento, custos e as métricas de risco. O cálculo roda no navegador; a
 base de preços (`web/public/precos/`) é mantida pelo robô `Atualizar preços`,
 inteiro na nuvem. Documentada em **`SIMULACAO.md`**.
 
+E uma aba de **oportunidades**: as ações cujo P/VP está mais de dois
+desvios-padrão abaixo da média dos últimos 1, 5 ou 10 anos (em logaritmo),
+com o preço-gatilho de cada uma e há quantas semanas está abaixo dele. Usa o
+mesmo histórico semanal do gráfico por papel (`pvp_papeis.json`) e roda no
+navegador; nenhum robô novo. Documentada em **`OPORTUNIDADES.md`**.
+
 ## Começar (Windows)
 
 Dê **duplo clique em `iniciar.bat`**. Na primeira vez ele instala tudo, roda a

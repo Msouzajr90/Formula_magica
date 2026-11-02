@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oportunidades — P/VP abaixo da própria história</title>
+<meta name="description" content="Ações cujo P/VP está mais de dois desvios-padrão abaixo da média dos últimos 1, 5 ou 10 anos.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='54'>🎯</text></svg>">
+<link rel="stylesheet" href="estilo.css">
+<style>
+  .seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden}
+  .seg button{background:var(--surface-0);border:0;border-right:1px solid var(--line-strong);white-space:nowrap;
+              padding:7px 12px;font:inherit;font-size:13px;color:var(--ink-2);cursor:pointer}
+  .seg button:last-child{border-right:0}
+  .seg button[aria-pressed=true]{background:var(--s1);color:#fff}
+  .grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px 22px}
+  .grade .ctl label{display:block;font-size:12px;color:var(--ink-2);margin-bottom:7px;font-weight:500}
+  .grade .ctl label.chk{font-size:13px;color:var(--ink-2);display:flex;gap:7px;align-items:flex-start;
+                        margin:2px 0 8px;font-weight:400}
+  .grade .ctl label.chk input{margin:2px 0 0}
+  .grade input[type=search]{width:100%;padding:7px 10px;border:1px solid var(--line-strong);border-radius:8px;
+                            background:var(--surface-0);color:var(--ink);font:inherit;text-transform:uppercase}
+  .grade input[type=search]::placeholder{text-transform:none}
+  .sub2{font-size:13px;color:var(--ink-2);margin:0 0 12px;max-width:80ch}
+  .card h2{margin:0 0 4px}
+  td.z{font-variant-numeric:tabular-nums}
+  td.z.dispara{color:var(--bad);font-weight:600}
+  td.z.quase{color:var(--s2)}
+  th.sel, td.sel{background:color-mix(in srgb, var(--s1) 9%, transparent)}
+  .nm2{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-3);
+       font-size:11px;font-weight:400;margin-top:1px}
+  .salto{font-size:11px;color:var(--s2);cursor:help;white-space:nowrap}
+  .fm{font-size:11.5px;white-space:nowrap}
+  .fm.ok{color:var(--good);font-weight:600}
+  .vazio{padding:14px 4px}
+  #tbSaltos td.l{white-space:normal}
+  @media(max-width:700px){ .opc{display:none} th,td{padding:7px 6px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="nav">
+  <a href="index.html">Ações</a>
+  <a href="fiis.html">Fundos imobiliários</a>
+  <a href="fundos.html">Fundos fechados</a>
+  <a href="mercado.html">Indicadores de mercado</a>
+  <a href="simulacao.html">Simulação</a>
+  <a href="oportunidades.html" aria-current="page">Oportunidades</a>
+</nav>
+
+<header>
+  <h1>Oportunidades</h1>
+  <p class="sub">Ações com o P/VP muito abaixo da própria história: mais de dois
+     desvios-padrão abaixo da média dos últimos 1, 5 ou 10 anos. É uma triagem
+     para olhar com calma, e não um sinal de compra: muitas vezes o preço cai
+     porque algo mudou na empresa.</p>
+  <div class="stamp">
+    <span><span class="dot"></span>Fechamento de <b id="stamp">—</b></span>
+    <span id="stampBase"></span>
+  </div>
+</header>
+
+<div id="avisos"></div>
+<div id="loading" class="load">Carregando o histórico de P/VP…</div>
+<div id="erro" class="load hidden"></div>
+
+<main id="app" class="hidden">
+
+  <div class="tiles" id="tiles"></div>
+
+  <section class="card">
+    <div class="grade">
+      <div class="ctl">
+        <label>Janela da média</label>
+        <div class="seg" id="segJanela">
+          <button data-v="1">1 ano</button>
+          <button data-v="5" aria-pressed="true">5 anos</button>
+          <button data-v="10">10 anos</button>
+        </div>
+      </div>
+      <div class="ctl">
+        <label>Gatilho (desvios-padrão abaixo da média)</label>
+        <div class="seg" id="segK">
+          <button data-v="1.5">1,5</button>
+          <button data-v="2" aria-pressed="true">2</button>
+          <button data-v="2.5">2,5</button>
+          <button data-v="3">3</button>
+        </div>
+      </div>
+      <div class="ctl">
+        <label>Filtros</label>
+        <label class="chk"><input type="checkbox" id="ckTodas">
+          <span>Só quando todas as janelas disponíveis concordam</span></label>
+        <label class="chk"><input type="checkbox" id="ckSalto">
+          <span>Incluir papéis com salto de patrimônio na janela</span></label>
+      </div>
+      <div class="ctl">
+        <label for="busca">Procurar</label>
+        <input type="search" id="busca" placeholder="Código ou nome" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Abaixo do gatilho</h2>
+    <p class="sub2" id="subOp"></p>
+    <div class="scroll"><table id="tbOp"></table></div>
+  </section>
+
+  <section class="card">
+    <h2>Quase lá</h2>
+    <p class="sub2" id="subQuase"></p>
+    <div class="scroll"><table id="tbQuase"></table></div>
+  </section>
+
+  <section class="card">
+    <details id="detSaltos">
+      <summary id="sumSaltos">Fora da lista por salto de patrimônio na janela</summary>
+      <p class="sub2" style="margin-top:10px">Dentro da janela, o patrimônio por ação
+        mudou 50% ou mais de um balanço para o outro: aumento de capital (o nº de ações
+        de hoje é aplicado ao passado), baixa contábil, fusão. A média passa a misturar
+        duas empresas diferentes, e o desvio-padrão deixa de medir o que promete.
+        Queda de <b>preço</b>, por maior que seja, não tira ninguém da lista.
+        Confira o gráfico antes de confiar no número.</p>
+      <p class="sub2 hidden" id="notaSemDegraus">O histórico publicado ainda não traz os
+        balanços um a um. Até ele ser refeito com <code>pvp_papeis.bat</code>, conta como
+        salto o P/VP que dobrou ou caiu à metade em uma semana, exceto depois do prazo de
+        entrega do último balanço, quando o patrimônio não muda e todo movimento é de preço.</p>
+      <div class="scroll"><table id="tbSaltos"></table></div>
+    </details>
+  </section>
+
+  <section class="card metodo" style="margin-top:26px">
+    <h2 style="margin-top:0">Como a conta é feita</h2>
+    <h3>A regra</h3>
+    <p>Para cada ação, o P/VP de hoje é comparado com o histórico semanal dela
+       mesma na janela escolhida, em logaritmo:</p>
+    <p><code>z = (ln P/VP hoje − média do ln P/VP na janela) ÷ desvio-padrão do ln P/VP na janela</code></p>
+    <p>A ação entra na lista quando <code>z</code> fica abaixo do gatilho (−2 por padrão).
+       O <b>P/VP-gatilho</b> é o valor em que isso acontece, e o <b>preço-gatilho</b>
+       é esse P/VP vezes o patrimônio por ação: abaixo desse preço, a ação entra na lista.</p>
+    <h3>Por que em logaritmo</h3>
+    <p>O P/VP não fica negativo e tem cauda longa para cima. Na escala normal,
+       "média menos dois desvios" dá número negativo em boa parte das ações, uma
+       regra que nunca dispara. No logaritmo a distribuição fica perto de simétrica,
+       e o gatilho vira uma divisão: média geométrica ÷ e<sup>2×desvio</sup>.
+       O <b>percentil</b> não depende de hipótese nenhuma: é a fração das semanas da
+       janela em que o P/VP esteve abaixo do de hoje.</p>
+    <h3>Cada janela responde a uma pergunta</h3>
+    <ul>
+      <li><b>1 ano:</b> o desvio é estreito e o patrimônio só muda quatro vezes. Dispara
+          com quedas comuns de preço: diz mais "caiu rápido" do que "está barata".</li>
+      <li><b>10 anos:</b> mistura regimes. Juros, setor e a própria empresa mudam em uma
+          década, e uma ação pode parecer "−2σ" para sempre sem estar barata.</li>
+      <li><b>5 anos</b> costuma ser o meio-termo, e por isso a tela abre nela.</li>
+    </ul>
+    <h3>Detalhes</h3>
+    <ul>
+      <li>A janela inclui a semana de hoje. Desvio-padrão amostral.</li>
+      <li>Cobertura mínima: 80% das semanas da janela com P/VP, e ao menos 26
+          semanas. Uma ação que abriu capital há três anos não tem z de 5 nem de 10 anos.</li>
+      <li>O ponto de hoje é o último fechamento ÷ o patrimônio por ação guardado. Na
+          mesma semana do último ponto gravado, ele o substitui.</li>
+      <li><b>Desde</b> é o início da sequência atual de semanas abaixo do gatilho, cada
+          semana medida com a janela que terminava nela, sem olhar o futuro.</li>
+      <li><b>Fórmula mágica</b> é a posição da ação no ranking da aba Ações (✓ = está
+          entre as selecionadas). Serve de lembrete de qualidade: P/VP baixo com
+          retorno sobre capital ruim costuma ser armadilha.</li>
+    </ul>
+    <h3>Limites</h3>
+    <ul>
+      <li>É o mesmo histórico do gráfico por papel da aba Mercado: patrimônio dos
+          controladores, com o balanço que já tinha sido entregue à CVM em cada data.</li>
+      <li><b>O nº de ações é o de hoje, aplicado ao passado.</b> Emissões e recompras
+          distorcem os anos antigos. Uma empresa que emitiu muitas ações tem o P/VP
+          antigo inflado, e hoje parece mais barata do que é contra a própria história.</li>
+      <li>O robô só move o preço. O patrimônio muda quando o histórico é refeito no
+          seu computador (<code>pvp_papeis.bat</code>), depois de cada temporada de balanços.</li>
+    </ul>
+  </section>
+
+</main>
+
+<footer class="note" style="margin:34px 0 60px;color:var(--ink-3)">
+  Fontes: CVM (patrimônio líquido, nº de ações), Yahoo Finance (preços).
+  Triagem com dados públicos: não é recomendação de investimento.
+</footer>
+
+</div>
+<script src="oportunidades_motor.js"></script>
+<script src="oportunidades.js"></script>
+</body>
+</html>
