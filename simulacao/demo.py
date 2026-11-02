@@ -78,6 +78,10 @@ def fontes_falsas(hoje: date, semente: int = 7) -> SimpleNamespace:
     usd = rng.normal(0.10 / 252, 0.16 / np.sqrt(252), n)
 
     ajustado, fechamento, volume = {}, {}, {}
+    abertura, maxima, minima = {}, {}, {}
+    # Velas da aba técnica num sorteio à parte: acrescentá-las não muda nenhum
+    # número da base de demonstração que já existia.
+    rng_v = np.random.default_rng(semente + 1000)
     for t, _nome, classe, beta, idio, ini, fim, liq, dy in ATIVOS:
         e = rng.normal(0, idio / np.sqrt(252), n)
         if t == "IVVB11" or t == "GOLD11":
@@ -102,6 +106,15 @@ def fontes_falsas(hoje: date, semente: int = 7) -> SimpleNamespace:
         ajustado[t] = serie_aj.where(mascara)
         fechamento[t] = pd.Series(px, index=cal).where(mascara)
         volume[t] = pd.Series(vol, index=cal).where(mascara)
+        # abertura perto do fechamento anterior; pavios proporcionais à vol
+        sd = (abs(beta) * 0.24 + idio) / np.sqrt(252)
+        ant = np.concatenate([[px[0]], px[:-1]])
+        ab = ant * (1 + rng_v.normal(0, sd / 3, n))
+        mx = np.maximum(ab, px) * (1 + np.abs(rng_v.normal(0, sd / 2, n)))
+        mn = np.minimum(ab, px) * (1 - np.abs(rng_v.normal(0, sd / 2, n)))
+        abertura[t] = pd.Series(ab, index=cal).where(mascara)
+        maxima[t] = pd.Series(mx, index=cal).where(mascara)
+        minima[t] = pd.Series(mn, index=cal).where(mascara)
 
     ibov = pd.Series(68_000 * np.cumprod(1 + mkt), index=cal)
 
@@ -120,7 +133,8 @@ def fontes_falsas(hoje: date, semente: int = 7) -> SimpleNamespace:
     def precos(tickers, inicio, fim):
         cols = [t for t in tickers if t in ajustado]
         out = {}
-        for k, fonte in (("preco", ajustado), ("fechamento", fechamento), ("volume", volume)):
+        for k, fonte in (("preco", ajustado), ("fechamento", fechamento), ("volume", volume),
+                         ("abertura", abertura), ("maxima", maxima), ("minima", minima)):
             df = pd.DataFrame({t: fonte[t] for t in cols}, index=cal)
             out[k] = _recorte(df, inicio, fim).dropna(how="all", axis=1)
         return out

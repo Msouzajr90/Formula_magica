@@ -119,7 +119,64 @@ def conferir(pasta: Path, hoje: date | None = None) -> tuple[list[str], list[str
     orfaos = sorted(arquivos - vistos)
     if orfaos:
         avisos.append(f"{len(orfaos)} arquivo(s) sem entrada no índice: {', '.join(orfaos[:10])}")
+    e2, a2 = conferir_velas(pasta, ind)
+    return erros + e2, avisos + a2
+
+
+def conferir_velas(pasta: Path, ind: dict) -> tuple[list[str], list[str]]:
+    """Velas e painel da aba de análise técnica (`precos/ohlc/`).
+
+    Só é ERRO o que quebraria a tela: arquivo ilegível, fora do calendário ou
+    com máxima abaixo do fechamento. Falta de velas é aviso — a base de
+    retornos da Simulação não pode deixar de sair por causa da outra aba.
+    """
+    from tecnica import config as TC, velas as V
+
+    erros, avisos = [], []
+    pregoes = ind.get("pregoes") or []
+    pasta_v = Path(pasta) / TC.PASTA_VELAS.name
+    acoes = [e["t"] for e in ind.get("ativos") or [] if e.get("classe") in TC.CLASSES]
+    if not pasta_v.exists():
+        avisos.append("sem velas ainda (precos/ohlc/): a aba técnica mostra só o fechamento")
+        return erros, avisos
+    com, em_dia = 0, 0
+    for t in acoes:
+        if not V.caminho(pasta_v, t).exists():
+            continue
+        v = V.ler(pasta_v, t)
+        if v is None:
+            erros.append(f"velas de {t}: arquivo corrompido ou de outra versão")
+            continue
+        com += 1
+        n = len(v["a"])
+        if v["i0"] < 0 or v["i0"] + n > len(pregoes):
+            erros.append(f"velas de {t}: fora do calendário")
+            continue
+        a, x, m, f = (np.asarray(v[k]) for k in ("a", "x", "m", "f"))
+        if np.any(x < 0) or np.any(m > 0) or np.any(a > x) or np.any(a < m):
+            erros.append(f"velas de {t}: máxima abaixo do fechamento ou abertura fora da faixa do dia")
+        if np.any(f < 0):
+            erros.append(f"velas de {t}: volume negativo")
+        ult = v.get("ult") or ["", 0]
+        if not (ult[1] and ult[1] > 0) or ult[0] not in pregoes[v["i0"]:v["i0"] + n]:
+            erros.append(f"velas de {t}: último fechamento ({ult}) fora do intervalo das velas")
+        if v["i0"] + n == len(pregoes):
+            em_dia += 1
+    if acoes and com < 0.5 * len(acoes):
+        avisos.append(f"só {com} de {len(acoes)} ações têm velas")
+    elif acoes and em_dia < TC_FRACAO * len(acoes):
+        avisos.append(f"só {em_dia} de {len(acoes)} ações têm vela no último pregão")
+    painel = arquivo.ler_json(pasta_v / TC.ARQ_SINAIS)
+    if painel is None:
+        avisos.append("painel técnico (_sinais.json) não existe")
+    elif pregoes and painel.get("pregao") != pregoes[-1]:
+        avisos.append(f"painel técnico é de {painel.get('pregao')}; a base vai até {pregoes[-1]}")
+    elif painel.get("demo") and not ind.get("demo"):
+        erros.append("painel técnico é de DEMONSTRAÇÃO e a base não")
     return erros, avisos
+
+
+TC_FRACAO = 0.8
 
 
 def main(argv=None) -> int:

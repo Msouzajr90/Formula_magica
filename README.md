@@ -55,6 +55,12 @@ com o preço-gatilho de cada uma e há quantas semanas está abaixo dele. Usa o
 mesmo histórico semanal do gráfico por papel (`pvp_papeis.json`) e roda no
 navegador; nenhum robô novo. Documentada em **`OPORTUNIDADES.md`**.
 
+E uma aba de **análise técnica**: gráfico de velas com médias, Bollinger, IFR,
+MACD, estocástico, ADX e OBV, o painel com o estado desses indicadores em
+todas as ações da base, e o teste de seis regras de compra e venda desde 2010
+contra comprar e segurar. As velas (`web/public/precos/ohlc/`) saem do mesmo
+download do robô `Atualizar preços`. Documentada em **`TECNICA.md`**.
+
 ## Começar (Windows)
 
 Dê **duplo clique em `iniciar.bat`**. Na primeira vez ele instala tudo, roda a

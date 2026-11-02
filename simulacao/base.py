@@ -43,6 +43,9 @@ class Relatorio:
     reconstruidos: list = field(default_factory=list)
     divergencias: dict = field(default_factory=dict)
     gravados: int = 0
+    velas: int = 0                # ações com arquivo de velas (aba técnica)
+    velas_gravadas: int = 0
+    sem_velas: list = field(default_factory=list)
     avisos: list = field(default_factory=list)
 
     def texto(self) -> str:
@@ -59,6 +62,8 @@ class Relatorio:
             f"reconstruídos     : {len(self.reconstruidos)}"
             + (f" — {', '.join(self.reconstruidos[:15])}" if self.reconstruidos else ""),
             f"arquivos gravados : {self.gravados}",
+            f"velas (técnica)   : {self.velas} ações, {self.velas_gravadas} arquivos gravados"
+            + (f"; sem velas: {', '.join(self.sem_velas[:15])}" if self.sem_velas else ""),
         ]
         if self.divergencias:
             pior = sorted(self.divergencias.items(), key=lambda kv: -kv[1])[:10]
@@ -231,6 +236,12 @@ def atualizar(pasta: Path = C.PASTA_PRECOS, *, completo: bool = False,
 
     ativos: dict[str, dict] = {}
 
+    # Velas da aba de análise técnica: mesmo download, nenhuma requisição a
+    # mais no dia a dia (ver `tecnica.velas.Gravador`).
+    from tecnica import velas as V
+    gv = V.Gravador(pasta, pregoes, pregoes_velhos=pregoes_velhos,
+                    calendario_mudou=calendario_mudou, hoje=hoje)
+
     def processar(t, dados, anterior_e, velho_s, modo_emenda):
         """Grava a série de `t`. Devolve 'ok', 'sem_dados' ou 'buraco'."""
         nonlocal gravados
@@ -261,6 +272,7 @@ def atualizar(pasta: Path = C.PASTA_PRECOS, *, completo: bool = False,
                                             arquivo.serie(t, i0, r))
         ativos[t] = e
         recusados.pop(t, None)
+        gv.receber(t, e["classe"], dados, emendar_no_gravado=bool(modo_emenda and velho_s))
         return "ok"
 
     def manter_antigo(t):
@@ -279,6 +291,7 @@ def atualizar(pasta: Path = C.PASTA_PRECOS, *, completo: bool = False,
             i0, r = ra
             gravar_serie(t, i0, r)
         a.update({"i0": i0, "n": len(r)})
+        gv.manter(t, a.get("classe", "acao"))
         sal = S.saltos(i0, r, pregoes)
         if sal:
             a["saltos"] = sal[:20]
@@ -328,6 +341,13 @@ def atualizar(pasta: Path = C.PASTA_PRECOS, *, completo: bool = False,
             elif st == "sem_dados":
                 rel.sem_cotacao.append(t)
                 recusados[t] = {"liqMax": None, "em": hoje.isoformat(), "motivo": "sem cotação"}
+
+    # ação que ainda não tinha velas: histórico inteiro, uma vez
+    gv.completar(fontes.precos, inicio, hoje)
+    rel.velas = len(gv.com_velas)
+    rel.velas_gravadas = gv.gravados
+    rel.sem_velas = sorted(set(gv.sem_velas))
+    rel.avisos.extend(gv.avisos)
 
     # ---- 4. índice ------------------------------------------------------
     for t in list(recusados):

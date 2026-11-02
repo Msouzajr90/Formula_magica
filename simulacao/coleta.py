@@ -26,7 +26,9 @@ def _sem_sufixo(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def baixar_precos(tickers: list[str], inicio: date, fim: date) -> dict[str, pd.DataFrame]:
-    """{'preco': ajustado, 'fechamento', 'volume'}, colunas sem '.SA'.
+    """{'preco': ajustado, 'fechamento', 'volume', 'abertura', 'maxima',
+    'minima'}, colunas sem '.SA'. Os três últimos alimentam as velas da aba
+    de análise técnica (`tecnica.velas`).
 
     `fim` é inclusivo aqui; o yfinance trata o fim como exclusivo.
     """
@@ -34,7 +36,8 @@ def baixar_precos(tickers: list[str], inicio: date, fim: date) -> dict[str, pd.D
 
     if not tickers:
         vazio = pd.DataFrame()
-        return {"preco": vazio, "fechamento": vazio, "volume": vazio}
+        return {k: vazio for k in ("preco", "fechamento", "volume",
+                                   "abertura", "maxima", "minima")}
     simbolos = [f"{t}.SA" for t in tickers]
     bruto = prices.baixar_historico(simbolos, inicio, fim + timedelta(days=1))
     return {k: _sem_sufixo(v) for k, v in bruto.items()}

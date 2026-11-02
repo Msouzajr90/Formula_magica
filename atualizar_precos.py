@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """Gera e atualiza a base de preços da aba Simulação (web/public/precos/).
 
+Grava também as velas das ações (web/public/precos/ohlc/) e o painel da aba
+de análise técnica (precos/ohlc/_sinais.json), com o mesmo download.
+
 Roda no GitHub Actions (o Yahoo e o Banco Central respondem de fora do
 Brasil). A primeira execução baixa tudo desde 2010; as seguintes só emendam
 os pregões novos.
@@ -49,6 +52,19 @@ def main(argv=None) -> int:
         rel = base.atualizar(pasta, completo=a.completo, hoje=hoje)
 
     print(rel.texto())
+
+    # Painel da aba de análise técnica: lê o que acabou de ser gravado. Uma
+    # falha aqui não pode barrar a base da Simulação — vira aviso no log, e o
+    # validador avisa que o painel ficou para trás.
+    try:
+        from tecnica import sinais
+        painel = sinais.gravar(pasta)
+        if painel:
+            print(f"painel técnico     : {len(painel['papeis'])} ações, "
+                  f"{painel['comVelas']} com velas")
+    except Exception as exc:                                   # noqa: BLE001
+        logging.exception("painel técnico não foi gerado")
+        print(f"AVISO: painel técnico não foi gerado ({exc})")
     return 0
 
 

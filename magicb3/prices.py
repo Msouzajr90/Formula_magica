@@ -375,7 +375,22 @@ def baixar_historico(tickers: list[str], inicio: str | date, fim: str | date,
         "preco": _achatar(raw, campo_aj, tickers),
         "fechamento": _achatar(raw, "Close", tickers),
         "volume": _achatar(raw, "Volume", tickers),
+        # Abertura, máxima e mínima vêm no mesmo download (o yf.download traz
+        # todos os campos); só a aba de análise técnica usa. Brutos como o
+        # fechamento: ajustados por desdobramento, não por provento.
+        "abertura": _achatar_ou_vazio(raw, "Open", tickers),
+        "maxima": _achatar_ou_vazio(raw, "High", tickers),
+        "minima": _achatar_ou_vazio(raw, "Low", tickers),
     }
+
+
+def _achatar_ou_vazio(df: pd.DataFrame, campo: str, tickers: list[str]) -> pd.DataFrame:
+    """Como `_achatar`, mas um campo ausente (cache antigo, layout estranho)
+    vira tabela vazia em vez de derrubar a coleta inteira."""
+    try:
+        return _achatar(df, campo, tickers)
+    except (KeyError, ValueError):
+        return pd.DataFrame()
 
 
 def liquidez_media_diaria(fechamento: pd.DataFrame, volume: pd.DataFrame,
