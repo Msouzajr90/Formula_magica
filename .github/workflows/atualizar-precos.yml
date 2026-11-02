@@ -59,8 +59,9 @@ jobs:
             git reset --hard origin/main
             # A base e acumulativa: o que esta na pasta gerada E a base inteira.
             # Copiar por cima (sem apagar a pasta) nunca tira um papel antigo.
+            # Copia recursiva: leva tambem as velas da aba tecnica (precos/ohlc/).
             mkdir -p web/public/precos
-            cp /tmp/precos/*.json web/public/precos/
+            cp -r /tmp/precos/. web/public/precos/
             git add web/public/precos
             if git diff --staged --quiet; then
               echo "Nada mudou."
