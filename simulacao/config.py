@@ -76,47 +76,31 @@ ARQ_CDI = "_CDI.json"
 # Formato de código de negociação que entra na base: 4 caracteres começando
 # por letra (B3SA tem dígito) e o sufixo numérico da classe — 3 a 8 para
 # ações, 11 para units, FII e ETF, 31 a 39 para BDR (só via tickers_extras).
-PADRAO_TICKER = r"^[A-Z][A-Z0-9]{3}(3|4|5|6|7|8|11|3[1-59])$"
+# Começar por dígito só com o sufixo 11: há ETFs assim (5GTK11, 5PRE11), e
+# nenhum deles vem de lista gerada por máquina — vêm do catálogo de ETFs,
+# escrito à mão. (Os FIIs passam antes pelo filtro de quatro letras do fiib3.)
+PADRAO_TICKER = r"^(?:[A-Z][A-Z0-9]{3}(3|4|5|6|7|8|11|3[1-59])|[0-9][A-Z0-9]{3}11)$"
 
 # Irmãos de classe testados para cada ação já conhecida. O ranking da fórmula
 # mágica guarda só um papel por empresa (PETR4, não PETR3), mas na simulação
 # a escolha da classe é do Marco.
 SUFIXOS_IRMAOS = ("3", "4", "11")
 
-# ETFs listados na B3. Os que não existirem no Yahoo simplesmente não entram;
-# os sem liquidez caem no corte como qualquer papel.
-ETFS = {
-    "BOVA11": "iShares Ibovespa",
-    "BOVV11": "It Now Ibovespa",
-    "BOVX11": "Trend Ibovespa",
-    "XBOV11": "Caixa Ibovespa",
-    "BRAX11": "iShares IBrX-100",
-    "PIBB11": "It Now IBrX-50",
-    "SMAL11": "iShares Small Cap",
-    "DIVO11": "It Now IDIV (dividendos)",
-    "FIND11": "It Now financeiro",
-    "MATB11": "It Now materiais básicos",
-    "ECOO11": "iShares carbono eficiente",
-    "IVVB11": "iShares S&P 500 (em reais)",
-    "SPXI11": "It Now S&P 500 (em reais)",
-    "NASD11": "Trend Nasdaq-100 (em reais)",
-    "ACWI11": "iShares MSCI ACWI (em reais)",
-    "WRLD11": "Investo mundo (em reais)",
-    "EURP11": "Trend Europa (em reais)",
-    "XINA11": "Trend China (em reais)",
-    "GOLD11": "Trend ouro",
-    "HASH11": "Hashdex cripto",
-    "QBTC11": "QR bitcoin",
-    "BITH11": "Hashdex bitcoin",
-    "ETHE11": "Hashdex ethereum",
-    "IMAB11": "It Now IMA-B (NTN-B)",
-    "B5P211": "It Now IMA-B5 (NTN-B até 5 anos)",
-    "IB5M11": "It Now IMA-B5+ (NTN-B longas)",
-    "IRFM11": "It Now IRF-M (prefixados)",
-    "FIXA11": "Mirae prefixado",
-    "LFTS11": "Investo Tesouro Selic",
-    "DEBB11": "BTG debêntures incentivadas",
-}
+# ETFs listados na B3: a lista mora em web/public/etfs_catalogo.json, que a
+# aba de ETFs também lê (categoria, índice, grupo de aderência). Uma fonte só,
+# para a aba nunca mostrar um ETF que o robô não tenta baixar, nem o contrário.
+# Os que não existirem no Yahoo simplesmente não entram; os sem liquidez caem
+# no corte como qualquer papel.
+ARQ_CATALOGO_ETFS = PUBLICO / "etfs_catalogo.json"
+
+
+def _ler_etfs(caminho: Path = ARQ_CATALOGO_ETFS) -> dict[str, str]:
+    import json
+    cat = json.loads(caminho.read_text(encoding="utf-8"))
+    return {t: e["nome"] for t, e in cat["etfs"].items()}
+
+
+ETFS = _ler_etfs()
 
 
 def hoje() -> date:

@@ -676,7 +676,7 @@
       const [t, w] = x.split(':');
       const v = w != null && w !== '' && isFinite(+w) ? +w / 100 : null;
       return { t: t.toUpperCase().replace(/[^A-Z0-9]/g, ''), peso: v };
-    }).filter(a => /^[A-Z][A-Z0-9]{3}\d{1,2}$/.test(a.t));
+    }).filter(a => /^[A-Z0-9][A-Z0-9]{3}\d{1,2}$/.test(a.t));
     const o = p.get('o') || 'minvar';
     const num = (k, d, lo, hi) => { const v = +p.get(k); return p.has(k) && isFinite(v) && v >= lo && v <= hi ? v : d; };
     const data = (k) => (/^\d{4}-\d{2}-\d{2}$/.test(p.get(k) || '') ? p.get(k) : null);

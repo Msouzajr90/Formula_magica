@@ -260,7 +260,7 @@ function ligarControles() {
         && [...el('lista').options].some(o => o.value === v)) {
       // só adiciona sozinho se o texto bate exatamente com um código da base
       // e veio de uma escolha (o valor tem o tamanho de um código inteiro)
-      if (/^[A-Z][A-Z0-9]{3}\d{1,2}$/.test(v) && v.length >= 5 && el('novo').dataset.ultimo !== v) {
+      if (/^[A-Z0-9][A-Z0-9]{3}\d{1,2}$/.test(v) && v.length >= 5 && el('novo').dataset.ultimo !== v) {
         el('novo').dataset.ultimo = v;
       }
     }

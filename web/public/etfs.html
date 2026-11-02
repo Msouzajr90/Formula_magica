@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ETFs — comparação, aderência e correlação</title>
+<meta name="description" content="Os ETFs da B3 lado a lado: retorno, volatilidade, queda máxima, Sharpe, aderência ao índice e correlação, com preços desde 2010.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='54'>🧺</text></svg>">
+<link rel="stylesheet" href="estilo.css">
+<style>
+  /* oito cores fixas para os ETFs escolhidos, na ordem da paleta do site;
+     Ibovespa e CDI ficam em tinta neutra: são régua, não concorrentes */
+  :root{ --c4:#eda100; --c5:#e87ba4; --c6:#008300; --c7:#6250d6; --c8:#e34948; --neg:#e34948 }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){ --c4:#c98500; --c5:#d55181; --c6:#008300; --c7:#9085e9; --c8:#e66767; --neg:#e66767 }
+  }
+  .seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;flex-wrap:wrap}
+  .seg button{background:var(--surface-0);border:0;border-right:1px solid var(--line-strong);white-space:nowrap;
+              padding:7px 12px;font:inherit;font-size:13px;color:var(--ink-2);cursor:pointer}
+  .seg button:last-child{border-right:0}
+  .seg button[aria-pressed=true]{background:var(--s1);color:#fff}
+  .barraCtl{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end;margin:6px 0 12px}
+  .barraCtl .ctl label{display:block;font-size:12px;color:var(--ink-2);margin-bottom:6px;font-weight:500}
+  .barraCtl input[type=search]{width:220px;padding:7px 10px;border:1px solid var(--line-strong);border-radius:8px;
+                               background:var(--surface-0);color:var(--ink);font:inherit}
+  .sub2{font-size:13px;color:var(--ink-2);margin:0 0 12px;max-width:80ch}
+  .nm2{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-3);
+       font-size:11px;font-weight:400;margin-top:1px}
+  .cat{font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin-left:4px}
+  .aviso{font-size:11px;color:var(--s2);cursor:help;margin-left:3px}
+  .up{color:var(--good)} .down{color:var(--bad)}
+  #tbEtfs td, #tbEtfs th{padding:7px 8px}
+  #tbEtfs th.grp{border-left:1px solid var(--line-strong)}
+  #tbEtfs td.grp{border-left:1px solid var(--line)}
+  #tbEtfs tr.escolhido td:first-child{box-shadow:inset 3px 0 0 var(--cor, var(--s1))}
+  .mapa td{text-align:center;font-size:12px;padding:6px 7px;font-variant-numeric:tabular-nums;
+           border:2px solid var(--surface-1);min-width:56px}
+  .mapa th{text-align:center}
+  .mapa td.l, .mapa th.l{text-align:left}
+  .legend i.linha{width:16px;height:3px;border-radius:2px}
+  .legend i.trac{width:16px;height:0;border-top:2px dashed currentColor;border-radius:0;background:none!important}
+  .ader h3{font-size:13.5px;margin:18px 0 4px}
+  .ader h3:first-child{margin-top:4px}
+  .ader table{margin-bottom:6px}
+  .ader .refnota{font-size:12px;color:var(--ink-3);margin:0 0 6px}
+  .duas{display:grid;grid-template-columns:1fr 1fr;gap:0 26px}
+  @media(max-width:980px){.duas{grid-template-columns:1fr}}
+  .msg{font-size:12.5px;color:var(--ink-2);margin:6px 0 0}
+  .lim{font-size:12px;color:var(--ink-3)}
+  @media(max-width:760px){ .opc,.cat{display:none} #tbEtfs td,#tbEtfs th{padding:7px 5px} .nm2{max-width:130px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="nav">
+  <a href="index.html">Ações</a>
+  <a href="fiis.html">Fundos imobiliários</a>
+  <a href="fundos.html">Fundos fechados</a>
+  <a href="etfs.html" aria-current="page">ETFs</a>
+  <a href="mercado.html">Indicadores de mercado</a>
+  <a href="simulacao.html">Simulação</a>
+  <a href="oportunidades.html">Oportunidades</a>
+</nav>
+
+<header>
+  <h1>ETFs</h1>
+  <p class="sub">Os fundos de índice da B3 lado a lado: quanto renderam, quanto
+     oscilaram, quanto caíram no pior momento, se entregam o índice que prometem
+     e quais andam juntos. Preços com proventos desde 2010, calculados no seu
+     navegador.</p>
+  <div class="stamp">
+    <span><span class="dot"></span>Fechamento de <b id="stamp">—</b></span>
+    <span id="stampBase"></span>
+  </div>
+</header>
+
+<div class="warn hidden" id="baseDemo"
+     style="border-left-color:var(--bad);background:color-mix(in srgb, var(--bad) 8%, transparent)">
+  <b>⚠ Não use esta tela para decidir nada.</b> A base de preços está em modo
+  demonstração: os retornos foram sorteados.
+</div>
+
+<div id="loading" class="load">Carregando os preços dos ETFs…</div>
+<div id="erro" class="load hidden"></div>
+
+<main id="app" class="hidden">
+
+  <section class="card">
+    <h2>Comparação</h2>
+    <p class="sub2">Marque até oito ETFs para vê-los no gráfico e na correlação.
+      Clique no título de uma coluna para ordenar. Retornos de 3 e 5 anos são
+      ao ano; célula vazia é ETF sem história no período inteiro.</p>
+    <div class="barraCtl">
+      <div class="ctl">
+        <label>Categoria</label>
+        <div class="chips" id="segCat" style="margin:0"></div>
+      </div>
+      <div class="ctl">
+        <label>Risco medido em</label>
+        <div class="seg" id="segJanela">
+          <button data-v="12m">12 meses</button><button data-v="3a">3 anos</button>
+          <button data-v="5a">5 anos</button><button data-v="10a">10 anos</button>
+          <button data-v="max" title="Todo o histórico de cada ETF">Tudo</button>
+        </div>
+      </div>
+      <div class="ctl">
+        <label for="busca">Procurar</label>
+        <input type="search" id="busca" placeholder="Código, nome ou índice" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+    <div class="contagem" id="contagem"></div>
+    <div class="scroll tall">
+      <table id="tbEtfs">
+        <thead><tr>
+          <th class="sel"></th>
+          <th class="l ord" data-k="t">ETF</th>
+          <th class="ord opc" data-k="liq" title="Volume financeiro médio por pregão nos últimos 3 meses">Liquidez/dia</th>
+          <th class="ord grp" data-k="r1m">1 mês</th>
+          <th class="ord opc" data-k="rano">No ano</th>
+          <th class="ord" data-k="r12m">12 meses</th>
+          <th class="ord" data-k="r3a" title="Ao ano">3 anos</th>
+          <th class="ord opc" data-k="r5a" title="Ao ano">5 anos</th>
+          <th class="ord grp" data-k="vol" title="Desvio-padrão dos retornos diários, anualizado">Volatilidade</th>
+          <th class="ord" data-k="mdd" title="Maior queda do pico ao vale dentro da janela">Queda máx.</th>
+          <th class="ord" data-k="sharpe" title="(retorno ao ano − CDI ao ano) ÷ volatilidade, na mesma janela">Sharpe</th>
+          <th class="ord opc" data-k="corrIbov" title="Correlação dos retornos semanais com o Ibovespa">Correl. Ibov</th>
+          <th class="ord opc" data-k="betaIbov" title="Beta semanal contra o Ibovespa">Beta</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="msg" id="rodapeTabela"></p>
+  </section>
+
+  <section class="card">
+    <h2>Desempenho</h2>
+    <p class="sub2" id="subGrafico">Retorno acumulado dos ETFs marcados, com proventos, contra o Ibovespa e o CDI.</p>
+    <div class="barraCtl" style="margin-top:0">
+      <div class="seg" id="segGrafico">
+        <button data-v="12m">12 meses</button><button data-v="3a">3 anos</button>
+        <button data-v="5a">5 anos</button><button data-v="10a">10 anos</button>
+        <button data-v="max">Máximo</button>
+      </div>
+    </div>
+    <div class="legend" id="legGrafico"></div>
+    <svg class="chart" id="chGrafico" role="img" aria-label="Retorno acumulado dos ETFs escolhidos, do Ibovespa e do CDI"></svg>
+    <p class="msg" id="notaGrafico"></p>
+  </section>
+
+  <div class="duas">
+    <section class="card">
+      <h2>Correlação</h2>
+      <p class="sub2" id="subCorr">Retornos semanais, na janela de risco escolhida acima.
+        Perto de 1: andam juntos e um não protege o outro. Perto de zero ou
+        negativa: é aí que está a diversificação.</p>
+      <div class="scroll"><table class="mapa" id="tbCorr"></table></div>
+      <p class="msg" id="notaCorr"></p>
+    </section>
+
+    <section class="card ader">
+      <h2>Aderência ao índice</h2>
+      <p class="sub2" id="subAder">ETFs que seguem o mesmo índice, comparados com
+        ele (Ibovespa, CDI) ou com o mais antigo do grupo. <b>Diferença</b> é
+        retorno ao ano acima (+) ou abaixo (−) da referência; <b>tracking
+        error</b> é o quanto a diferença oscila, semana a semana, anualizado.</p>
+      <div id="ader"></div>
+    </section>
+  </div>
+
+  <section class="card metodo">
+    <h2 style="margin-top:0">Como ler e de onde vem</h2>
+    <h3>Os preços</h3>
+    <p>A mesma base da aba Simulação: preço ajustado por proventos do Yahoo
+      Finance, Ibovespa da B3 e CDI do Banco Central. Entra todo ETF do catálogo
+      (<span id="txCatalogo">—</span>) que negociou mais de R$ 1 milhão por dia, na
+      média de 3 meses, em algum momento desde 2010.</p>
+    <h3>As contas</h3>
+    <ul>
+      <li><b>Janelas</b> terminam no último fechamento e começam no fechamento
+        do mesmo dia N meses antes. ETF que não existia no começo da janela fica
+        sem número — um "5 anos" de quem tem dois anos seria outra coisa com o
+        mesmo nome.</li>
+      <li><b>Volatilidade, queda máxima e Sharpe</b> usam os retornos diários e as
+        fórmulas da Simulação. O Sharpe desconta o CDI do mesmo período.</li>
+      <li><b>Correlação, beta e aderência</b> usam retornos de 5 pregões. Um ETF de
+        S&amp;P 500 fecha às 17h em São Paulo com Nova York aberta, e no diário
+        metade do movimento cai no dia seguinte: a correlação diária sairia
+        baixa demais.</li>
+      <li><b>Não há taxa de administração</b> na tela. A aderência mostra o custo
+        total que de fato chegou ao investidor.</li>
+    </ul>
+    <h3>Defeitos dos dados, e o que a tela faz com eles</h3>
+    <ul>
+      <li><b>Lacunas do Yahoo</b>: o preço fica parado por meses e depois salta
+        de uma vez para onde deveria estar. O retorno de ponta a ponta continua
+        certo; volatilidade, queda e correlação de um período com lacuna não
+        fazem sentido e ficam vazias. <span id="txLacunas"></span></li>
+      <li><b>Saltos isolados</b> acima de 15% num dia (renda fixa) ou 40% (o resto)
+        são desdobramentos que o Yahoo não ajustou e viram retorno zero.
+        <span id="txArtefatos"></span></li>
+    </ul>
+    <h3>Quem não está na tabela</h3>
+    <p id="txFora">—</p>
+  </section>
+
+</main>
+
+<footer class="note" style="margin:34px 0 60px;color:var(--ink-3)">
+  Fontes: Yahoo Finance (preços ajustados), B3 (Ibovespa), Banco Central (CDI);
+  catálogo de ETFs montado à mão a partir das listagens públicas da B3.
+  Resultado passado, calculado com dados públicos — não é promessa nem recomendação.
+</footer>
+
+</div>
+<div class="tip" id="tip"></div>
+<script src="etfs_motor.js"></script>
+<script src="etfs.js"></script>
+</body>
+</html>
