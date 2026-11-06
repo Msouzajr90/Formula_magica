@@ -11,6 +11,7 @@ on:
     # 00h40 UTC = 21h40 em Brasilia, de segunda a sexta (2-6 em UTC: a
     # segunda-feira brasileira cai na terca-feira UTC). Meia hora depois do
     # robo de mercado, para nao brigarem pelo push.
+    - cron: "40 21 * * 1-5"
     - cron: "40 0 * * 2-6"
 jobs:
   atualizar:
