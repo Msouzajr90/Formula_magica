@@ -65,6 +65,15 @@ SALTO_SUSPEITO = 0.40
 # Mínimos para o validador aceitar a base.
 MINIMO_ATIVOS = 100
 FRACAO_MINIMA_ATUALIZADA = 0.80
+
+# Pregão novo só entra no calendário se pelo menos esta fração dos papéis
+# ativos tiver preço nele. O Yahoo devolve o último pregão com preço vazio
+# (só o volume) para quem pede depois da meia-noite de Nova York e antes de o
+# mercado abrir — o Ibovespa vem completo e estendia o calendário, as ações
+# não. Foi o que travou a publicação em 04 e 05/11/2026: as rodadas marcadas
+# para 21h40 começaram às 4h, e só 35% e 7% dos papéis tinham o último dia.
+# O mesmo corte do validador: o dia adiado entra na rodada seguinte.
+FRACAO_MINIMA_PREGAO_NOVO = FRACAO_MINIMA_ATUALIZADA
 IDADE_MAXIMA_DIAS = 8          # mesmo limite da aba de mercado
 
 # Séries de referência.

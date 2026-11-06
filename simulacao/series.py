@@ -52,6 +52,43 @@ def estender_calendario(antigo: list[str], novas: list[str]) -> list[str]:
     return antigo + sorted({d for d in novas if d > ultimo})
 
 
+def sem_pregoes_incompletos(datas: list[str], precos: pd.DataFrame | None,
+                            minimo: float, protegido: str | None = None,
+                            janela_dias: int = 10) -> tuple[list[str], list[tuple[str, float]]]:
+    """Tira do FIM do calendário os pregões em que poucos papéis têm preço.
+
+    `datas` é o calendário candidato (as datas do Ibovespa). Para cada data do
+    fim para trás, conta quantos papéis *ativos* — com preço em algum dia dos
+    `janela_dias` corridos anteriores — têm preço nela. Abaixo de `minimo`, a
+    data sai e o teste passa para a anterior; a primeira data boa encerra o
+    corte (um buraco no meio não é este problema). Datas até `protegido`
+    (o último pregão já gravado) nunca saem.
+
+    Devolve (calendário, [(data adiada, fração com preço)]).
+    """
+    if precos is None or precos.empty or not datas:
+        return list(datas), []
+    px = precos.copy()
+    px.index = pd.DatetimeIndex(px.index).tz_localize(None).normalize()
+    px = px[~px.index.duplicated(keep="last")].sort_index()
+    validos = px.notna() & (px > 0)
+    out, adiados = list(datas), []
+    while out and (protegido is None or out[-1] > protegido):
+        d = pd.Timestamp(out[-1])
+        recente = validos[(validos.index > d - pd.Timedelta(days=janela_dias))
+                          & (validos.index < d)]
+        ativos = recente.any(axis=0)
+        if not ativos.any():
+            break
+        no_dia = (validos.loc[d] if d in validos.index
+                  else pd.Series(False, index=validos.columns))
+        frac = float((no_dia & ativos).sum() / ativos.sum())
+        if frac >= minimo:
+            break
+        adiados.append((out.pop(), frac))
+    return out, adiados
+
+
 def _posicoes(datas: pd.DatetimeIndex, pregoes: list[str]) -> np.ndarray:
     """Posição de cada data no calendário; data fora do calendário vai para o
     pregão seguinte (o negócio feito num dia que o Ibovespa não tem conta como

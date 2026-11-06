@@ -405,3 +405,83 @@ def test_coleta_tira_o_sufixo_e_o_fuso(monkeypatch):
     assert pedidos[0][2] == date(2026, 1, 7)          # o fim do yfinance é exclusivo
     ib = coleta.baixar_ibov(date(2026, 1, 1), date(2026, 1, 6))
     assert S.calendario_de(ib) == ["2026-01-05", "2026-01-06"]
+
+
+# ---------------------------------------------------------------------------
+# Último pregão que o Yahoo ainda não fechou para as ações
+# ---------------------------------------------------------------------------
+def test_pregao_novo_sem_preco_da_maioria_sai_do_fim():
+    idx = pd.to_datetime(CAL)
+    px = pd.DataFrame({t: np.linspace(10, 11, len(CAL)) for t in "ABCDEFGHIJ"}, index=idx)
+    px.iloc[-1, 1:] = np.nan                           # 13/01: só A tem preço
+    cal, adiados = S.sem_pregoes_incompletos(CAL, px, 0.8)
+    assert cal == CAL[:-1]
+    assert adiados == [("2026-01-13", pytest.approx(0.1))]
+
+
+def test_pregao_com_quase_todos_fica_e_deslistado_nao_conta():
+    idx = pd.to_datetime(CAL)
+    px = pd.DataFrame({t: np.linspace(10, 11, len(CAL)) for t in "ABCDEFGHIJ"}, index=idx)
+    px.iloc[-1, 0] = np.nan                            # 9 de 10: passa
+    px["MORTO"] = np.nan                               # sem preço há meses: fora da conta
+    px.loc[idx[0], "MORTO"] = 5.0
+    cal, adiados = S.sem_pregoes_incompletos(CAL, px, 0.8, janela_dias=3)
+    assert cal == CAL and adiados == []
+
+
+def test_pregao_ja_gravado_nunca_sai():
+    idx = pd.to_datetime(CAL)
+    px = pd.DataFrame({t: np.linspace(10, 11, len(CAL)) for t in "ABCDE"}, index=idx)
+    px.iloc[-2:, :] = np.nan
+    cal, _ = S.sem_pregoes_incompletos(CAL, px, 0.8, protegido=CAL[-1])
+    assert cal == CAL
+    cal, adiados = S.sem_pregoes_incompletos(CAL, px, 0.8, protegido=CAL[-3])
+    assert cal == CAL[:-2] and [d for d, _ in adiados] == CAL[-2:][::-1]
+
+
+def _yahoo_de_madrugada(f, dia):
+    """Como o Yahoo responde entre a meia-noite de Nova York e a abertura:
+    o Ibovespa traz o dia; as ações trazem só o volume, preço vazio."""
+    def precos(tickers, inicio, fim):
+        d = f.precos(tickers, inicio, fim)
+        out = {}
+        for k, df in d.items():
+            df = df.copy()
+            if k != "volume" and not df.empty and pd.Timestamp(dia) in df.index:
+                cols = list(df.columns)[: max(1, len(df.columns) * 9 // 10)]
+                df.loc[pd.Timestamp(dia), cols] = np.nan
+            out[k] = df
+        return out
+    return SimpleNamespace(precos=precos, ibov=f.ibov, cdi=f.cdi)
+
+
+def test_rodada_de_madrugada_adia_o_dia_e_a_seguinte_completa(tmp_path):
+    """O caso de 04 e 05/11/2026: sem o corte, o calendário ganhava o dia do
+    Ibovespa, 90% dos papéis paravam um dia antes e o validador barrava a
+    publicação inteira. Com o corte, a base fica no pregão anterior, passa no
+    validador, e o dia entra completo na rodada seguinte."""
+    f = demo.fontes_falsas(HOJE)
+    cands = demo.candidatos_demo()
+    ontem = HOJE - timedelta(days=1)                   # 29/10/2026, quinta
+    base.atualizar(tmp_path, completo=True, hoje=ontem - timedelta(days=1),
+                   fontes=f, candidatos=cands)
+    ind0 = arquivo.ler_indice(tmp_path)
+
+    rel = base.atualizar(tmp_path, hoje=ontem, fontes=_yahoo_de_madrugada(f, ontem),
+                         candidatos=cands)
+    assert [d for d, _ in rel.adiados] == [ontem.isoformat()]
+    assert any("adiado" in a for a in rel.avisos)
+    ind1 = arquivo.ler_indice(tmp_path)
+    assert ind1["pregoes"] == ind0["pregoes"]          # o dia não entrou
+    erros, _ = validar_precos.conferir(tmp_path, hoje=ontem)
+    # a base de demonstração tem 30 papéis, abaixo do mínimo de produção; o
+    # que importa aqui é o erro que travou o robô
+    assert not [e for e in erros if "último pregão" in e or "Ibovespa" in e]
+
+    rel = base.atualizar(tmp_path, hoje=ontem, fontes=f, candidatos=cands)
+    assert rel.adiados == []
+    ind2 = arquivo.ler_indice(tmp_path)
+    assert ind2["pregoes"][-1] == ontem.isoformat()
+    ref = tmp_path / "ref"
+    base.atualizar(ref, completo=True, hoje=ontem, fontes=f, candidatos=cands)
+    assert _arquivos(tmp_path) == _arquivos(ref)

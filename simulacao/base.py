@@ -46,12 +46,16 @@ class Relatorio:
     velas: int = 0                # ações com arquivo de velas (aba técnica)
     velas_gravadas: int = 0
     sem_velas: list = field(default_factory=list)
+    adiados: list = field(default_factory=list)   # [(data, fração com preço)]
     avisos: list = field(default_factory=list)
 
     def texto(self) -> str:
         linhas = [
             f"modo              : {self.modo}",
-            f"pregões           : {self.pregoes} (último {self.ultimo_pregao})",
+            f"pregões           : {self.pregoes} (último {self.ultimo_pregao})"
+            + (" — adiados: " + ", ".join(f"{d} ({f:.0%} dos papéis com preço)"
+                                           for d, f in self.adiados)
+               if self.adiados else ""),
             f"ativos na base    : {self.na_base}",
             f"entraram agora    : {len(self.entraram)}"
             + (f" — {', '.join(self.entraram[:15])}{' …' if len(self.entraram) > 15 else ''}"
@@ -161,9 +165,28 @@ def atualizar(pasta: Path = C.PASTA_PRECOS, *, completo: bool = False,
     else:
         ini_janela = inicio
 
+    # ---- 0. preços de quem já está na base ------------------------------
+    # Baixados ANTES do calendário: é com eles que se decide se o último
+    # pregão do Ibovespa já está fechado também para as ações.
+    base_anterior = {a["t"]: a for a in (anterior or {}).get("ativos") or []}
+    ja_na_base = sorted(base_anterior)
+    dados_base = (fontes.precos(ja_na_base, ini_janela if incremental else inicio, hoje)
+                  if ja_na_base else {})
+
     # ---- 1. calendário e Ibovespa --------------------------------------
     ibov = fontes.ibov(ini_janela, hoje)
     novas = S.calendario_de(ibov)
+    novas, adiados = S.sem_pregoes_incompletos(
+        novas, dados_base.get("preco") if dados_base else None,
+        C.FRACAO_MINIMA_PREGAO_NOVO,
+        protegido=pregoes_velhos[-1] if incremental and pregoes_velhos else None)
+    if adiados:
+        rel.adiados = list(reversed(adiados))
+        rel.avisos.append(
+            "pregão " + ", ".join(d for d, _ in rel.adiados) + " adiado: o Ibovespa "
+            "já tem o dia, mas só " + ", ".join(f"{f:.0%}" for _, f in rel.adiados)
+            + " dos papéis têm preço nele (o Yahoo ainda não fechou o dia). "
+            "Entra na próxima rodada.")
     pregoes = S.estender_calendario(pregoes_velhos if incremental else [], novas)
     if len(pregoes) < 2:
         raise RuntimeError("Calendário de pregões vazio: o Ibovespa veio sem dados.")
@@ -223,7 +246,6 @@ def atualizar(pasta: Path = C.PASTA_PRECOS, *, completo: bool = False,
                                         arquivo.serie("CDI", i0_cdi, r_cdi, C.ESCALA_CDI))
 
     # ---- 3. ativos ------------------------------------------------------
-    base_anterior = {a["t"]: a for a in (anterior or {}).get("ativos") or []}
     recusados = dict((anterior or {}).get("recusados") or {})
     cands = candidatos if candidatos is not None else universo.candidatos()
     info = {t: dict(v) for t, v in cands.items()}
@@ -304,9 +326,8 @@ def atualizar(pasta: Path = C.PASTA_PRECOS, *, completo: bool = False,
         gravados += arquivo.gravar_se_mudou(arquivo.caminho_serie(pasta, t),
                                             arquivo.serie(t, i0, r))
 
-    ja_na_base = sorted(base_anterior)
     if incremental:
-        dados = fontes.precos(ja_na_base, ini_janela, hoje) if ja_na_base else {}
+        dados = dados_base
         refazer = []
         for t in ja_na_base:
             st = processar(t, dados, base_anterior[t], arquivo.ler_serie(pasta, t), True)
@@ -325,7 +346,7 @@ def atualizar(pasta: Path = C.PASTA_PRECOS, *, completo: bool = False,
                     rel.nao_atualizados.append(t)
                     manter_antigo(t)
     elif ja_na_base:
-        dados = fontes.precos(ja_na_base, inicio, hoje)
+        dados = dados_base
         for t in ja_na_base:
             st = processar(t, dados, base_anterior[t], None, False)
             if st != "ok":
