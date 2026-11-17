@@ -1,6 +1,6 @@
 {
  "v": 1,
- "geradoEm": "2026-11-17 04:14",
+ "geradoEm": "2026-11-17 08:32",
  "demo": false,
  "escala": 1000000,
  "corteLiquidez": 1000000.0,
@@ -5651,6 +5651,10 @@
    "liqMax": null,
    "em": "2026-11-02",
    "motivo": "sem cotação"
+  },
+  "EXES11": {
+   "liqMax": 209361,
+   "em": "2026-11-17"
   },
   "EZTC11": {
    "liqMax": null,
