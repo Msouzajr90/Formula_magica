@@ -1,25 +1,25 @@
 {
- "data": "2026-11-18",
+ "data": "2026-11-19",
  "papeis": [
   {
    "ticker": "ALOS3",
    "nome": "ALLOS",
    "tipo": "ON NM",
-   "part": 0.532,
+   "part": 0.536,
    "qtd": 478975645.0
   },
   {
    "ticker": "ABEV3",
    "nome": "AMBEV S/A",
    "tipo": "ON",
-   "part": 2.714,
+   "part": 2.775,
    "qtd": 4043349180.0
   },
   {
    "ticker": "ASAI3",
    "nome": "ASSAI",
    "tipo": "ON NM",
-   "part": 0.544,
+   "part": 0.54,
    "qtd": 1335651252.0
   },
   {
@@ -33,91 +33,91 @@
    "ticker": "AXIA3",
    "nome": "AXIA ENERGIA",
    "tipo": "ON NM",
-   "part": 4.553,
+   "part": 4.505,
    "qtd": 2278697967.0
   },
   {
    "ticker": "AZZA3",
    "nome": "AZZAS 2154",
    "tipo": "ON NM",
-   "part": 0.086,
+   "part": 0.088,
    "qtd": 130746665.0
   },
   {
    "ticker": "B3SA3",
    "nome": "B3",
    "tipo": "ON NM",
-   "part": 3.077,
+   "part": 3.045,
    "qtd": 4985893391.0
   },
   {
    "ticker": "BBSE3",
    "nome": "BBSEGURIDADE",
    "tipo": "ON NM",
-   "part": 0.968,
+   "part": 0.965,
    "qtd": 616248544.0
   },
   {
    "ticker": "BBDC3",
    "nome": "BRADESCO",
    "tipo": "ON N1",
-   "part": 0.814,
+   "part": 0.807,
    "qtd": 1464434502.0
   },
   {
    "ticker": "BBDC4",
    "nome": "BRADESCO",
    "tipo": "PN N1",
-   "part": 3.097,
+   "part": 3.067,
    "qtd": 5100907585.0
   },
   {
    "ticker": "BRAP4",
    "nome": "BRADESPAR",
    "tipo": "PN EDJ N1",
-   "part": 0.183,
+   "part": 0.181,
    "qtd": 250886751.0
   },
   {
    "ticker": "BBAS3",
    "nome": "BRASIL",
    "tipo": "ON NM",
-   "part": 1.751,
+   "part": 1.714,
    "qtd": 2842760965.0
   },
   {
    "ticker": "BRAV3",
    "nome": "BRAVA",
    "tipo": "ON NM",
-   "part": 0.16,
+   "part": 0.156,
    "qtd": 277531689.0
   },
   {
    "ticker": "BPAC11",
    "nome": "BTGP BANCO",
    "tipo": "UNT N2",
-   "part": 2.615,
+   "part": 2.556,
    "qtd": 1194770950.0
   },
   {
    "ticker": "CXSE3",
    "nome": "CAIXA SEGURI",
    "tipo": "ON NM",
-   "part": 0.538,
+   "part": 0.525,
    "qtd": 600000000.0
   },
   {
    "ticker": "CEAB3",
    "nome": "CEA MODAS",
    "tipo": "ON NM",
-   "part": 0.068,
+   "part": 0.069,
    "qtd": 204244409.0
   },
   {
    "ticker": "CMIG4",
    "nome": "CEMIG",
    "tipo": "PN N1",
-   "part": 0.839,
+   "part": 0.851,
    "qtd": 1823593065.0
   },
   {
@@ -131,77 +131,77 @@
    "ticker": "CSMG3",
    "nome": "COPASA",
    "tipo": "ON NM",
-   "part": 0.888,
+   "part": 0.899,
    "qtd": 379172627.0
   },
   {
    "ticker": "CPLE3",
    "nome": "COPEL",
    "tipo": "ON NM",
-   "part": 1.92,
+   "part": 1.938,
    "qtd": 2969578102.0
   },
   {
    "ticker": "CSAN3",
    "nome": "COSAN",
    "tipo": "ON NM",
-   "part": 0.312,
+   "part": 0.304,
    "qtd": 2278224258.0
   },
   {
    "ticker": "CPFE3",
    "nome": "CPFL ENERGIA",
    "tipo": "ON NM",
-   "part": 0.356,
+   "part": 0.354,
    "qtd": 187732538.0
   },
   {
    "ticker": "CMIN3",
    "nome": "CSNMINERACAO",
    "tipo": "ON N2",
-   "part": 0.315,
+   "part": 0.34,
    "qtd": 1572292846.0
   },
   {
    "ticker": "CURY3",
    "nome": "CURY S/A",
    "tipo": "ON ED NM",
-   "part": 0.178,
+   "part": 0.174,
    "qtd": 160988231.0
   },
   {
    "ticker": "CYRE3",
    "nome": "CYRELA REALT",
    "tipo": "ON NM",
-   "part": 0.211,
+   "part": 0.209,
    "qtd": 256078095.0
   },
   {
    "ticker": "DIRR3",
    "nome": "DIRECIONAL",
    "tipo": "ON NM",
-   "part": 0.126,
+   "part": 0.125,
    "qtd": 326739860.0
   },
   {
    "ticker": "EMBJ3",
    "nome": "EMBRAER",
    "tipo": "ON NM",
-   "part": 3.298,
+   "part": 3.337,
    "qtd": 711833141.0
   },
   {
    "ticker": "ENGI11",
    "nome": "ENERGISA",
    "tipo": "UNT N2",
-   "part": 0.74,
+   "part": 0.747,
    "qtd": 358085210.0
   },
   {
    "ticker": "ENEV3",
    "nome": "ENEVA",
    "tipo": "ON NM",
-   "part": 2.155,
+   "part": 2.138,
    "qtd": 1916508073.0
   },
   {
@@ -215,35 +215,35 @@
    "ticker": "EQTL3",
    "nome": "EQUATORIAL",
    "tipo": "ON NM",
-   "part": 1.79,
+   "part": 1.791,
    "qtd": 1245905097.0
   },
   {
    "ticker": "FLRY3",
    "nome": "FLEURY",
    "tipo": "ON NM",
-   "part": 0.392,
+   "part": 0.399,
    "qtd": 445241785.0
   },
   {
    "ticker": "GGBR4",
    "nome": "GERDAU",
    "tipo": "PN ED N1",
-   "part": 1.294,
+   "part": 1.359,
    "qtd": 1244099630.0
   },
   {
    "ticker": "GOAU4",
    "nome": "GERDAU MET",
    "tipo": "PN ED N1",
-   "part": 0.381,
+   "part": 0.398,
    "qtd": 827170367.0
   },
   {
    "ticker": "HAPV3",
    "nome": "HAPVIDA",
    "tipo": "ON ATZ NM",
-   "part": 0.071,
+   "part": 0.075,
    "qtd": 276640336.0
   },
   {
@@ -264,35 +264,35 @@
    "ticker": "ISAE4",
    "nome": "ISA ENERGIA",
    "tipo": "PN EJ N1",
-   "part": 0.512,
+   "part": 0.514,
    "qtd": 460013216.0
   },
   {
    "ticker": "ITSA4",
    "nome": "ITAUSA",
    "tipo": "PN N1",
-   "part": 3.351,
+   "part": 3.358,
    "qtd": 5980171123.0
   },
   {
    "ticker": "ITUB4",
    "nome": "ITAUUNIBANCO",
    "tipo": "PN N1",
-   "part": 9.195,
+   "part": 9.161,
    "qtd": 5337898685.0
   },
   {
    "ticker": "KLBN11",
    "nome": "KLABIN S/A",
    "tipo": "UNT N2",
-   "part": 0.579,
+   "part": 0.576,
    "qtd": 786869850.0
   },
   {
    "ticker": "RENT3",
    "nome": "LOCALIZA",
    "tipo": "ON NM",
-   "part": 1.221,
+   "part": 1.229,
    "qtd": 976910862.0
   },
   {
@@ -306,7 +306,7 @@
    "ticker": "MGLU3",
    "nome": "MAGAZ LUIZA",
    "tipo": "ON NM",
-   "part": 0.13,
+   "part": 0.138,
    "qtd": 389237948.0
   },
   {
@@ -320,147 +320,147 @@
    "ticker": "MBRF3",
    "nome": "MARFRIG",
    "tipo": "ON NM",
-   "part": 0.556,
+   "part": 0.587,
    "qtd": 735470942.0
   },
   {
    "ticker": "BEEF3",
    "nome": "MINERVA",
    "tipo": "ON NM",
-   "part": 0.065,
+   "part": 0.07,
    "qtd": 444534706.0
   },
   {
    "ticker": "MOTV3",
    "nome": "MOTIVA SA",
    "tipo": "ON NM",
-   "part": 0.662,
+   "part": 0.676,
    "qtd": 1002045228.0
   },
   {
    "ticker": "MRVE3",
    "nome": "MRV",
    "tipo": "ON NM",
-   "part": 0.079,
+   "part": 0.076,
    "qtd": 374720028.0
   },
   {
    "ticker": "MULT3",
    "nome": "MULTIPLAN",
    "tipo": "ON N2",
-   "part": 0.364,
+   "part": 0.367,
    "qtd": 322143505.0
   },
   {
    "ticker": "NATU3",
    "nome": "NATURA",
    "tipo": "ON NM",
-   "part": 0.168,
+   "part": 0.171,
    "qtd": 837026185.0
   },
   {
    "ticker": "PETR3",
    "nome": "PETROBRAS",
    "tipo": "ON N2",
-   "part": 5.168,
+   "part": 5.141,
    "qtd": 2441951100.0
   },
   {
    "ticker": "PETR4",
    "nome": "PETROBRAS",
    "tipo": "PN N2",
-   "part": 8.173,
+   "part": 8.131,
    "qtd": 4410957710.0
   },
   {
    "ticker": "PSSA3",
    "nome": "PORTO SEGURO",
    "tipo": "ON NM",
-   "part": 0.346,
+   "part": 0.341,
    "qtd": 178825403.0
   },
   {
    "ticker": "PRIO3",
    "nome": "PRIO",
    "tipo": "ON ATZ NM",
-   "part": 2.031,
+   "part": 1.992,
    "qtd": 753702456.0
   },
   {
    "ticker": "RADL3",
    "nome": "RAIADROGASIL",
    "tipo": "ON NM",
-   "part": 0.783,
+   "part": 0.787,
    "qtd": 1312816783.0
   },
   {
    "ticker": "RDOR3",
    "nome": "REDE D OR",
    "tipo": "ON NM",
-   "part": 1.573,
+   "part": 1.597,
    "qtd": 1030028001.0
   },
   {
    "ticker": "RAIL3",
    "nome": "RUMO S.A.",
    "tipo": "ON NM",
-   "part": 1.002,
+   "part": 1.006,
    "qtd": 1406822230.0
   },
   {
    "ticker": "SBSP3",
    "nome": "SABESP",
    "tipo": "ON EJ NM",
-   "part": 4.122,
+   "part": 4.128,
    "qtd": 3524534025.0
   },
   {
    "ticker": "SANB11",
    "nome": "SANTANDER BR",
    "tipo": "UNT",
-   "part": 0.426,
+   "part": 0.428,
    "qtd": 356245448.0
   },
   {
    "ticker": "CSNA3",
    "nome": "SID NACIONAL",
    "tipo": "ON",
-   "part": 0.116,
+   "part": 0.113,
    "qtd": 727462410.0
   },
   {
    "ticker": "SMFT3",
    "nome": "SMART FIT",
    "tipo": "ON NM",
-   "part": 0.412,
+   "part": 0.421,
    "qtd": 555416717.0
   },
   {
    "ticker": "SUZB3",
    "nome": "SUZANO S.A.",
    "tipo": "ON ATZ NM",
-   "part": 1.419,
+   "part": 1.444,
    "qtd": 608216821.0
   },
   {
    "ticker": "TAEE11",
    "nome": "TAESA",
    "tipo": "UNT ED N2",
-   "part": 0.375,
+   "part": 0.379,
    "qtd": 218568234.0
   },
   {
    "ticker": "VIVT3",
    "nome": "TELEF BRASIL",
    "tipo": "ON",
-   "part": 1.069,
+   "part": 1.074,
    "qtd": 707098992.0
   },
   {
    "ticker": "TEND3",
    "nome": "TENDA",
    "tipo": "ON NM",
-   "part": 0.079,
+   "part": 0.076,
    "qtd": 118671153.0
   },
   {
@@ -474,56 +474,56 @@
    "ticker": "TOTS3",
    "nome": "TOTVS",
    "tipo": "ON NM",
-   "part": 0.689,
+   "part": 0.703,
    "qtd": 515889217.0
   },
   {
    "ticker": "UGPA3",
    "nome": "ULTRAPAR",
    "tipo": "ON NM",
-   "part": 1.444,
+   "part": 1.441,
    "qtd": 1067930953.0
   },
   {
    "ticker": "USIM5",
    "nome": "USIMINAS",
    "tipo": "PNA N1",
-   "part": 0.109,
+   "part": 0.111,
    "qtd": 518248757.0
   },
   {
    "ticker": "VALE3",
    "nome": "VALE",
    "tipo": "ON NM",
-   "part": 9.374,
+   "part": 9.29,
    "qtd": 3687404862.0
   },
   {
    "ticker": "VAMO3",
    "nome": "VAMOS",
    "tipo": "ON NM",
-   "part": 0.06,
+   "part": 0.058,
    "qtd": 527021942.0
   },
   {
    "ticker": "VBBR3",
    "nome": "VIBRA",
    "tipo": "ON NM",
-   "part": 1.542,
+   "part": 1.55,
    "qtd": 1194079963.0
   },
   {
    "ticker": "VIVA3",
    "nome": "VIVARA S.A.",
    "tipo": "ON NM",
-   "part": 0.086,
+   "part": 0.088,
    "qtd": 123861677.0
   },
   {
    "ticker": "WEGE3",
    "nome": "WEG",
    "tipo": "ON NM",
-   "part": 3.147,
+   "part": 3.204,
    "qtd": 1460506056.0
   },
   {
