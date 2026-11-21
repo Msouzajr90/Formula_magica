@@ -1,6 +1,6 @@
 {
  "v": 1,
- "geradoEm": "2026-11-21 02:52",
+ "geradoEm": "2026-11-21 07:43",
  "demo": false,
  "escala": 1000000,
  "corteLiquidez": 1000000.0,
@@ -269,6 +269,16 @@
      -0.4297
     ]
    ]
+  },
+  {
+   "t": "AUAU3",
+   "nome": "UNIÃO PET PARTICIPAÇÕES S.A.",
+   "classe": "acao",
+   "i0": 3967,
+   "n": 219,
+   "liqMax": 22608742,
+   "liq": 22608742,
+   "neg": 1.0
   },
   {
    "t": "AURE3",
@@ -5027,6 +5037,16 @@
   "ASIA11": {
    "liqMax": null,
    "em": "2026-11-02",
+   "motivo": "sem cotação"
+  },
+  "AUAU11": {
+   "liqMax": null,
+   "em": "2026-11-21",
+   "motivo": "sem cotação"
+  },
+  "AUAU4": {
+   "liqMax": null,
+   "em": "2026-11-21",
    "motivo": "sem cotação"
   },
   "AURE11": {
