@@ -1,6 +1,6 @@
 {
  "v": 1,
- "geradoEm": "2026-11-26 08:57",
+ "geradoEm": "2026-11-27 03:49",
  "demo": false,
  "escala": 1000000,
  "corteLiquidez": 1000000.0,
@@ -11,19 +11,19 @@
    "nome": "Ibovespa",
    "arquivo": "_IBOV.json",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "esc": 1000000
   },
   "CDI": {
    "nome": "CDI",
    "arquivo": "_CDI.json",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "esc": 100000000
   }
  },
  "avisos": [
-  "pregão 2026-11-25 adiado: o Ibovespa já tem o dia, mas só 80% dos papéis têm preço nele (o Yahoo ainda não fechou o dia). Entra na próxima rodada."
+  "pregão 2026-11-26 adiado: o Ibovespa já tem o dia, mas só 7% dos papéis têm preço nele (o Yahoo ainda não fechou o dia). Entra na próxima rodada."
  ],
  "ativos": [
   {
@@ -31,9 +31,9 @@
    "nome": "It Now prefixado 5 anos",
    "classe": "etf",
    "i0": 4001,
-   "n": 187,
-   "liqMax": 2954302,
-   "liq": 2954302,
+   "n": 188,
+   "liqMax": 2967205,
+   "liq": 2967205,
    "neg": 1.0
   },
   {
@@ -41,9 +41,9 @@
    "nome": "AZ QUEST SOLE FIAGRO - IMOBILIÁRIO",
    "classe": "fii",
    "i0": 3210,
-   "n": 978,
+   "n": 979,
    "liqMax": 1176134,
-   "liq": 547928,
+   "liq": 550324,
    "neg": 1.0
   },
   {
@@ -51,7 +51,7 @@
    "nome": "AMBEV S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 548992782,
    "liq": 544277450,
    "neg": 1.0
@@ -61,9 +61,9 @@
    "nome": "Trend mundo (ACWI)",
    "classe": "etf",
    "i0": 2738,
-   "n": 1450,
+   "n": 1451,
    "liqMax": 10953520,
-   "liq": 4262957,
+   "liq": 4196944,
    "neg": 1.0
   },
   {
@@ -71,7 +71,7 @@
    "nome": "AF INVEST CRI FII",
    "classe": "fii",
    "i0": 3484,
-   "n": 704,
+   "n": 705,
    "liqMax": 1536734,
    "liq": 1101307,
    "neg": 1.0
@@ -81,9 +81,9 @@
    "nome": "BB agronegócio",
    "classe": "etf",
    "i0": 3064,
-   "n": 1124,
+   "n": 1125,
    "liqMax": 1159409,
-   "liq": 62060,
+   "liq": 58858,
    "neg": 0.984
   },
   {
@@ -91,7 +91,7 @@
    "nome": "BRASILAGRO - CIA BRAS DE PROP AGRICOLAS",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 34987459,
    "liq": 4887639,
    "neg": 1.0
@@ -101,7 +101,7 @@
    "nome": "ARCH EDIFICIOS CORPORATIVOS FII",
    "classe": "fii",
    "i0": 3016,
-   "n": 1172,
+   "n": 1173,
    "liqMax": 1863070,
    "liq": 1863070,
    "neg": 1.0
@@ -111,7 +111,7 @@
    "nome": "AJ MALLS FUNDO DE INVESTIMENTO IMOBILIÁRIO",
    "classe": "fii",
    "i0": 3431,
-   "n": 757,
+   "n": 758,
    "liqMax": 1380130,
    "liq": 330678,
    "neg": 1.0
@@ -121,7 +121,7 @@
    "nome": "ALLIED TECNOLOGIA S.A.",
    "classe": "acao",
    "i0": 2786,
-   "n": 1402,
+   "n": 1403,
    "liqMax": 17612000,
    "liq": 9625031,
    "neg": 1.0
@@ -131,7 +131,7 @@
    "nome": "ALLOS S.A.",
    "classe": "acao",
    "i0": 270,
-   "n": 3918,
+   "n": 3919,
    "liqMax": 229182083,
    "liq": 228236058,
    "neg": 1.0
@@ -141,7 +141,7 @@
    "nome": "ALPARGATAS S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 142579698,
    "liq": 38444534,
    "neg": 1.0
@@ -151,9 +151,9 @@
    "nome": "Investo imobiliário global",
    "classe": "etf",
    "i0": 2925,
-   "n": 1263,
+   "n": 1264,
    "liqMax": 1573148,
-   "liq": 309244,
+   "liq": 309600,
    "neg": 1.0
   },
   {
@@ -161,7 +161,7 @@
    "nome": "ALUPAR INVESTIMENTO S/A",
    "classe": "acao",
    "i0": 817,
-   "n": 3371,
+   "n": 3372,
    "liqMax": 50820054,
    "liq": 49138562,
    "neg": 1.0
@@ -171,7 +171,7 @@
    "nome": "ALIANZA TRUST FII RL",
    "classe": "fii",
    "i0": 1981,
-   "n": 2207,
+   "n": 2208,
    "liqMax": 3816681,
    "liq": 3729670,
    "neg": 1.0
@@ -181,7 +181,7 @@
    "nome": "AMERICANAS S.A. - EM RECUPERAÇÃO JUDICIAL",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 499533061,
    "liq": 11165823,
    "neg": 1.0,
@@ -213,7 +213,7 @@
    "nome": "AUTOMOB PARTICIPAÇÕES S.A.",
    "classe": "acao",
    "i0": 3707,
-   "n": 481,
+   "n": 482,
    "liqMax": 12136046,
    "liq": 1230259,
    "neg": 1.0,
@@ -229,7 +229,7 @@
    "nome": "ANIMA HOLDING S.A.",
    "classe": "acao",
    "i0": 947,
-   "n": 3241,
+   "n": 3242,
    "liqMax": 39204843,
    "liq": 34394154,
    "neg": 1.0,
@@ -245,7 +245,7 @@
    "nome": "ARMAC LOCAÇÃO, LOGÍSTICA E SERVIÇOS S.A.",
    "classe": "acao",
    "i0": 2861,
-   "n": 1327,
+   "n": 1328,
    "liqMax": 19181223,
    "liq": 6727166,
    "neg": 1.0,
@@ -261,7 +261,7 @@
    "nome": "ASSAI",
    "classe": "acao",
    "i0": 2757,
-   "n": 1431,
+   "n": 1432,
    "liqMax": 346422327,
    "liq": 197599475,
    "neg": 1.0,
@@ -277,7 +277,7 @@
    "nome": "UNIÃO PET PARTICIPAÇÕES S.A.",
    "classe": "acao",
    "i0": 3967,
-   "n": 221,
+   "n": 222,
    "liqMax": 22801482,
    "liq": 22386063,
    "neg": 1.0
@@ -287,7 +287,7 @@
    "nome": "AUREN ENERGIA S.A.",
    "classe": "acao",
    "i0": 3025,
-   "n": 1163,
+   "n": 1164,
    "liqMax": 71516565,
    "liq": 61675129,
    "neg": 1.0
@@ -297,7 +297,7 @@
    "nome": "AXIA ENERGIA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 945850108,
    "liq": 918481195,
    "neg": 1.0,
@@ -313,7 +313,7 @@
    "nome": "AZEVEDO E TRAVASSOS S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 11839407,
    "liq": 10833846,
    "neg": 1.0,
@@ -401,7 +401,7 @@
    "nome": "AZEVEDO E TRAVASSOS S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 10289014,
    "liq": 4215680,
    "neg": 1.0,
@@ -441,7 +441,7 @@
    "nome": "AZ QUEST PANORAMA LOGISTICA FII RESP LIM",
    "classe": "fii",
    "i0": 3636,
-   "n": 552,
+   "n": 553,
    "liqMax": 1080357,
    "liq": 495165,
    "neg": 1.0
@@ -451,7 +451,7 @@
    "nome": "AZEVEDO & TRAVASSOS ENERGIA S.A.",
    "classe": "acao",
    "i0": 3784,
-   "n": 404,
+   "n": 405,
    "liqMax": 2654986,
    "liq": 1407984,
    "neg": 1.0
@@ -461,7 +461,7 @@
    "nome": "AZZAS 2154 S.A.",
    "classe": "acao",
    "i0": 269,
-   "n": 3919,
+   "n": 3920,
    "liqMax": 157252974,
    "liq": 85382416,
    "neg": 1.0
@@ -471,7 +471,7 @@
    "nome": "B3 S.A. - BRASIL, BOLSA, BALCÃO",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 1048005524,
    "liq": 1003099863,
    "neg": 1.0,
@@ -487,9 +487,9 @@
    "nome": "Bradesco IMA-B 5+",
    "classe": "etf",
    "i0": 2460,
-   "n": 1728,
+   "n": 1729,
    "liqMax": 22105502,
-   "liq": 21605897,
+   "liq": 21604834,
    "neg": 1.0
   },
   {
@@ -497,9 +497,9 @@
    "nome": "It Now IMA-B 5",
    "classe": "etf",
    "i0": 2690,
-   "n": 1498,
-   "liqMax": 25810148,
-   "liq": 25810148,
+   "n": 1499,
+   "liqMax": 26140740,
+   "liq": 26140740,
    "neg": 1.0,
    "saltos": [
     [
@@ -513,7 +513,7 @@
    "nome": "BCO BRASIL S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 1058121973,
    "liq": 1035684661,
    "neg": 1.0
@@ -523,7 +523,7 @@
    "nome": "BCO BRADESCO S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 231706390,
    "liq": 225143454,
    "neg": 1.0
@@ -533,7 +533,7 @@
    "nome": "BCO BRADESCO S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 1253416242,
    "liq": 1085105174,
    "neg": 1.0
@@ -543,7 +543,7 @@
    "nome": "BB PREMIUM MALLS FII DE RESPONSABILIDADE LIMITADA",
    "classe": "fii",
    "i0": 3550,
-   "n": 638,
+   "n": 639,
    "liqMax": 1478451,
    "liq": 812468,
    "neg": 1.0
@@ -553,9 +553,9 @@
    "nome": "BB Ibovespa",
    "classe": "etf",
    "i0": 2667,
-   "n": 1521,
+   "n": 1522,
    "liqMax": 58566691,
-   "liq": 20545891,
+   "liq": 20502383,
    "neg": 1.0
   },
   {
@@ -563,7 +563,7 @@
    "nome": "BB SEGURIDADE PARTICIPAÇÕES S.A.",
    "classe": "acao",
    "i0": 820,
-   "n": 3368,
+   "n": 3369,
    "liqMax": 305875023,
    "liq": 298221992,
    "neg": 1.0
@@ -573,7 +573,7 @@
    "nome": "BRADESCO CARTEIRA IMOBILIÁRIA ATIVA FII",
    "classe": "fii",
    "i0": 1924,
-   "n": 2264,
+   "n": 2265,
    "liqMax": 1300047,
    "liq": 399698,
    "neg": 1.0
@@ -583,7 +583,7 @@
    "nome": "BANESTES RECEBIVEIS IMOBILIARIOS FII",
    "classe": "fii",
    "i0": 1924,
-   "n": 2264,
+   "n": 2265,
    "liqMax": 2670423,
    "liq": 439604,
    "neg": 1.0
@@ -593,9 +593,9 @@
    "nome": "Morningstar setores defensivos",
    "classe": "etf",
    "i0": 3248,
-   "n": 940,
+   "n": 941,
    "liqMax": 1545234,
-   "liq": 1359883,
+   "liq": 1354986,
    "neg": 1.0
   },
   {
@@ -603,9 +603,9 @@
    "nome": "BTG PACTUAL DÍVIDA INFRA FIF EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM ",
    "classe": "fii",
    "i0": 2794,
-   "n": 1394,
+   "n": 1395,
    "liqMax": 5480784,
-   "liq": 2163559,
+   "liq": 2157361,
    "neg": 1.0
   },
   {
@@ -613,7 +613,7 @@
    "nome": "MINERVA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 125378194,
    "liq": 95140008,
    "neg": 1.0
@@ -623,7 +623,7 @@
    "nome": "GRUPO CASAS BAHIA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 1682977542,
    "liq": 13826051,
    "neg": 1.0,
@@ -643,9 +643,9 @@
    "nome": "BRADESCO FIF - CIC RF INCENTIVADO DE INVESTIMENTO EM INFRAESTRUTURA CDI CRED PRI",
    "classe": "fii",
    "i0": 3665,
-   "n": 523,
-   "liqMax": 1930925,
-   "liq": 1930925,
+   "n": 524,
+   "liqMax": 1937458,
+   "liq": 1937458,
    "neg": 1.0
   },
   {
@@ -653,9 +653,9 @@
    "nome": "Hashdex bitcoin",
    "classe": "etf",
    "i0": 2865,
-   "n": 1323,
+   "n": 1324,
    "liqMax": 23283673,
-   "liq": 9157633,
+   "liq": 8992541,
    "neg": 1.0
   },
   {
@@ -663,9 +663,9 @@
    "nome": "It Now bitcoin",
    "classe": "etf",
    "i0": 3181,
-   "n": 1007,
+   "n": 1008,
    "liqMax": 3049889,
-   "liq": 659657,
+   "liq": 637406,
    "neg": 1.0,
    "saltos": [
     [
@@ -679,7 +679,7 @@
    "nome": "BLAU FARMACÊUTICA S.A.",
    "classe": "acao",
    "i0": 2791,
-   "n": 1397,
+   "n": 1398,
    "liqMax": 17913246,
    "liq": 3525891,
    "neg": 1.0
@@ -689,9 +689,9 @@
    "nome": "B-Index LFT curto prazo",
    "classe": "etf",
    "i0": 3916,
-   "n": 272,
+   "n": 273,
    "liqMax": 6459230,
-   "liq": 1200031,
+   "liq": 1184007,
    "neg": 1.0
   },
   {
@@ -699,7 +699,7 @@
    "nome": "BCO MERCANTIL DO BRASIL S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 3175054,
    "liq": 1913191,
    "neg": 1.0
@@ -709,7 +709,7 @@
    "nome": "BANCO BMG S/A",
    "classe": "acao",
    "i0": 2452,
-   "n": 1736,
+   "n": 1737,
    "liqMax": 26125576,
    "liq": 11385981,
    "neg": 1.0
@@ -719,7 +719,7 @@
    "nome": "BEMOBI MOBILE TECH S.A.",
    "classe": "acao",
    "i0": 2747,
-   "n": 1441,
+   "n": 1442,
    "liqMax": 35033970,
    "liq": 23934997,
    "neg": 1.0
@@ -729,9 +729,9 @@
    "nome": "iShares Ibovespa",
    "classe": "etf",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 1296957043,
-   "liq": 987757912,
+   "liq": 990246273,
    "neg": 1.0
   },
   {
@@ -739,9 +739,9 @@
    "nome": "Bradesco Ibovespa",
    "classe": "etf",
    "i0": 2343,
-   "n": 1845,
+   "n": 1846,
    "liqMax": 47490982,
-   "liq": 9331538,
+   "liq": 9319440,
    "neg": 1.0
   },
   {
@@ -749,9 +749,9 @@
    "nome": "Safra Ibovespa",
    "classe": "etf",
    "i0": 2823,
-   "n": 1365,
+   "n": 1366,
    "liqMax": 2040616,
-   "liq": 789458,
+   "liq": 789584,
    "neg": 1.0
   },
   {
@@ -759,9 +759,9 @@
    "nome": "It Now Ibovespa",
    "classe": "etf",
    "i0": 1626,
-   "n": 2562,
+   "n": 2563,
    "liqMax": 460717006,
-   "liq": 118697444,
+   "liq": 118019098,
    "neg": 1.0
   },
   {
@@ -769,9 +769,9 @@
    "nome": "Trend Ibovespa",
    "classe": "etf",
    "i0": 2834,
-   "n": 1354,
+   "n": 1355,
    "liqMax": 38697071,
-   "liq": 23673915,
+   "liq": 23672659,
    "neg": 1.0
   },
   {
@@ -779,7 +779,7 @@
    "nome": "BCO BTG PACTUAL S.A.",
    "classe": "acao",
    "i0": 1770,
-   "n": 2418,
+   "n": 2419,
    "liqMax": 1083547211,
    "liq": 1065881704,
    "neg": 1.0
@@ -789,7 +789,7 @@
    "nome": "BRADESPAR",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 13658433,
    "liq": 1493837,
    "neg": 1.0
@@ -799,7 +799,7 @@
    "nome": "BRADESPAR",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 211855677,
    "liq": 83552644,
    "neg": 1.0
@@ -809,7 +809,7 @@
    "nome": "BRAVA ENERGIA S.A.",
    "classe": "acao",
    "i0": 2688,
-   "n": 1500,
+   "n": 1501,
    "liqMax": 283890071,
    "liq": 75369785,
    "neg": 1.0
@@ -819,9 +819,9 @@
    "nome": "iShares IBrX-100",
    "classe": "etf",
    "i0": 33,
-   "n": 4155,
+   "n": 4156,
    "liqMax": 2347652,
-   "liq": 1596621,
+   "liq": 1587275,
    "neg": 1.0
   },
   {
@@ -829,7 +829,7 @@
    "nome": "BRBI BR PARTNERS S.A",
    "classe": "acao",
    "i0": 2850,
-   "n": 1338,
+   "n": 1339,
    "liqMax": 17531245,
    "liq": 9801704,
    "neg": 1.0
@@ -839,7 +839,7 @@
    "nome": "BRESCO LOGISTICA FUNDO DE INVESTIMENTO IMOBILIÁRIO",
    "classe": "fii",
    "i0": 2456,
-   "n": 1732,
+   "n": 1733,
    "liqMax": 8837304,
    "liq": 8254097,
    "neg": 1.0
@@ -849,7 +849,7 @@
    "nome": "BC FUND FII",
    "classe": "fii",
    "i0": 1135,
-   "n": 3053,
+   "n": 3054,
    "liqMax": 17335804,
    "liq": 2388275,
    "neg": 1.0
@@ -859,7 +859,7 @@
    "nome": "BRASKEM S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 2545013,
    "liq": 288168,
    "neg": 1.0
@@ -869,7 +869,7 @@
    "nome": "BRASKEM S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 213696319,
    "liq": 26811421,
    "neg": 1.0
@@ -879,7 +879,7 @@
    "nome": "BANCO DO ESTADO DO RIO GRANDE DO SUL SA",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 1127668,
    "liq": 160943,
    "neg": 1.0,
@@ -907,7 +907,7 @@
    "nome": "BANCO DO ESTADO DO RIO GRANDE DO SUL SA",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 39903235,
    "liq": 37507727,
    "neg": 1.0
@@ -917,7 +917,7 @@
    "nome": "BRISANET SERVIÇOS DE TELECOMUNICAÇÕES S.A.",
    "classe": "acao",
    "i0": 3726,
-   "n": 462,
+   "n": 463,
    "liqMax": 1309281,
    "liq": 1002865,
    "neg": 1.0
@@ -927,9 +927,9 @@
    "nome": "BTG Teva IABR selector",
    "classe": "etf",
    "i0": 3897,
-   "n": 291,
+   "n": 292,
    "liqMax": 1464802,
-   "liq": 527631,
+   "liq": 524436,
    "neg": 1.0
   },
   {
@@ -937,7 +937,7 @@
    "nome": "BTGP LOGISTICA FII",
    "classe": "fii",
    "i0": 1135,
-   "n": 3053,
+   "n": 3054,
    "liqMax": 23773060,
    "liq": 22594989,
    "neg": 1.0
@@ -947,7 +947,7 @@
    "nome": "BTG RENDA URB FII",
    "classe": "fii",
    "i0": 2717,
-   "n": 1471,
+   "n": 1472,
    "liqMax": 9989793,
    "liq": 3395130,
    "neg": 1.0
@@ -957,7 +957,7 @@
    "nome": "CAMIL ALIMENTOS S.A.",
    "classe": "acao",
    "i0": 1917,
-   "n": 2271,
+   "n": 2272,
    "liqMax": 26721331,
    "liq": 8293069,
    "neg": 1.0
@@ -967,9 +967,9 @@
    "nome": "iShares Ibovespa BR+ Cap 5%",
    "classe": "etf",
    "i0": 3847,
-   "n": 341,
+   "n": 342,
    "liqMax": 2049605,
-   "liq": 1657106,
+   "liq": 1701264,
    "neg": 0.857
   },
   {
@@ -977,7 +977,7 @@
    "nome": "MÉLIUZ S.A.",
    "classe": "acao",
    "i0": 2685,
-   "n": 1503,
+   "n": 1504,
    "liqMax": 309544610,
    "liq": 7476114,
    "neg": 1.0
@@ -987,7 +987,7 @@
    "nome": "COMPANHIA BRASILEIRA DE ALUMÍNIO",
    "classe": "acao",
    "i0": 2852,
-   "n": 1336,
+   "n": 1337,
    "liqMax": 68837352,
    "liq": 42524898,
    "neg": 1.0
@@ -997,9 +997,9 @@
    "nome": "SPARTA INFRA CDI FI FINANCEIRO EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO E",
    "classe": "fii",
    "i0": 3312,
-   "n": 876,
+   "n": 877,
    "liqMax": 8037202,
-   "liq": 7339256,
+   "liq": 7419636,
    "neg": 1.0
   },
   {
@@ -1007,7 +1007,7 @@
    "nome": "C&A MODAS S.A.",
    "classe": "acao",
    "i0": 2436,
-   "n": 1752,
+   "n": 1753,
    "liqMax": 164401155,
    "liq": 124653624,
    "neg": 1.0,
@@ -1023,9 +1023,9 @@
    "nome": "Investo semicondutores",
    "classe": "etf",
    "i0": 3897,
-   "n": 291,
-   "liqMax": 6377700,
-   "liq": 6377700,
+   "n": 292,
+   "liqMax": 6467513,
+   "liq": 6467513,
    "neg": 1.0,
    "saltos": [
     [
@@ -1039,7 +1039,7 @@
    "nome": "CLAVE INDICES FII RL",
    "classe": "fii",
    "i0": 3428,
-   "n": 760,
+   "n": 761,
    "liqMax": 2440601,
    "liq": 813265,
    "neg": 1.0
@@ -1049,7 +1049,7 @@
    "nome": "CENTRAIS ELET DE SANTA CATARINA S.A.",
    "classe": "acao",
    "i0": 510,
-   "n": 3678,
+   "n": 3679,
    "liqMax": 2239181,
    "liq": 2239181,
    "neg": 1.0
@@ -1059,9 +1059,9 @@
    "nome": "BTG Teva ações commodities",
    "classe": "etf",
    "i0": 2944,
-   "n": 1244,
+   "n": 1245,
    "liqMax": 1794021,
-   "liq": 374509,
+   "liq": 374746,
    "neg": 1.0
   },
   {
@@ -1069,7 +1069,7 @@
    "nome": "CIA ENERGETICA DE MINAS GERAIS - CEMIG",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 37158145,
    "liq": 2582139,
    "neg": 1.0
@@ -1079,7 +1079,7 @@
    "nome": "CIA ENERGETICA DE MINAS GERAIS - CEMIG",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 216639912,
    "liq": 191620273,
    "neg": 1.0
@@ -1089,7 +1089,7 @@
    "nome": "CSN MINERAÇÃO S.A.",
    "classe": "acao",
    "i0": 2752,
-   "n": 1436,
+   "n": 1437,
    "liqMax": 95409197,
    "liq": 45605554,
    "neg": 1.0
@@ -1099,7 +1099,7 @@
    "nome": "COGNA EDUCAÇÃO S.A.",
    "classe": "acao",
    "i0": 544,
-   "n": 3644,
+   "n": 3645,
    "liqMax": 621225805,
    "liq": 116973380,
    "neg": 1.0,
@@ -1115,9 +1115,9 @@
    "nome": "Buena Vista bitcoin high income",
    "classe": "etf",
    "i0": 3706,
-   "n": 482,
+   "n": 483,
    "liqMax": 7231674,
-   "liq": 3022321,
+   "liq": 3030136,
    "neg": 1.0
   },
   {
@@ -1125,7 +1125,7 @@
    "nome": "CPFL ENERGIA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 148039076,
    "liq": 98247766,
    "neg": 1.0
@@ -1135,7 +1135,7 @@
    "nome": "CIA PARANAENSE DE ENERGIA - COPEL",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 401571950,
    "liq": 375148900,
    "neg": 1.0
@@ -1145,9 +1145,9 @@
    "nome": "CAPITANIA FI FINANCEIRO EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRA",
    "classe": "fii",
    "i0": 2799,
-   "n": 1389,
+   "n": 1390,
    "liqMax": 4128722,
-   "liq": 2601415,
+   "liq": 2591298,
    "neg": 1.0
   },
   {
@@ -1155,9 +1155,9 @@
    "nome": "CAPITANIA AGRO S. FUNDO DE I. NAS C. P. DO A. R. LIMITADA",
    "classe": "fii",
    "i0": 3084,
-   "n": 1104,
+   "n": 1105,
    "liqMax": 3064682,
-   "liq": 204422,
+   "liq": 206619,
    "neg": 1.0
   },
   {
@@ -1165,7 +1165,7 @@
    "nome": "CAPITANIA SEC II FII",
    "classe": "fii",
    "i0": 1924,
-   "n": 2264,
+   "n": 2265,
    "liqMax": 12313956,
    "liq": 7071992,
    "neg": 1.0
@@ -1175,7 +1175,7 @@
    "nome": "CAPITANIA HBC II FII",
    "classe": "fii",
    "i0": 3489,
-   "n": 699,
+   "n": 700,
    "liqMax": 20675734,
    "liq": 2127043,
    "neg": 1.0
@@ -1185,9 +1185,9 @@
    "nome": "SPARTA FIAGRO FUNDO DE I. NAS CADEIAS P. A. R. LIMITADA",
    "classe": "fii",
    "i0": 3280,
-   "n": 908,
+   "n": 909,
    "liqMax": 1498484,
-   "liq": 490075,
+   "liq": 485969,
    "neg": 1.0
   },
   {
@@ -1195,7 +1195,7 @@
    "nome": "COSAN S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 278845067,
    "liq": 167127461,
    "neg": 1.0,
@@ -1211,7 +1211,7 @@
    "nome": "CRUZEIRO DO SUL EDUCACIONAL S.A.",
    "classe": "acao",
    "i0": 2747,
-   "n": 1441,
+   "n": 1442,
    "liqMax": 13650096,
    "liq": 2918496,
    "neg": 1.0
@@ -1221,7 +1221,7 @@
    "nome": "CIA SANEAMENTO DE MINAS GERAIS-COPASA MG",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 320936591,
    "liq": 298905150,
    "neg": 1.0
@@ -1231,7 +1231,7 @@
    "nome": "CIA SIDERURGICA NACIONAL",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 628496933,
    "liq": 133647733,
    "neg": 1.0
@@ -1241,7 +1241,7 @@
    "nome": "CURY CONSTRUTORA E INCORPORADORA S.A.",
    "classe": "acao",
    "i0": 2652,
-   "n": 1536,
+   "n": 1537,
    "liqMax": 155662016,
    "liq": 146763193,
    "neg": 1.0
@@ -1251,7 +1251,7 @@
    "nome": "CVC BRASIL OPERADORA E AGÊNCIA DE VIAGENS S.A.",
    "classe": "acao",
    "i0": 975,
-   "n": 3213,
+   "n": 3214,
    "liqMax": 180238298,
    "liq": 22085654,
    "neg": 1.0
@@ -1261,7 +1261,7 @@
    "nome": "CAIXA SEGURIDADE PARTICIPAÇÕES S.A.",
    "classe": "acao",
    "i0": 2799,
-   "n": 1389,
+   "n": 1390,
    "liqMax": 164247206,
    "liq": 160191282,
    "neg": 1.0
@@ -1271,7 +1271,7 @@
    "nome": "CYRELA BRAZIL REALTY S.A.EMPREEND E PART",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 309033131,
    "liq": 283072170,
    "neg": 1.0,
@@ -1287,7 +1287,7 @@
    "nome": "CYRELA BRAZIL REALTY S.A.EMPREEND E PART",
    "classe": "acao",
    "i0": 3993,
-   "n": 195,
+   "n": 196,
    "liqMax": 19262284,
    "liq": 12385937,
    "neg": 1.0,
@@ -1303,7 +1303,7 @@
    "nome": "DIAGNOSTICOS DA AMERICA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 43869789,
    "liq": 6397226,
    "neg": 1.0,
@@ -1323,9 +1323,9 @@
    "nome": "BTG debêntures DI",
    "classe": "etf",
    "i0": 3084,
-   "n": 1104,
+   "n": 1105,
    "liqMax": 9181154,
-   "liq": 7206519,
+   "liq": 7077081,
    "neg": 1.0
   },
   {
@@ -1333,9 +1333,9 @@
    "nome": "Hashdex DeFi",
    "classe": "etf",
    "i0": 3000,
-   "n": 1188,
+   "n": 1189,
    "liqMax": 1127324,
-   "liq": 334960,
+   "liq": 326467,
    "neg": 1.0
   },
   {
@@ -1343,7 +1343,7 @@
    "nome": "DESKTOP S.A.",
    "classe": "acao",
    "i0": 2856,
-   "n": 1332,
+   "n": 1333,
    "liqMax": 24812243,
    "liq": 12927873,
    "neg": 1.0
@@ -1353,7 +1353,7 @@
    "nome": "DEVANT RECEBÍVEIS IMOBILIÁRIOS FII",
    "classe": "fii",
    "i0": 3487,
-   "n": 701,
+   "n": 702,
    "liqMax": 1601380,
    "liq": 435434,
    "neg": 1.0
@@ -1363,7 +1363,7 @@
    "nome": "DIRECIONAL ENGENHARIA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 143487356,
    "liq": 138671062,
    "neg": 1.0
@@ -1373,9 +1373,9 @@
    "nome": "It Now IDIV Renda (distribui)",
    "classe": "etf",
    "i0": 3575,
-   "n": 613,
+   "n": 614,
    "liqMax": 3118672,
-   "liq": 2024832,
+   "liq": 2045334,
    "neg": 1.0
   },
   {
@@ -1383,9 +1383,9 @@
    "nome": "It Now IDIV",
    "classe": "etf",
    "i0": 516,
-   "n": 3672,
+   "n": 3673,
    "liqMax": 43592182,
-   "liq": 42504759,
+   "liq": 43220786,
    "neg": 1.0
   },
   {
@@ -1393,9 +1393,9 @@
    "nome": "BB dólar futuro",
    "classe": "etf",
    "i0": 3897,
-   "n": 291,
-   "liqMax": 8468842,
-   "liq": 8468842,
+   "n": 292,
+   "liqMax": 8719804,
+   "liq": 8719804,
    "neg": 1.0
   },
   {
@@ -1403,9 +1403,9 @@
    "nome": "BTG cambial",
    "classe": "etf",
    "i0": 3897,
-   "n": 291,
+   "n": 292,
    "liqMax": 1927305,
-   "liq": 1745533,
+   "liq": 1765598,
    "neg": 1.0
   },
   {
@@ -1413,7 +1413,7 @@
    "nome": "DEXCO S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 64807053,
    "liq": 24631097,
    "neg": 1.0,
@@ -1429,17 +1429,17 @@
    "nome": "iShares carbono eficiente",
    "classe": "etf",
    "i0": 608,
-   "n": 3580,
+   "n": 3581,
    "liqMax": 2367296,
-   "liq": 137590,
-   "neg": 0.952
+   "liq": 137612,
+   "neg": 0.968
   },
   {
    "t": "ECOR3",
    "nome": "ECORODOVIAS INFRAESTRUTURA E LOGÍSTICA S.A.",
    "classe": "acao",
    "i0": 61,
-   "n": 4127,
+   "n": 4128,
    "liqMax": 135499762,
    "liq": 128274021,
    "neg": 1.0,
@@ -1455,9 +1455,9 @@
    "nome": "ECOAGRO I FIAGRO - RESPONSABILIDADE LIMITADA",
    "classe": "fii",
    "i0": 2986,
-   "n": 1202,
+   "n": 1203,
    "liqMax": 1352783,
-   "liq": 717403,
+   "liq": 726703,
    "neg": 1.0
   },
   {
@@ -1465,7 +1465,7 @@
    "nome": "ENGIE BRASIL ENERGIA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 126381246,
    "liq": 100144822,
    "neg": 1.0
@@ -1475,9 +1475,9 @@
    "nome": "Safra mulheres na liderança",
    "classe": "etf",
    "i0": 3010,
-   "n": 1178,
+   "n": 1179,
    "liqMax": 1579741,
-   "liq": 123836,
+   "liq": 124456,
    "neg": 1.0
   },
   {
@@ -1485,7 +1485,7 @@
    "nome": "EMBRAER S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 642067641,
    "liq": 642067641,
    "neg": 1.0
@@ -1495,7 +1495,7 @@
    "nome": "ENEVA S.A",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 449042015,
    "liq": 365322502,
    "neg": 1.0
@@ -1505,7 +1505,7 @@
    "nome": "ENERGISA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 260672516,
    "liq": 253761947,
    "neg": 1.0
@@ -1515,7 +1515,7 @@
    "nome": "EQUATORIAL S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 603482844,
    "liq": 586041685,
    "neg": 1.0
@@ -1525,9 +1525,9 @@
    "nome": "BTG S&P/B3 Brazil ESG",
    "classe": "etf",
    "i0": 2661,
-   "n": 1527,
+   "n": 1528,
    "liqMax": 1135813,
-   "liq": 10269,
+   "liq": 10265,
    "neg": 1.0
   },
   {
@@ -1535,7 +1535,7 @@
    "nome": "MPM CORPÓREOS S.A.",
    "classe": "acao",
    "i0": 2742,
-   "n": 1446,
+   "n": 1447,
    "liqMax": 32065736,
    "liq": 911867,
    "neg": 1.0
@@ -1545,9 +1545,9 @@
    "nome": "Hashdex ethereum",
    "classe": "etf",
    "i0": 2874,
-   "n": 1314,
+   "n": 1315,
    "liqMax": 26155894,
-   "liq": 6348922,
+   "liq": 6134574,
    "neg": 1.0
   },
   {
@@ -1555,7 +1555,7 @@
    "nome": "EUCATEX S.A. INDUSTRIA E COMERCIO",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 3857572,
    "liq": 1557940,
    "neg": 1.0
@@ -1565,7 +1565,7 @@
    "nome": "EVEN CONSTRUTORA E INCORPORADORA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 38329315,
    "liq": 6917172,
    "neg": 1.0
@@ -1575,7 +1575,7 @@
    "nome": "EZ TEC EMPREEND. E PARTICIPACOES S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 123482169,
    "liq": 65394271,
    "neg": 1.0,
@@ -1591,7 +1591,7 @@
    "nome": "CIA FERRO LIGAS DA BAHIA - FERBASA",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 34633278,
    "liq": 8225002,
    "neg": 1.0
@@ -1601,9 +1601,9 @@
    "nome": "FG AGRO FI NAS CADEIAS PROD AGROIND FIAGRO IMOBILIARIO",
    "classe": "fii",
    "i0": 3248,
-   "n": 940,
+   "n": 941,
    "liqMax": 1697277,
-   "liq": 731735,
+   "liq": 729148,
    "neg": 1.0
   },
   {
@@ -1611,7 +1611,7 @@
    "nome": "GENERAL SHOPPING ATIVO E RENDA FUNDO DE INVEST IMOB",
    "classe": "fii",
    "i0": 1135,
-   "n": 3053,
+   "n": 3054,
    "liqMax": 1204588,
    "liq": 205869,
    "neg": 1.0
@@ -1621,7 +1621,7 @@
    "nome": "F.I.I. INDUSTRIAL DO BRASIL RESPONSABILIDADE LIMITADA",
    "classe": "fii",
    "i0": 1136,
-   "n": 3052,
+   "n": 3053,
    "liqMax": 1081042,
    "liq": 236917,
    "neg": 1.0
@@ -1631,9 +1631,9 @@
    "nome": "It Now financeiro",
    "classe": "etf",
    "i0": 309,
-   "n": 3879,
+   "n": 3880,
    "liqMax": 18991518,
-   "liq": 9490292,
+   "liq": 9475490,
    "neg": 1.0
   },
   {
@@ -1641,7 +1641,7 @@
    "nome": "UNIFIQUE TELECOMUNICAÇÕES S.A.",
    "classe": "acao",
    "i0": 2861,
-   "n": 1327,
+   "n": 1328,
    "liqMax": 9531695,
    "liq": 9531695,
    "neg": 1.0
@@ -1651,9 +1651,9 @@
    "nome": "BB prefixado (futuro de DI 3 anos)",
    "classe": "etf",
    "i0": 2150,
-   "n": 2038,
+   "n": 2039,
    "liqMax": 1497029,
-   "liq": 207830,
+   "liq": 203847,
    "neg": 1.0,
    "saltos": [
     [
@@ -1667,7 +1667,7 @@
    "nome": "FLEURY S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 129190596,
    "liq": 125993498,
    "neg": 1.0
@@ -1677,7 +1677,7 @@
    "nome": "FRASLE MOBILITY S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 13750621,
    "liq": 7943535,
    "neg": 1.0,
@@ -1717,7 +1717,7 @@
    "nome": "FII GUARDIAN MULTIESTRATÉGIA",
    "classe": "fii",
    "i0": 3489,
-   "n": 699,
+   "n": 700,
    "liqMax": 1186035,
    "liq": 253574,
    "neg": 1.0
@@ -1727,7 +1727,7 @@
    "nome": "FII GUARDIAL LOGISTICA",
    "classe": "fii",
    "i0": 3508,
-   "n": 680,
+   "n": 681,
    "liqMax": 18192423,
    "liq": 6798073,
    "neg": 1.0
@@ -1737,9 +1737,9 @@
    "nome": "BTG S&P/B3 Ingenius",
    "classe": "etf",
    "i0": 2858,
-   "n": 1330,
+   "n": 1331,
    "liqMax": 1283744,
-   "liq": 111764,
+   "liq": 112740,
    "neg": 1.0
   },
   {
@@ -1747,7 +1747,7 @@
    "nome": "GAFISA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 79603992,
    "liq": 1869212,
    "neg": 1.0,
@@ -1775,7 +1775,7 @@
    "nome": "GERDAU S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 9750184,
    "liq": 835008,
    "neg": 1.0
@@ -1785,7 +1785,7 @@
    "nome": "GERDAU S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 502488978,
    "liq": 284683280,
    "neg": 1.0
@@ -1795,7 +1795,7 @@
    "nome": "GPS PARTICIPAÇÕES E EMPREENDIMENTOS S.A.",
    "classe": "acao",
    "i0": 2797,
-   "n": 1391,
+   "n": 1392,
    "liqMax": 90568553,
    "liq": 86449874,
    "neg": 1.0
@@ -1805,9 +1805,9 @@
    "nome": "Investo ouro",
    "classe": "etf",
    "i0": 3837,
-   "n": 351,
+   "n": 352,
    "liqMax": 1531299,
-   "liq": 1085087,
+   "liq": 1075265,
    "neg": 1.0
   },
   {
@@ -1815,7 +1815,7 @@
    "nome": "GRUPO MATEUS S.A.",
    "classe": "acao",
    "i0": 2667,
-   "n": 1521,
+   "n": 1522,
    "liqMax": 72761260,
    "liq": 34309163,
    "neg": 1.0
@@ -1825,7 +1825,7 @@
    "nome": "METALURGICA GERDAU S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 2835181,
    "liq": 559031,
    "neg": 1.0
@@ -1835,7 +1835,7 @@
    "nome": "METALURGICA GERDAU S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 165180011,
    "liq": 139798572,
    "neg": 1.0
@@ -1845,9 +1845,9 @@
    "nome": "Trend ouro",
    "classe": "etf",
    "i0": 2708,
-   "n": 1480,
+   "n": 1481,
    "liqMax": 67436956,
-   "liq": 29415015,
+   "liq": 29741240,
    "neg": 1.0
   },
   {
@@ -1855,9 +1855,9 @@
    "nome": "It Now governança",
    "classe": "etf",
    "i0": 457,
-   "n": 3731,
+   "n": 3732,
    "liqMax": 1544341,
-   "liq": 62158,
+   "liq": 61752,
    "neg": 1.0
   },
   {
@@ -1865,9 +1865,9 @@
    "nome": "Grão Tesouro IPCA 2 anos",
    "classe": "etf",
    "i0": 4096,
-   "n": 92,
+   "n": 93,
    "liqMax": 5458928,
-   "liq": 4892574,
+   "liq": 4881011,
    "neg": 1.0
   },
   {
@@ -1875,9 +1875,9 @@
    "nome": "Investo GP S&P 500",
    "classe": "etf",
    "i0": 3897,
-   "n": 291,
+   "n": 292,
    "liqMax": 2295386,
-   "liq": 2254467,
+   "liq": 2290941,
    "neg": 1.0
   },
   {
@@ -1885,7 +1885,7 @@
    "nome": "GRENDENE S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 29075127,
    "liq": 12799564,
    "neg": 1.0
@@ -1895,7 +1895,7 @@
    "nome": "FUNDO DE INVESTIMENTO IMOBILIÁRIO GREEN TOWERS",
    "classe": "fii",
    "i0": 2341,
-   "n": 1847,
+   "n": 1848,
    "liqMax": 3834550,
    "liq": 990579,
    "neg": 1.0
@@ -1905,7 +1905,7 @@
    "nome": "HABITAT RECEBÍVEIS PULVERIZADOS FII RL",
    "classe": "fii",
    "i0": 2370,
-   "n": 1818,
+   "n": 1819,
    "liqMax": 4322698,
    "liq": 988186,
    "neg": 1.0
@@ -1915,7 +1915,7 @@
    "nome": "HAPVIDA PARTICIPAÇÕES E INVESTIMENTOS S.A.",
    "classe": "acao",
    "i0": 2057,
-   "n": 2131,
+   "n": 2132,
    "liqMax": 472115938,
    "liq": 80899837,
    "neg": 1.0,
@@ -1935,9 +1935,9 @@
    "nome": "Hashdex Nasdaq Crypto",
    "classe": "etf",
    "i0": 2795,
-   "n": 1393,
+   "n": 1394,
    "liqMax": 96496877,
-   "liq": 14682183,
+   "liq": 14470845,
    "neg": 1.0
   },
   {
@@ -1945,7 +1945,7 @@
    "nome": "HELBOR EMPREENDIMENTOS S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 64530924,
    "liq": 2514763,
    "neg": 1.0
@@ -1955,7 +1955,7 @@
    "nome": "HBR REALTY EMPREENDIMENTOS IMOBILIÁRIOS S.A.",
    "classe": "acao",
    "i0": 2735,
-   "n": 1453,
+   "n": 1454,
    "liqMax": 4506803,
    "liq": 2853312,
    "neg": 1.0
@@ -1965,7 +1965,7 @@
    "nome": "HIDROVIAS DO BRASIL S.A.",
    "classe": "acao",
    "i0": 2656,
-   "n": 1532,
+   "n": 1533,
    "liqMax": 50653128,
    "liq": 7706878,
    "neg": 1.0
@@ -1975,7 +1975,7 @@
    "nome": "FII HECTARE CE",
    "classe": "fii",
    "i0": 2353,
-   "n": 1835,
+   "n": 1836,
    "liqMax": 12666113,
    "liq": 564808,
    "neg": 1.0
@@ -1985,7 +1985,7 @@
    "nome": "HEDGE TOP FOFII 3 FUNDO DE INVESTIMENTO IMOBILIÁRIO",
    "classe": "fii",
    "i0": 2018,
-   "n": 2170,
+   "n": 2171,
    "liqMax": 6282493,
    "liq": 2090236,
    "neg": 1.0
@@ -1995,7 +1995,7 @@
    "nome": "HEDGE BRASIL LOGÍSTICO INDUSTRIAL FII DE RESP LIMITADA",
    "classe": "fii",
    "i0": 3536,
-   "n": 652,
+   "n": 653,
    "liqMax": 1238481,
    "liq": 420807,
    "neg": 1.0
@@ -2005,7 +2005,7 @@
    "nome": "HEDGE BRASIL SHOPPING FUNDO DE INVESTIMENTO IMOBILIÁRIO",
    "classe": "fii",
    "i0": 542,
-   "n": 3646,
+   "n": 3647,
    "liqMax": 13010492,
    "liq": 7115242,
    "neg": 1.0
@@ -2015,7 +2015,7 @@
    "nome": "PÁTRIA RECEBÍVEIS IMOBILIÁRIOS - FII",
    "classe": "fii",
    "i0": 1135,
-   "n": 3053,
+   "n": 3054,
    "liqMax": 5970899,
    "liq": 3270327,
    "neg": 1.0
@@ -2025,7 +2025,7 @@
    "nome": "PÁTRIA LOG - FUNDO DE INVESTIMENTO IMOBILIÁRIO",
    "classe": "fii",
    "i0": 289,
-   "n": 3899,
+   "n": 3900,
    "liqMax": 21812310,
    "liq": 19873667,
    "neg": 1.0
@@ -2035,7 +2035,7 @@
    "nome": "PÁTRIA ESCRITÓRIOS FUNDO DE INVESTIMENTO IMOBILIÁRIO",
    "classe": "fii",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 9318777,
    "liq": 2435354,
    "neg": 1.0
@@ -2045,7 +2045,7 @@
    "nome": "PÁTRIA RENDA URBANA - FUNDO DE INVESTIMENTO IMOBILIÁRIO",
    "classe": "fii",
    "i0": 2120,
-   "n": 2068,
+   "n": 2069,
    "liqMax": 9805779,
    "liq": 8596003,
    "neg": 1.0
@@ -2055,9 +2055,9 @@
    "nome": "Nu Ibov smart high beta",
    "classe": "etf",
    "i0": 3644,
-   "n": 544,
-   "liqMax": 8389468,
-   "liq": 8389468,
+   "n": 545,
+   "liqMax": 8516555,
+   "liq": 8516555,
    "neg": 1.0
   },
   {
@@ -2065,9 +2065,9 @@
    "nome": "Investo bitcoin",
    "classe": "etf",
    "i0": 3897,
-   "n": 291,
+   "n": 292,
    "liqMax": 5098545,
-   "liq": 2413621,
+   "liq": 2458224,
    "neg": 1.0
   },
   {
@@ -2075,7 +2075,7 @@
    "nome": "HSI ATIVOS FINANCEIROS FUNDO DE INVESTIMENTO IMOBILIÁRIO",
    "classe": "fii",
    "i0": 3487,
-   "n": 701,
+   "n": 702,
    "liqMax": 1244446,
    "liq": 472589,
    "neg": 1.0
@@ -2085,7 +2085,7 @@
    "nome": "HSI LOGÍSTICA FUNDO DE INVESTIMENTO IMOBILIÁRIO",
    "classe": "fii",
    "i0": 3487,
-   "n": 701,
+   "n": 702,
    "liqMax": 15391171,
    "liq": 1399900,
    "neg": 1.0
@@ -2095,7 +2095,7 @@
    "nome": "HSI - MALLS FII RESP. LIMITADA",
    "classe": "fii",
    "i0": 2379,
-   "n": 1809,
+   "n": 1810,
    "liqMax": 11024870,
    "liq": 5780273,
    "neg": 1.0
@@ -2105,7 +2105,7 @@
    "nome": "HOTEL MAXINVEST FII",
    "classe": "fii",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 2172294,
    "liq": 321988,
    "neg": 1.0
@@ -2115,7 +2115,7 @@
    "nome": "HYPERA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 194338718,
    "liq": 102242101,
    "neg": 1.0
@@ -2125,9 +2125,9 @@
    "nome": "It Now IMA-B 5+",
    "classe": "etf",
    "i0": 2405,
-   "n": 1783,
-   "liqMax": 3974328,
-   "liq": 3974328,
+   "n": 1784,
+   "liqMax": 3986453,
+   "liq": 3986453,
    "neg": 1.0
   },
   {
@@ -2135,9 +2135,9 @@
    "nome": "BTG Ibovespa",
    "classe": "etf",
    "i0": 2858,
-   "n": 1330,
+   "n": 1331,
    "liqMax": 11913789,
-   "liq": 10079782,
+   "liq": 10071941,
    "neg": 1.0
   },
   {
@@ -2145,7 +2145,7 @@
    "nome": "ITAÚ CRÉDITO IMOBILIÁRIO IPCA FII",
    "classe": "fii",
    "i0": 3497,
-   "n": 691,
+   "n": 692,
    "liqMax": 1522150,
    "liq": 722488,
    "neg": 1.0
@@ -2155,9 +2155,9 @@
    "nome": "It Now IRF-M P3",
    "classe": "etf",
    "i0": 3897,
-   "n": 291,
-   "liqMax": 3396442,
-   "liq": 3396442,
+   "n": 292,
+   "liqMax": 3412063,
+   "liq": 3412063,
    "neg": 1.0
   },
   {
@@ -2165,9 +2165,9 @@
    "nome": "ITAÚ FIF - CIC FIF INCENTIVADOS EM INFRA RF CRED PRIV - RESP LIMITADA",
    "classe": "fii",
    "i0": 2708,
-   "n": 1480,
+   "n": 1481,
    "liqMax": 3202056,
-   "liq": 2901848,
+   "liq": 2844304,
    "neg": 1.0
   },
   {
@@ -2175,9 +2175,9 @@
    "nome": "ITAÚ FIC DE FUNDOS INCENTIVADOS DE INVEST FINANCEIRO EM INFRAESTR CDI RF CRÉD PR",
    "classe": "fii",
    "i0": 3582,
-   "n": 606,
+   "n": 607,
    "liqMax": 3660620,
-   "liq": 2722960,
+   "liq": 2769149,
    "neg": 1.0
   },
   {
@@ -2185,7 +2185,7 @@
    "nome": "IGUATEMI S.A.",
    "classe": "acao",
    "i0": 2939,
-   "n": 1249,
+   "n": 1250,
    "liqMax": 121961484,
    "liq": 121961484,
    "neg": 1.0
@@ -2195,7 +2195,7 @@
    "nome": "IGUATEMI S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 13386939,
    "liq": 213313,
    "neg": 1.0,
@@ -2219,9 +2219,9 @@
    "nome": "It Now IMA-B",
    "classe": "etf",
    "i0": 2316,
-   "n": 1872,
+   "n": 1873,
    "liqMax": 18323529,
-   "liq": 16937075,
+   "liq": 17008706,
    "neg": 1.0
   },
   {
@@ -2229,9 +2229,9 @@
    "nome": "Bradesco IMA-B",
    "classe": "etf",
    "i0": 2460,
-   "n": 1728,
+   "n": 1729,
    "liqMax": 17405604,
-   "liq": 17002112,
+   "liq": 16999932,
    "neg": 1.0
   },
   {
@@ -2239,7 +2239,7 @@
    "nome": "INTELBRAS S.A. IND. DE TELECOMUNICAÇÃO ELETRÔNICA BRASILEIRA",
    "classe": "acao",
    "i0": 2744,
-   "n": 1444,
+   "n": 1445,
    "liqMax": 62701500,
    "liq": 23915649,
    "neg": 1.0
@@ -2249,7 +2249,7 @@
    "nome": "IRB - BRASIL RESSEGUROS S.A.",
    "classe": "acao",
    "i0": 1875,
-   "n": 2313,
+   "n": 2314,
    "liqMax": 516919585,
    "liq": 61763921,
    "neg": 1.0
@@ -2259,9 +2259,9 @@
    "nome": "It Now IRF-M",
    "classe": "etf",
    "i0": 2405,
-   "n": 1783,
-   "liqMax": 14145282,
-   "liq": 13578623,
+   "n": 1784,
+   "liqMax": 14895673,
+   "liq": 14895673,
    "neg": 1.0,
    "saltos": [
     [
@@ -2279,7 +2279,7 @@
    "nome": "IRIDIUM CRI FII RL",
    "classe": "fii",
    "i0": 3484,
-   "n": 704,
+   "n": 705,
    "liqMax": 7527487,
    "liq": 3509539,
    "neg": 1.0
@@ -2289,7 +2289,7 @@
    "nome": "ISA ENERGIA BRASIL",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 128190841,
    "liq": 120951388,
    "neg": 1.0
@@ -2299,7 +2299,7 @@
    "nome": "ITAÚ TOTAL RETURN FUNDO DE INVESTIMENTO IMOBILIÁRIO",
    "classe": "fii",
    "i0": 3615,
-   "n": 573,
+   "n": 574,
    "liqMax": 2297819,
    "liq": 1137663,
    "neg": 1.0
@@ -2309,7 +2309,7 @@
    "nome": "ITAÚSA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 73127627,
    "liq": 3035516,
    "neg": 1.0
@@ -2319,7 +2319,7 @@
    "nome": "ITAÚSA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 494765432,
    "liq": 471160232,
    "neg": 1.0
@@ -2329,7 +2329,7 @@
    "nome": "ITAU UNIBANCO HOLDING S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 159857983,
    "liq": 108237717,
    "neg": 1.0
@@ -2339,7 +2339,7 @@
    "nome": "ITAU UNIBANCO HOLDING S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 1500028579,
    "liq": 1437728046,
    "neg": 1.0
@@ -2349,9 +2349,9 @@
    "nome": "iShares S&P 500",
    "classe": "etf",
    "i0": 1068,
-   "n": 3120,
+   "n": 3121,
    "liqMax": 188943469,
-   "liq": 97024265,
+   "liq": 98550615,
    "neg": 1.0
   },
   {
@@ -2359,9 +2359,9 @@
    "nome": "Buena Vista Russell 2000 high income",
    "classe": "etf",
    "i0": 3706,
-   "n": 482,
+   "n": 483,
    "liqMax": 3426210,
-   "liq": 197842,
+   "liq": 196374,
    "neg": 1.0
   },
   {
@@ -2369,7 +2369,7 @@
    "nome": "JALLES MACHADO S.A.",
    "classe": "acao",
    "i0": 2744,
-   "n": 1444,
+   "n": 1445,
    "liqMax": 11961976,
    "liq": 2877829,
    "neg": 1.0
@@ -2379,7 +2379,7 @@
    "nome": "JHSF PARTICIPACOES S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 116376531,
    "liq": 55635742,
    "neg": 1.0
@@ -2389,9 +2389,9 @@
    "nome": "Investo games e e-sports",
    "classe": "etf",
    "i0": 2956,
-   "n": 1232,
+   "n": 1233,
    "liqMax": 3308470,
-   "liq": 167725,
+   "liq": 177149,
    "neg": 1.0
   },
   {
@@ -2399,7 +2399,7 @@
    "nome": "JS ATIVOS FINANCEIROS FUNDO DE INVESTIMENTO IMOBILIÁRIO",
    "classe": "fii",
    "i0": 2997,
-   "n": 1191,
+   "n": 1192,
    "liqMax": 2498452,
    "liq": 2046640,
    "neg": 1.0
@@ -2409,7 +2409,7 @@
    "nome": "JSL S.A.",
    "classe": "acao",
    "i0": 2645,
-   "n": 1543,
+   "n": 1544,
    "liqMax": 15931106,
    "liq": 14541415,
    "neg": 1.0,
@@ -2425,7 +2425,7 @@
    "nome": "JS REAL ESTATE MULTIGESTÃO FUNDO DE INVESTIMENTO IMOBILIÁRIO",
    "classe": "fii",
    "i0": 1135,
-   "n": 3053,
+   "n": 3054,
    "liqMax": 8511583,
    "liq": 4179452,
    "neg": 1.0
@@ -2435,9 +2435,9 @@
    "nome": "SPARTA INFRA FI EM COTAS DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRAESTRUTUR",
    "classe": "fii",
    "i0": 2960,
-   "n": 1228,
+   "n": 1229,
    "liqMax": 7867030,
-   "liq": 4315676,
+   "liq": 4342397,
    "neg": 1.0
   },
   {
@@ -2445,9 +2445,9 @@
    "nome": "KINEA INFRA FIF CIC DE FUNDOS INCENTIVADOS DE INVESTIMENTO EM INFRA RF CRED PRIV",
    "classe": "fii",
    "i0": 3579,
-   "n": 609,
+   "n": 610,
    "liqMax": 5555456,
-   "liq": 5188388,
+   "liq": 5172997,
    "neg": 1.0
   },
   {
@@ -2455,7 +2455,7 @@
    "nome": "KEPLER WEBER S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 32618085,
    "liq": 11697665,
    "neg": 1.0,
@@ -2471,7 +2471,7 @@
    "nome": "FUNDO DE FUNDOS DE INVESTIMENTO IMOBILIÁRIO KINEA FII",
    "classe": "fii",
    "i0": 2261,
-   "n": 1927,
+   "n": 1928,
    "liqMax": 2170827,
    "liq": 1238261,
    "neg": 1.0
@@ -2481,7 +2481,7 @@
    "nome": "KLABIN S.A.",
    "classe": "acao",
    "i0": 1004,
-   "n": 3184,
+   "n": 3185,
    "liqMax": 221961205,
    "liq": 119302911,
    "neg": 1.0
@@ -2491,7 +2491,7 @@
    "nome": "KLABIN S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 4531713,
    "liq": 3028353,
    "neg": 1.0,
@@ -2511,7 +2511,7 @@
    "nome": "KLABIN S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 40020404,
    "liq": 15719061,
    "neg": 1.0
@@ -2521,9 +2521,9 @@
    "nome": "KINEA CRÉDITO AGRO FIAGRO-IMOBILIÁRIO",
    "classe": "fii",
    "i0": 2978,
-   "n": 1210,
+   "n": 1211,
    "liqMax": 5538823,
-   "liq": 3484472,
+   "liq": 3507355,
    "neg": 1.0
   },
   {
@@ -2531,7 +2531,7 @@
    "nome": "KINEA RENDIMENTOS IMOBILIARIOS FII RESPONSABILIDADE LIMITADA",
    "classe": "fii",
    "i0": 1135,
-   "n": 3053,
+   "n": 3054,
    "liqMax": 28631019,
    "liq": 28631019,
    "neg": 1.0
@@ -2541,7 +2541,7 @@
    "nome": "KINEA HEDGE FUND FII RESPONSABILIDADE LIMITADA",
    "classe": "fii",
    "i0": 3377,
-   "n": 811,
+   "n": 812,
    "liqMax": 5824245,
    "liq": 5673974,
    "neg": 1.0
@@ -2551,7 +2551,7 @@
    "nome": "KINEA HIGH YIELD CRI FII RESPONSABILIDADE LIMITADA",
    "classe": "fii",
    "i0": 2130,
-   "n": 2058,
+   "n": 2059,
    "liqMax": 6922401,
    "liq": 5007152,
    "neg": 1.0
@@ -2561,7 +2561,7 @@
    "nome": "KINEA INDICES DE PREÇOS FII RESPONSABILIDADE LIMITADA",
    "classe": "fii",
    "i0": 1924,
-   "n": 2264,
+   "n": 2265,
    "liqMax": 17089813,
    "liq": 11322804,
    "neg": 1.0
@@ -2571,7 +2571,7 @@
    "nome": "KINEA RENDA IMOBILIARIA FII RESPONSABILIDADE LIMITADA",
    "classe": "fii",
    "i0": 1135,
-   "n": 3053,
+   "n": 3054,
    "liqMax": 11460973,
    "liq": 7998384,
    "neg": 1.0
@@ -2581,7 +2581,7 @@
    "nome": "KINEA SECURITIES FII RESPONSABILIDADE LIMITADA",
    "classe": "fii",
    "i0": 3000,
-   "n": 1188,
+   "n": 1189,
    "liqMax": 7070052,
    "liq": 6649545,
    "neg": 1.0
@@ -2591,7 +2591,7 @@
    "nome": "KINEA OPORTUNIDADES REAL ESTATE FII",
    "classe": "fii",
    "i0": 3451,
-   "n": 737,
+   "n": 738,
    "liqMax": 3440426,
    "liq": 1945487,
    "neg": 1.0
@@ -2601,7 +2601,7 @@
    "nome": "LAVVI EMPREENDIMENTOS IMOBILIÁRIOS S.A.",
    "classe": "acao",
    "i0": 2641,
-   "n": 1547,
+   "n": 1548,
    "liqMax": 15258800,
    "liq": 12683800,
    "neg": 1.0,
@@ -2617,7 +2617,7 @@
    "nome": "MAHLE METAL LEVE S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 30574257,
    "liq": 16960373,
    "neg": 1.0
@@ -2627,9 +2627,9 @@
    "nome": "BTG letras financeiras",
    "classe": "etf",
    "i0": 3922,
-   "n": 266,
+   "n": 267,
    "liqMax": 5872397,
-   "liq": 4976212,
+   "liq": 4967030,
    "neg": 1.0
   },
   {
@@ -2637,9 +2637,9 @@
    "nome": "Investo letra financeira S1",
    "classe": "etf",
    "i0": 3994,
-   "n": 194,
+   "n": 195,
    "liqMax": 8833457,
-   "liq": 7340440,
+   "liq": 7421815,
    "neg": 1.0
   },
   {
@@ -2647,9 +2647,9 @@
    "nome": "Investo Treasury 760 dias",
    "classe": "etf",
    "i0": 3897,
-   "n": 291,
+   "n": 292,
    "liqMax": 90618107,
-   "liq": 88021300,
+   "liq": 88445547,
    "neg": 1.0
   },
   {
@@ -2657,9 +2657,9 @@
    "nome": "Investo Tesouro Selic",
    "classe": "etf",
    "i0": 3180,
-   "n": 1008,
+   "n": 1009,
    "liqMax": 45220409,
-   "liq": 40702978,
+   "liq": 40655111,
    "neg": 1.0
   },
   {
@@ -2667,7 +2667,7 @@
    "nome": "FII LIFE CAPITAL PARTNERS",
    "classe": "fii",
    "i0": 3170,
-   "n": 1018,
+   "n": 1019,
    "liqMax": 1218733,
    "liq": 556065,
    "neg": 1.0
@@ -2677,7 +2677,7 @@
    "nome": "LIGHT S.A. - EM RECUPERAÇÃO JUDICIAL",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 80116292,
    "liq": 14232262,
    "neg": 1.0
@@ -2687,9 +2687,9 @@
    "nome": "BTG Teva target 750",
    "classe": "etf",
    "i0": 4116,
-   "n": 72,
+   "n": 73,
    "liqMax": 1523457,
-   "liq": 1467331,
+   "liq": 1467867,
    "neg": 1.0
   },
   {
@@ -2697,7 +2697,7 @@
    "nome": "LOJAS QUERO QUERO S.A.",
    "classe": "acao",
    "i0": 2623,
-   "n": 1565,
+   "n": 1566,
    "liqMax": 43529210,
    "liq": 8181084,
    "neg": 1.0,
@@ -2713,7 +2713,7 @@
    "nome": "LOG COMMERCIAL PROPERTIES E PARTICIPAÇÕES",
    "classe": "acao",
    "i0": 2220,
-   "n": 1968,
+   "n": 1969,
    "liqMax": 22442012,
    "liq": 22442012,
    "neg": 1.0
@@ -2723,7 +2723,7 @@
    "nome": "LOJAS RENNER S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 473252616,
    "liq": 299368973,
    "neg": 1.0
@@ -2733,7 +2733,7 @@
    "nome": "VBI LOGISTICO FII RL",
    "classe": "fii",
    "i0": 2528,
-   "n": 1660,
+   "n": 1661,
    "liqMax": 5059655,
    "liq": 5059655,
    "neg": 1.0
@@ -2743,9 +2743,9 @@
    "nome": "Nu Ibov smart low volatility",
    "classe": "etf",
    "i0": 3644,
-   "n": 544,
+   "n": 545,
    "liqMax": 2304167,
-   "liq": 2015284,
+   "liq": 2004079,
    "neg": 1.0
   },
   {
@@ -2753,7 +2753,7 @@
    "nome": "LWSA S/A",
    "classe": "acao",
    "i0": 2497,
-   "n": 1691,
+   "n": 1692,
    "liqMax": 268680280,
    "liq": 19304016,
    "neg": 1.0
@@ -2763,9 +2763,9 @@
    "nome": "BTG debêntures ultra qualidade",
    "classe": "etf",
    "i0": 3897,
-   "n": 291,
+   "n": 292,
    "liqMax": 1762931,
-   "liq": 1347656,
+   "liq": 1377782,
    "neg": 1.0
   },
   {
@@ -2773,9 +2773,9 @@
    "nome": "It Now materiais básicos",
    "classe": "etf",
    "i0": 516,
-   "n": 3672,
+   "n": 3673,
    "liqMax": 3396812,
-   "liq": 3121320,
+   "liq": 3162531,
    "neg": 1.0
   },
   {
@@ -2783,7 +2783,7 @@
    "nome": "HOSPITAL MATER DEI S.A.",
    "classe": "acao",
    "i0": 2808,
-   "n": 1380,
+   "n": 1381,
    "liqMax": 14256245,
    "liq": 1548238,
    "neg": 1.0
@@ -2793,7 +2793,7 @@
    "nome": "MARFRIG GLOBAL FOODS S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 293311903,
    "liq": 105243934,
    "neg": 1.0
@@ -2803,7 +2803,7 @@
    "nome": "MAUA CAP RE FII RL",
    "classe": "fii",
    "i0": 2459,
-   "n": 1729,
+   "n": 1730,
    "liqMax": 6265534,
    "liq": 6231978,
    "neg": 1.0
@@ -2813,7 +2813,7 @@
    "nome": "M.DIAS BRANCO S.A. IND COM DE ALIMENTOS",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 63561317,
    "liq": 19749068,
    "neg": 1.0
@@ -2823,7 +2823,7 @@
    "nome": "MOURA DUBEUX ENGENHARIA S/A",
    "classe": "acao",
    "i0": 2502,
-   "n": 1686,
+   "n": 1687,
    "liqMax": 48005062,
    "liq": 46051189,
    "neg": 1.0
@@ -2833,7 +2833,7 @@
    "nome": "MELNICK DESENVOLVIMENTO IMOBILIÁRIO S.A.",
    "classe": "acao",
    "i0": 2658,
-   "n": 1530,
+   "n": 1531,
    "liqMax": 6049525,
    "liq": 1988005,
    "neg": 1.0
@@ -2843,7 +2843,7 @@
    "nome": "MÉRITO DESENVOLVIMENTO IMOBILIÁRIO FII",
    "classe": "fii",
    "i0": 1135,
-   "n": 3053,
+   "n": 3054,
    "liqMax": 2956423,
    "liq": 527684,
    "neg": 1.0,
@@ -2859,7 +2859,7 @@
    "nome": "MAGAZINE LUIZA S.A.",
    "classe": "acao",
    "i0": 328,
-   "n": 3860,
+   "n": 3861,
    "liqMax": 1152232411,
    "liq": 383700472,
    "neg": 1.0,
@@ -2875,9 +2875,9 @@
    "nome": "It Now estilo de vida digital",
    "classe": "etf",
    "i0": 2831,
-   "n": 1357,
+   "n": 1358,
    "liqMax": 1829888,
-   "liq": 105382,
+   "liq": 105433,
    "neg": 0.984
   },
   {
@@ -2885,7 +2885,7 @@
    "nome": "MILLS LOCAÇÃO, SERVIÇOS E LOGÍSTICA S.A.",
    "classe": "acao",
    "i0": 71,
-   "n": 4117,
+   "n": 4118,
    "liqMax": 19464189,
    "liq": 18953810,
    "neg": 1.0
@@ -2895,7 +2895,7 @@
    "nome": "GRUPO MULTILASER S.A.",
    "classe": "acao",
    "i0": 2856,
-   "n": 1332,
+   "n": 1333,
    "liqMax": 35016890,
    "liq": 5240132,
    "neg": 1.0
@@ -2905,7 +2905,7 @@
    "nome": "MOTIVA INFRAESTRUTURA DE MOBILIDADE S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 313214199,
    "liq": 302651809,
    "neg": 1.0
@@ -2915,7 +2915,7 @@
    "nome": "MOVIDA PARTICIPACOES SA",
    "classe": "acao",
    "i0": 1828,
-   "n": 2360,
+   "n": 2361,
    "liqMax": 151811481,
    "liq": 142283819,
    "neg": 1.0,
@@ -2931,7 +2931,7 @@
    "nome": "MRV ENGENHARIA E PARTICIPACOES S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 182921756,
    "liq": 104868022,
    "neg": 1.0,
@@ -2947,7 +2947,7 @@
    "nome": "MITRE REALTY EMPREENDIMENTOS E PARTICIPAÇÕES S.A.",
    "classe": "acao",
    "i0": 2500,
-   "n": 1688,
+   "n": 1689,
    "liqMax": 16316773,
    "liq": 3162569,
    "neg": 1.0
@@ -2957,7 +2957,7 @@
    "nome": "MULTIPLAN - EMPREEND IMOBILIARIOS S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 225629252,
    "liq": 217643816,
    "neg": 1.0
@@ -2967,7 +2967,7 @@
    "nome": "FII MAXI RENDA RL",
    "classe": "fii",
    "i0": 1135,
-   "n": 3053,
+   "n": 3054,
    "liqMax": 24076640,
    "liq": 23943147,
    "neg": 1.0
@@ -2977,7 +2977,7 @@
    "nome": "IOCHPE MAXION S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 41646795,
    "liq": 10812700,
    "neg": 1.0
@@ -2987,9 +2987,9 @@
    "nome": "Trend Nasdaq-100",
    "classe": "etf",
    "i0": 2815,
-   "n": 1373,
+   "n": 1374,
    "liqMax": 28483333,
-   "liq": 24820703,
+   "liq": 26296289,
    "neg": 1.0
   },
   {
@@ -2997,7 +2997,7 @@
    "nome": "NATURA COSMÉTICOS S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 162026839,
    "liq": 82290332,
    "neg": 1.0,
@@ -3017,9 +3017,9 @@
    "nome": "Nu Renda Ibov Smart Dividendos",
    "classe": "etf",
    "i0": 3404,
-   "n": 784,
+   "n": 785,
    "liqMax": 5418844,
-   "liq": 1496997,
+   "liq": 1464884,
    "neg": 1.0
   },
   {
@@ -3027,7 +3027,7 @@
    "nome": "NEWPORT LOGISTICA FII",
    "classe": "fii",
    "i0": 2470,
-   "n": 1718,
+   "n": 1719,
    "liqMax": 2980170,
    "liq": 348322,
    "neg": 1.0
@@ -3037,9 +3037,9 @@
    "nome": "Nu Ibov Smart Dividendos",
    "classe": "etf",
    "i0": 3404,
-   "n": 784,
+   "n": 785,
    "liqMax": 2970232,
-   "liq": 2086923,
+   "liq": 2038757,
    "neg": 1.0
   },
   {
@@ -3047,9 +3047,9 @@
    "nome": "Investo Tesouro IPCA+ 0-4 anos",
    "classe": "etf",
    "i0": 3331,
-   "n": 857,
+   "n": 858,
    "liqMax": 1459650,
-   "liq": 1061296,
+   "liq": 1054320,
    "neg": 1.0
   },
   {
@@ -3057,9 +3057,9 @@
    "nome": "Investo urânio e nuclear",
    "classe": "etf",
    "i0": 2956,
-   "n": 1232,
+   "n": 1233,
    "liqMax": 6525655,
-   "liq": 317426,
+   "liq": 319891,
    "neg": 1.0
   },
   {
@@ -3067,7 +3067,7 @@
    "nome": "ORANJEBTC S.A. - EDUCAÇÃO E INVESTIMENTO",
    "classe": "acao",
    "i0": 3952,
-   "n": 236,
+   "n": 237,
    "liqMax": 11748680,
    "liq": 10040519,
    "neg": 1.0
@@ -3077,7 +3077,7 @@
    "nome": "ONCOCLÍNICAS DO BRASIL SERVIÇOS MÉDICOS S.A.",
    "classe": "acao",
    "i0": 2898,
-   "n": 1290,
+   "n": 1291,
    "liqMax": 45946423,
    "liq": 15074755,
    "neg": 1.0,
@@ -3093,7 +3093,7 @@
    "nome": "OCEANPACT SERVIÇOS MARITIMOS S.A.",
    "classe": "acao",
    "i0": 2748,
-   "n": 1440,
+   "n": 1441,
    "liqMax": 20342142,
    "liq": 20342142,
    "neg": 1.0
@@ -3103,7 +3103,7 @@
    "nome": "ORIZON VALORIZAÇÃO DE RESÍDUOS S.A.",
    "classe": "acao",
    "i0": 2749,
-   "n": 1439,
+   "n": 1440,
    "liqMax": 69014691,
    "liq": 69014691,
    "neg": 1.0
@@ -3113,7 +3113,7 @@
    "nome": "OURINVEST JPP FUNDO DE INVESTIMENTO IMOBILIÁRIO RL",
    "classe": "fii",
    "i0": 1924,
-   "n": 2264,
+   "n": 2265,
    "liqMax": 1166087,
    "liq": 602133,
    "neg": 1.0
@@ -3123,9 +3123,9 @@
    "nome": "BTG Tesouro IPCA ultralongo",
    "classe": "etf",
    "i0": 3753,
-   "n": 435,
+   "n": 436,
    "liqMax": 3643916,
-   "liq": 2934214,
+   "liq": 2936441,
    "neg": 1.0
   },
   {
@@ -3133,9 +3133,9 @@
    "nome": "BTG IMA-B 5",
    "classe": "etf",
    "i0": 3897,
-   "n": 291,
+   "n": 292,
    "liqMax": 4938706,
-   "liq": 3043500,
+   "liq": 3007435,
    "neg": 1.0
   },
   {
@@ -3143,9 +3143,9 @@
    "nome": "BTG IMA-B",
    "classe": "etf",
    "i0": 3897,
-   "n": 291,
+   "n": 292,
    "liqMax": 3032088,
-   "liq": 2369940,
+   "liq": 2365610,
    "neg": 1.0
   },
   {
@@ -3153,7 +3153,7 @@
    "nome": "CIA BRASILEIRA DE DISTRIBUICAO",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 288000826,
    "liq": 21574059,
    "neg": 1.0,
@@ -3185,7 +3185,7 @@
    "nome": "PETROLEO BRASILEIRO S.A. PETROBRAS",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 859025334,
    "liq": 760750955,
    "neg": 1.0
@@ -3195,7 +3195,7 @@
    "nome": "PETROLEO BRASILEIRO S.A. PETROBRAS",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 3152709206,
    "liq": 2507598702,
    "neg": 1.0
@@ -3205,7 +3205,7 @@
    "nome": "PROFARMA DISTRIB PROD FARMACEUTICOS S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 6856422,
    "liq": 1583381,
    "neg": 1.0
@@ -3215,7 +3215,7 @@
    "nome": "EMPREENDIMENTOS PAGUE MENOS S.A.",
    "classe": "acao",
    "i0": 2641,
-   "n": 1547,
+   "n": 1548,
    "liqMax": 43774413,
    "liq": 43774413,
    "neg": 1.0,
@@ -3231,9 +3231,9 @@
    "nome": "It Now IBrX-50",
    "classe": "etf",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 29593421,
-   "liq": 3117341,
+   "liq": 3124744,
    "neg": 1.0
   },
   {
@@ -3241,7 +3241,7 @@
    "nome": "BCO PINE S.A",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 18988149,
    "liq": 15677523,
    "neg": 1.0
@@ -3251,7 +3251,7 @@
    "nome": "PLANO & PLANO DESENVOLVIMENTO IMOBILIÁRIO S.A.",
    "classe": "acao",
    "i0": 2651,
-   "n": 1537,
+   "n": 1538,
    "liqMax": 58966394,
    "liq": 23757572,
    "neg": 1.0
@@ -3261,7 +3261,7 @@
    "nome": "PARANAPANEMA S.A. - EM RECUPERAÇÃO JUDICIAL",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 16950466,
    "liq": 6536118,
    "neg": 1.0,
@@ -3285,7 +3285,7 @@
    "nome": "DIMED S.A. DISTRIBUIDORA DE MEDICAMENTOS",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 20314218,
    "liq": 14680237,
    "neg": 1.0
@@ -3295,7 +3295,7 @@
    "nome": "MARCOPOLO S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 10357993,
    "liq": 9937736,
    "neg": 1.0
@@ -3305,7 +3305,7 @@
    "nome": "MARCOPOLO S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 120057116,
    "liq": 88998996,
    "neg": 1.0
@@ -3315,7 +3315,7 @@
    "nome": "POLO CREDITO IMOBILIARIO - FUNDO DE INVESTIMENTO IMOBILIARIO",
    "classe": "fii",
    "i0": 1136,
-   "n": 3052,
+   "n": 3053,
    "liqMax": 5951452,
    "liq": 634466,
    "neg": 1.0
@@ -3325,7 +3325,7 @@
    "nome": "POSITIVO TECNOLOGIA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 126225903,
    "liq": 4980469,
    "neg": 1.0
@@ -3335,7 +3335,7 @@
    "nome": "PDPSC FII",
    "classe": "fii",
    "i0": 1135,
-   "n": 3053,
+   "n": 3054,
    "liqMax": 2809614,
    "liq": 494127,
    "neg": 1.0
@@ -3345,7 +3345,7 @@
    "nome": "PRIO S.A.",
    "classe": "acao",
    "i0": 202,
-   "n": 3986,
+   "n": 3987,
    "liqMax": 975575219,
    "liq": 615606463,
    "neg": 1.0,
@@ -3365,7 +3365,7 @@
    "nome": "PRINER SERVIÇOS INDUSTRIAIS S.A.",
    "classe": "acao",
    "i0": 2504,
-   "n": 1684,
+   "n": 1685,
    "liqMax": 14653899,
    "liq": 13913332,
    "neg": 1.0
@@ -3375,7 +3375,7 @@
    "nome": "PORTO SEGURO S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 133446093,
    "liq": 109298523,
    "neg": 1.0
@@ -3385,7 +3385,7 @@
    "nome": "PBG S/A",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 59216320,
    "liq": 1282439,
    "neg": 1.0
@@ -3395,7 +3395,7 @@
    "nome": "VBI PRIME FII RL",
    "classe": "fii",
    "i0": 3485,
-   "n": 703,
+   "n": 704,
    "liqMax": 7553956,
    "liq": 5122717,
    "neg": 1.0
@@ -3405,9 +3405,9 @@
    "nome": "QR bitcoin",
    "classe": "etf",
    "i0": 2836,
-   "n": 1352,
+   "n": 1353,
    "liqMax": 15646107,
-   "liq": 3810255,
+   "liq": 3847058,
    "neg": 1.0
   },
   {
@@ -3415,9 +3415,9 @@
    "nome": "QR ethereum",
    "classe": "etf",
    "i0": 2864,
-   "n": 1324,
+   "n": 1325,
    "liqMax": 7629821,
-   "liq": 500632,
+   "liq": 487137,
    "neg": 1.0
   },
   {
@@ -3425,9 +3425,9 @@
    "nome": "Buena Vista Nasdaq-100 high income",
    "classe": "etf",
    "i0": 3897,
-   "n": 291,
-   "liqMax": 3822234,
-   "liq": 3822234,
+   "n": 292,
+   "liqMax": 4014112,
+   "liq": 4014112,
    "neg": 1.0
   },
   {
@@ -3435,9 +3435,9 @@
    "nome": "Buena Vista V (Nasdaq-100)",
    "classe": "etf",
    "i0": 3710,
-   "n": 478,
+   "n": 479,
    "liqMax": 2400813,
-   "liq": 145554,
+   "liq": 144987,
    "neg": 1.0
   },
   {
@@ -3445,9 +3445,9 @@
    "nome": "QR solana",
    "classe": "etf",
    "i0": 3632,
-   "n": 556,
+   "n": 557,
    "liqMax": 3928770,
-   "liq": 402318,
+   "liq": 390695,
    "neg": 1.0
   },
   {
@@ -3455,7 +3455,7 @@
    "nome": "QUALICORP CONSULTORIA E CORRETORA DE SEGUROS S.A.",
    "classe": "acao",
    "i0": 369,
-   "n": 3819,
+   "n": 3820,
    "liqMax": 167000086,
    "liq": 8848748,
    "neg": 1.0
@@ -3465,7 +3465,7 @@
    "nome": "RAIA DROGASIL S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 257365507,
    "liq": 236953267,
    "neg": 1.0
@@ -3475,7 +3475,7 @@
    "nome": "RUMO S.A.",
    "classe": "acao",
    "i0": 1299,
-   "n": 2889,
+   "n": 2890,
    "liqMax": 349343821,
    "liq": 249182773,
    "neg": 1.0
@@ -3485,7 +3485,7 @@
    "nome": "RAÍZEN S.A.",
    "classe": "acao",
    "i0": 2866,
-   "n": 1322,
+   "n": 1323,
    "liqMax": 115286974,
    "liq": 115286974,
    "neg": 1.0,
@@ -3505,7 +3505,7 @@
    "nome": "IRANI PAPEL E EMBALAGEM S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 20930162,
    "liq": 8361716,
    "neg": 1.0,
@@ -3525,7 +3525,7 @@
    "nome": "RANDONCORP S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 56939648,
    "liq": 24458824,
    "neg": 1.0,
@@ -3541,7 +3541,7 @@
    "nome": "RIO BRAVO FUNDOS DE INVESTIMENTO IMOBILIÁRIO - FII",
    "classe": "fii",
    "i0": 2592,
-   "n": 1596,
+   "n": 1597,
    "liqMax": 1245773,
    "liq": 283333,
    "neg": 1.0
@@ -3551,7 +3551,7 @@
    "nome": "PÁTRIA LOGÍSTICA II FII",
    "classe": "fii",
    "i0": 2999,
-   "n": 1189,
+   "n": 1190,
    "liqMax": 1605263,
    "liq": 1437088,
    "neg": 1.0
@@ -3561,7 +3561,7 @@
    "nome": "FUNDO DE INVESTIMENTO IMOBILIARIO PÁTRIA PROPERTIES",
    "classe": "fii",
    "i0": 2133,
-   "n": 2055,
+   "n": 2056,
    "liqMax": 3722621,
    "liq": 1209157,
    "neg": 1.0
@@ -3571,7 +3571,7 @@
    "nome": "PATRIA HIGH G FII",
    "classe": "fii",
    "i0": 2062,
-   "n": 2126,
+   "n": 2127,
    "liqMax": 6096078,
    "liq": 3920268,
    "neg": 0.794
@@ -3581,7 +3581,7 @@
    "nome": "PATRIA CREDITO FII",
    "classe": "fii",
    "i0": 2319,
-   "n": 1869,
+   "n": 1870,
    "liqMax": 6149118,
    "liq": 4359773,
    "neg": 1.0
@@ -3591,7 +3591,7 @@
    "nome": "RIO BRAVO RENDA VAREJO FII DE RESPONSABILIDADE LIMITADA",
    "classe": "fii",
    "i0": 2305,
-   "n": 1883,
+   "n": 1884,
    "liqMax": 3336626,
    "liq": 2052946,
    "neg": 1.0,
@@ -3607,7 +3607,7 @@
    "nome": "FUNDO DE INV. IMOBILIÁRIO RIO BRAVO RENDA CORPORATIVA",
    "classe": "fii",
    "i0": 2437,
-   "n": 1751,
+   "n": 1752,
    "liqMax": 2474152,
    "liq": 818658,
    "neg": 1.0
@@ -3617,7 +3617,7 @@
    "nome": "RECRUSUL S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 22325624,
    "liq": 290598,
    "neg": 1.0,
@@ -3705,7 +3705,7 @@
    "nome": "RECRUSUL S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 33978339,
    "liq": 1419566,
    "neg": 1.0,
@@ -3789,7 +3789,7 @@
    "nome": "REDE D'OR SÃO LUIZ S.A.",
    "classe": "acao",
    "i0": 2710,
-   "n": 1478,
+   "n": 1479,
    "liqMax": 362343380,
    "liq": 326678159,
    "neg": 1.0
@@ -3799,7 +3799,7 @@
    "nome": "FII REC RECEBIVEIS IMOBILIARIOS",
    "classe": "fii",
    "i0": 2828,
-   "n": 1360,
+   "n": 1361,
    "liqMax": 8495751,
    "liq": 3671000,
    "neg": 1.0,
@@ -3815,7 +3815,7 @@
    "nome": "FUNDO REC RENDA IMOBILIARIA",
    "classe": "fii",
    "i0": 2304,
-   "n": 1884,
+   "n": 1885,
    "liqMax": 3229225,
    "liq": 351465,
    "neg": 1.0
@@ -3825,7 +3825,7 @@
    "nome": "PETRORECÔNCAVO S.A.",
    "classe": "acao",
    "i0": 2802,
-   "n": 1386,
+   "n": 1387,
    "liqMax": 91554057,
    "liq": 25251505,
    "neg": 1.0
@@ -3835,7 +3835,7 @@
    "nome": "LOCALIZA RENT A CAR S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 619812140,
    "liq": 583275349,
    "neg": 1.0
@@ -3845,7 +3845,7 @@
    "nome": "LOCALIZA RENT A CAR S.A.",
    "classe": "acao",
    "i0": 3965,
-   "n": 223,
+   "n": 224,
    "liqMax": 22952436,
    "liq": 8541639,
    "neg": 1.0
@@ -3855,7 +3855,7 @@
    "nome": "GUARARAPES CONFECCOES S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 27360506,
    "liq": 22522580,
    "neg": 1.0,
@@ -3871,7 +3871,7 @@
    "nome": "ROMI S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 55470843,
    "liq": 2228590,
    "neg": 1.0
@@ -3881,9 +3881,9 @@
    "nome": "ITAÚ ASSET RURAL FIAGRO RESPONSABILIDADE LIMITADA",
    "classe": "fii",
    "i0": 3012,
-   "n": 1176,
+   "n": 1177,
    "liqMax": 5484484,
-   "liq": 2715446,
+   "liq": 2725325,
    "neg": 1.0
   },
   {
@@ -3891,9 +3891,9 @@
    "nome": "FIAGRO RIZA AGRO IMOBILIÁRIO",
    "classe": "fii",
    "i0": 2914,
-   "n": 1274,
+   "n": 1275,
    "liqMax": 2850375,
-   "liq": 1180232,
+   "liq": 1181135,
    "neg": 1.0
   },
   {
@@ -3901,7 +3901,7 @@
    "nome": "RIZA AKIN FII RL",
    "classe": "fii",
    "i0": 3487,
-   "n": 701,
+   "n": 702,
    "liqMax": 2942524,
    "liq": 1352198,
    "neg": 1.0
@@ -3911,7 +3911,7 @@
    "nome": "FUNDO DE INVESTIMENTO IMOBILIÁRIO RIZA TERRAX",
    "classe": "fii",
    "i0": 3485,
-   "n": 703,
+   "n": 704,
    "liqMax": 5636759,
    "liq": 4418915,
    "neg": 1.0
@@ -3921,7 +3921,7 @@
    "nome": "BCO SANTANDER (BRASIL) S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 164695020,
    "liq": 134420265,
    "neg": 1.0
@@ -3931,7 +3931,7 @@
    "nome": "BCO SANTANDER (BRASIL) S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 6121817,
    "liq": 2668180,
    "neg": 1.0
@@ -3941,7 +3941,7 @@
    "nome": "BCO SANTANDER (BRASIL) S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 6513919,
    "liq": 3708486,
    "neg": 1.0
@@ -3951,7 +3951,7 @@
    "nome": "BRADSAÚDE S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 113846591,
    "liq": 111953505,
    "neg": 1.0
@@ -3961,7 +3961,7 @@
    "nome": "GRUPO SBF S.A.",
    "classe": "acao",
    "i0": 2296,
-   "n": 1892,
+   "n": 1893,
    "liqMax": 82438706,
    "liq": 42198356,
    "neg": 1.0,
@@ -3977,7 +3977,7 @@
    "nome": "CIA SANEAMENTO BASICO EST SAO PAULO",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 752874513,
    "liq": 725064622,
    "neg": 1.0
@@ -3987,7 +3987,7 @@
    "nome": "SER EDUCACIONAL S.A.",
    "classe": "acao",
    "i0": 948,
-   "n": 3240,
+   "n": 3241,
    "liqMax": 33584662,
    "liq": 16767402,
    "neg": 1.0
@@ -3997,7 +3997,7 @@
    "nome": "SCHULZ S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 7144103,
    "liq": 3180418,
    "neg": 1.0
@@ -4007,7 +4007,7 @@
    "nome": "SIMPAR S.A.",
    "classe": "acao",
    "i0": 2651,
-   "n": 1537,
+   "n": 1538,
    "liqMax": 73979981,
    "liq": 67677935,
    "neg": 1.0,
@@ -4023,7 +4023,7 @@
    "nome": "SLC AGRICOLA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 112185894,
    "liq": 52928658,
    "neg": 1.0
@@ -4033,9 +4033,9 @@
    "nome": "It Now Small Caps",
    "classe": "etf",
    "i0": 2493,
-   "n": 1695,
+   "n": 1696,
    "liqMax": 35697865,
-   "liq": 4761117,
+   "liq": 4782211,
    "neg": 1.0
   },
   {
@@ -4043,9 +4043,9 @@
    "nome": "iShares Small Cap",
    "classe": "etf",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 775295046,
-   "liq": 734307030,
+   "liq": 739147235,
    "neg": 1.0
   },
   {
@@ -4053,7 +4053,7 @@
    "nome": "SMARTFIT ESCOLA DE GINÁSTICA E DANÇA S.A.",
    "classe": "acao",
    "i0": 2850,
-   "n": 1338,
+   "n": 1339,
    "liqMax": 237807431,
    "liq": 237807431,
    "neg": 1.0
@@ -4063,7 +4063,7 @@
    "nome": "SAO MARTINHO S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 82643981,
    "liq": 41288891,
    "neg": 1.0
@@ -4073,9 +4073,9 @@
    "nome": "SUNO AGRO - FIAGRO - IMOBILIARIO",
    "classe": "fii",
    "i0": 3117,
-   "n": 1071,
+   "n": 1072,
    "liqMax": 2563208,
-   "liq": 2202995,
+   "liq": 2205557,
    "neg": 1.0
   },
   {
@@ -4083,7 +4083,7 @@
    "nome": "SUNO CRI FII RL",
    "classe": "fii",
    "i0": 2998,
-   "n": 1190,
+   "n": 1191,
    "liqMax": 2885705,
    "liq": 396478,
    "neg": 1.0
@@ -4093,7 +4093,7 @@
    "nome": "FUNDO DE INVESTIMENTO IMOBILIÁRIO SUNO ENERGIAS LIMPAS",
    "classe": "fii",
    "i0": 3455,
-   "n": 733,
+   "n": 734,
    "liqMax": 8716507,
    "liq": 8716507,
    "neg": 1.0
@@ -4103,7 +4103,7 @@
    "nome": "BOA SAFRA SEMENTES S.A.",
    "classe": "acao",
    "i0": 2799,
-   "n": 1389,
+   "n": 1390,
    "liqMax": 14758898,
    "liq": 6294694,
    "neg": 1.0
@@ -4113,9 +4113,9 @@
    "nome": "Hashdex solana",
    "classe": "etf",
    "i0": 3702,
-   "n": 486,
+   "n": 487,
    "liqMax": 4210556,
-   "liq": 1543578,
+   "liq": 1463968,
    "neg": 1.0
   },
   {
@@ -4123,9 +4123,9 @@
    "nome": "BTG S&P 500",
    "classe": "etf",
    "i0": 2896,
-   "n": 1292,
+   "n": 1293,
    "liqMax": 1860385,
-   "liq": 1124928,
+   "liq": 1135544,
    "neg": 1.0
   },
   {
@@ -4133,9 +4133,9 @@
    "nome": "It Now S&P 500",
    "classe": "etf",
    "i0": 1257,
-   "n": 2931,
+   "n": 2932,
    "liqMax": 32863960,
-   "liq": 22810476,
+   "liq": 23367873,
    "neg": 1.0,
    "saltos": [
     [
@@ -4149,9 +4149,9 @@
    "nome": "It Now S&P 500 quanto (sem câmbio)",
    "classe": "etf",
    "i0": 3897,
-   "n": 291,
-   "liqMax": 36921867,
-   "liq": 36921867,
+   "n": 292,
+   "liqMax": 37074026,
+   "liq": 37074026,
    "neg": 1.0
   },
   {
@@ -4159,7 +4159,7 @@
    "nome": "SPX REAL ESTATE FII",
    "classe": "fii",
    "i0": 3118,
-   "n": 1070,
+   "n": 1071,
    "liqMax": 1323338,
    "liq": 452398,
    "neg": 1.0
@@ -4169,9 +4169,9 @@
    "nome": "Buena Vista S&P 500 high income",
    "classe": "etf",
    "i0": 3497,
-   "n": 691,
+   "n": 692,
    "liqMax": 5287523,
-   "liq": 5069342,
+   "liq": 5071427,
    "neg": 1.0
   },
   {
@@ -4179,7 +4179,7 @@
    "nome": "SUZANO S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 627308381,
    "liq": 409145292,
    "neg": 1.0
@@ -4189,9 +4189,9 @@
    "nome": "Investo S&P SmallCap 600 value",
    "classe": "etf",
    "i0": 3098,
-   "n": 1090,
+   "n": 1091,
    "liqMax": 1858501,
-   "liq": 425244,
+   "liq": 435812,
    "neg": 1.0
   },
   {
@@ -4199,7 +4199,7 @@
    "nome": "SYN PROP & TECH S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 19861104,
    "liq": 1839854,
    "neg": 1.0,
@@ -4223,7 +4223,7 @@
    "nome": "TRANSMISSORA ALIANÇA DE ENERGIA ELÉTRICA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 104673796,
    "liq": 99484769,
    "neg": 1.0
@@ -4233,7 +4233,7 @@
    "nome": "TRANSMISSORA ALIANÇA DE ENERGIA ELÉTRICA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 3067114,
    "liq": 1892310,
    "neg": 1.0
@@ -4243,7 +4243,7 @@
    "nome": "TRANSMISSORA ALIANÇA DE ENERGIA ELÉTRICA S.A.",
    "classe": "acao",
    "i0": 1818,
-   "n": 2370,
+   "n": 2371,
    "liqMax": 5597279,
    "liq": 4197694,
    "neg": 1.0
@@ -4253,7 +4253,7 @@
    "nome": "TAURUS ARMAS S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 8660679,
    "liq": 628315,
    "neg": 1.0,
@@ -4297,7 +4297,7 @@
    "nome": "TAURUS ARMAS S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 84670101,
    "liq": 10208622,
    "neg": 1.0,
@@ -4325,9 +4325,9 @@
    "nome": "It Now NYSE FANG+",
    "classe": "etf",
    "i0": 2797,
-   "n": 1391,
+   "n": 1392,
    "liqMax": 19899847,
-   "liq": 12753196,
+   "liq": 12961276,
    "neg": 1.0
   },
   {
@@ -4335,7 +4335,7 @@
    "nome": "CONSTRUTORA TENDA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 134907343,
    "liq": 130109129,
    "neg": 1.0,
@@ -4351,7 +4351,7 @@
    "nome": "FII TELLUS PROP",
    "classe": "fii",
    "i0": 2556,
-   "n": 1632,
+   "n": 1633,
    "liqMax": 3084441,
    "liq": 2795121,
    "neg": 1.0
@@ -4361,7 +4361,7 @@
    "nome": "TRACK & FIELD CO S.A.",
    "classe": "acao",
    "i0": 2676,
-   "n": 1512,
+   "n": 1513,
    "liqMax": 17196741,
    "liq": 16456870,
    "neg": 1.0
@@ -4371,7 +4371,7 @@
    "nome": "FII TG ATIVO REAL",
    "classe": "fii",
    "i0": 1893,
-   "n": 2295,
+   "n": 2296,
    "liqMax": 10951947,
    "liq": 3934443,
    "neg": 1.0
@@ -4381,7 +4381,7 @@
    "nome": "TEGMA GESTAO LOGISTICA S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 19487746,
    "liq": 16996260,
    "neg": 1.0
@@ -4391,7 +4391,7 @@
    "nome": "TIM S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 175231739,
    "liq": 175231739,
    "neg": 1.0
@@ -4401,7 +4401,7 @@
    "nome": "TJK RENDA IMOBILIARIA FII - RESPONSABILIDADE LIMITADA",
    "classe": "fii",
    "i0": 3492,
-   "n": 696,
+   "n": 697,
    "liqMax": 1266862,
    "liq": 1209703,
    "neg": 1.0
@@ -4411,7 +4411,7 @@
    "nome": "TOTVS S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 239893676,
    "liq": 212014501,
    "neg": 1.0
@@ -4421,7 +4421,7 @@
    "nome": "TELLUS RIO BRAVO RENDA LOGISTICA FII DE RESP LTDA",
    "classe": "fii",
    "i0": 3376,
-   "n": 812,
+   "n": 813,
    "liqMax": 2166807,
    "liq": 863670,
    "neg": 1.0
@@ -4431,9 +4431,9 @@
    "nome": "Trígono Teva mid/small caps",
    "classe": "etf",
    "i0": 2933,
-   "n": 1255,
+   "n": 1256,
    "liqMax": 1741830,
-   "liq": 430626,
+   "liq": 432271,
    "neg": 1.0
   },
   {
@@ -4441,7 +4441,7 @@
    "nome": "TRISUL S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 30181652,
    "liq": 2024857,
    "neg": 1.0
@@ -4451,7 +4451,7 @@
    "nome": "TRX REAL ESTATE II FUNDO DE INVESTIMENTO IMOBILIÁRIO - FII",
    "classe": "fii",
    "i0": 3489,
-   "n": 699,
+   "n": 700,
    "liqMax": 15522241,
    "liq": 15522124,
    "neg": 0.968
@@ -4461,7 +4461,7 @@
    "nome": "TRX REAL ESTATE FUNDO DE INVESTIMENTO IMOBILIÁRIO - FII",
    "classe": "fii",
    "i0": 2487,
-   "n": 1701,
+   "n": 1702,
    "liqMax": 40444829,
    "liq": 40444829,
    "neg": 1.0
@@ -4471,7 +4471,7 @@
    "nome": "TRÊS TENTOS AGROINDUSTRIAL S/A",
    "classe": "acao",
    "i0": 2852,
-   "n": 1336,
+   "n": 1337,
    "liqMax": 30029081,
    "liq": 27977826,
    "neg": 1.0
@@ -4481,7 +4481,7 @@
    "nome": "TUPY S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 36428586,
    "liq": 19582128,
    "neg": 1.0
@@ -4491,7 +4491,7 @@
    "nome": "ULTRAPAR PARTICIPACOES S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 424490738,
    "liq": 401745129,
    "neg": 1.0,
@@ -4511,7 +4511,7 @@
    "nome": "UNIPAR CARBOCLORO S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 7159878,
    "liq": 359895,
    "neg": 1.0
@@ -4521,7 +4521,7 @@
    "nome": "UNIPAR CARBOCLORO S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 45298594,
    "liq": 18722151,
    "neg": 1.0
@@ -4531,9 +4531,9 @@
    "nome": "Renda fixa EUA (em reais)",
    "classe": "etf",
    "i0": 3099,
-   "n": 1089,
+   "n": 1090,
    "liqMax": 2349858,
-   "liq": 1711754,
+   "liq": 1726710,
    "neg": 1.0
   },
   {
@@ -4541,7 +4541,7 @@
    "nome": "USINAS SID DE MINAS GERAIS S.A.-USIMINAS",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 27421639,
    "liq": 5674692,
    "neg": 1.0
@@ -4551,7 +4551,7 @@
    "nome": "USINAS SID DE MINAS GERAIS S.A.-USIMINAS",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 450336533,
    "liq": 87262212,
    "neg": 1.0
@@ -4561,9 +4561,9 @@
    "nome": "Investo EUA tecnologia",
    "classe": "etf",
    "i0": 2860,
-   "n": 1328,
+   "n": 1329,
    "liqMax": 2079954,
-   "liq": 275444,
+   "liq": 280002,
    "neg": 1.0
   },
   {
@@ -4571,9 +4571,9 @@
    "nome": "Trend EUA tecnologia",
    "classe": "etf",
    "i0": 3061,
-   "n": 1127,
-   "liqMax": 3386584,
-   "liq": 3386584,
+   "n": 1128,
+   "liqMax": 3389478,
+   "liq": 3389478,
    "neg": 1.0
   },
   {
@@ -4581,7 +4581,7 @@
    "nome": "VALE S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 3017807824,
    "liq": 1756052847,
    "neg": 1.0
@@ -4591,7 +4591,7 @@
    "nome": "VAMOS LOCAÇÃO DE CAMINHÕES, MÁQUINAS E EQUIPAMENTOS S.A.",
    "classe": "acao",
    "i0": 2740,
-   "n": 1448,
+   "n": 1449,
    "liqMax": 117297920,
    "liq": 107572272,
    "neg": 1.0,
@@ -4607,7 +4607,7 @@
    "nome": "VIBRA ENERGIA S/A",
    "classe": "acao",
    "i0": 2027,
-   "n": 2161,
+   "n": 2162,
    "liqMax": 477459970,
    "liq": 459119934,
    "neg": 1.0
@@ -4617,7 +4617,7 @@
    "nome": "VECTIS JUROS REAL FUNDO DE INVESTIMENTO IMOBILIÁRIO - FII",
    "classe": "fii",
    "i0": 2490,
-   "n": 1698,
+   "n": 1699,
    "liqMax": 3544886,
    "liq": 2702368,
    "neg": 0.794
@@ -4627,9 +4627,9 @@
    "nome": "VECTIS DATAGRO CRÉDITO AGRONEGÓCIO FI LTDA",
    "classe": "fii",
    "i0": 3091,
-   "n": 1097,
+   "n": 1098,
    "liqMax": 1632868,
-   "liq": 441557,
+   "liq": 452331,
    "neg": 1.0
   },
   {
@@ -4637,7 +4637,7 @@
    "nome": "VALORA HEDGE FII",
    "classe": "fii",
    "i0": 3490,
-   "n": 698,
+   "n": 699,
    "liqMax": 5747359,
    "liq": 2677963,
    "neg": 1.0
@@ -4647,9 +4647,9 @@
    "nome": "VALORA CRA FUNDO DE I. NAS C. P. A. - FIAGRO R. LIMITADA",
    "classe": "fii",
    "i0": 2956,
-   "n": 1232,
+   "n": 1233,
    "liqMax": 5246621,
-   "liq": 1622724,
+   "liq": 1619737,
    "neg": 1.0
   },
   {
@@ -4657,7 +4657,7 @@
    "nome": "VALORA CRI FII RL",
    "classe": "fii",
    "i0": 2526,
-   "n": 1662,
+   "n": 1663,
    "liqMax": 4042021,
    "liq": 2064532,
    "neg": 1.0
@@ -4667,7 +4667,7 @@
    "nome": "VALORA CRI CDI FII",
    "classe": "fii",
    "i0": 2122,
-   "n": 2066,
+   "n": 2067,
    "liqMax": 6134477,
    "liq": 5345844,
    "neg": 1.0
@@ -4677,7 +4677,7 @@
    "nome": "VINCI LOGISTICA FUNDO DE INVESTIMENTO IMOBILIARIO",
    "classe": "fii",
    "i0": 2275,
-   "n": 1913,
+   "n": 1914,
    "liqMax": 7361318,
    "liq": 3320996,
    "neg": 1.0
@@ -4687,7 +4687,7 @@
    "nome": "VINCI OFFICES FUNDO DE INVESTIMENTO IMOBILIÁRIO",
    "classe": "fii",
    "i0": 2451,
-   "n": 1737,
+   "n": 1738,
    "liqMax": 4532249,
    "liq": 330968,
    "neg": 1.0
@@ -4697,7 +4697,7 @@
    "nome": "VINCI SHOPPING CENTERS FUNDO DE INVESTIMENTO IMOBILIÁRIO-FII",
    "classe": "fii",
    "i0": 1940,
-   "n": 2248,
+   "n": 2249,
    "liqMax": 12919119,
    "liq": 8460479,
    "neg": 1.0
@@ -4707,7 +4707,7 @@
    "nome": "VITTIA S.A.",
    "classe": "acao",
    "i0": 2886,
-   "n": 1302,
+   "n": 1303,
    "liqMax": 4480330,
    "liq": 1129365,
    "neg": 1.0
@@ -4717,7 +4717,7 @@
    "nome": "VIVARA PARTICIPAÇÕES S.A.",
    "classe": "acao",
    "i0": 2419,
-   "n": 1769,
+   "n": 1770,
    "liqMax": 136445553,
    "liq": 84159065,
    "neg": 1.0
@@ -4727,7 +4727,7 @@
    "nome": "TELEFÔNICA BRASIL S.A",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 214106385,
    "liq": 206080250,
    "neg": 1.0
@@ -4737,7 +4737,7 @@
    "nome": "VALID SOLUÇÕES S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 28694751,
    "liq": 5121662,
    "neg": 1.0
@@ -4747,7 +4747,7 @@
    "nome": "FATOR VERITA FII",
    "classe": "fii",
    "i0": 1135,
-   "n": 3053,
+   "n": 3054,
    "liqMax": 3967437,
    "liq": 1792528,
    "neg": 1.0
@@ -4757,7 +4757,7 @@
    "nome": "VITRU EDUCAÇÃO S.A.",
    "classe": "acao",
    "i0": 3575,
-   "n": 613,
+   "n": 614,
    "liqMax": 19210928,
    "liq": 19210928,
    "neg": 1.0
@@ -4767,7 +4767,7 @@
    "nome": "VULCABRAS S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 38949205,
    "liq": 36326932,
    "neg": 1.0,
@@ -4787,7 +4787,7 @@
    "nome": "CM HOSPITALAR S.A",
    "classe": "acao",
    "i0": 2868,
-   "n": 1320,
+   "n": 1321,
    "liqMax": 16390928,
    "liq": 1343844,
    "neg": 1.0
@@ -4797,7 +4797,7 @@
    "nome": "WEG S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 579583292,
    "liq": 579583292,
    "neg": 1.0
@@ -4807,7 +4807,7 @@
    "nome": "WIZ CO PARTICIPAÇÕES E CORRETAGEM DE SEGUROS S.A.",
    "classe": "acao",
    "i0": 1341,
-   "n": 2847,
+   "n": 2848,
    "liqMax": 76772229,
    "liq": 5743816,
    "neg": 1.0
@@ -4817,9 +4817,9 @@
    "nome": "Investo FTSE global",
    "classe": "etf",
    "i0": 2917,
-   "n": 1271,
-   "liqMax": 12211891,
-   "liq": 12211891,
+   "n": 1272,
+   "liqMax": 12497508,
+   "liq": 12497508,
    "neg": 1.0
   },
   {
@@ -4827,9 +4827,9 @@
    "nome": "Caixa Ibovespa",
    "classe": "etf",
    "i0": 710,
-   "n": 3478,
+   "n": 3479,
    "liqMax": 4871908,
-   "liq": 32315,
+   "liq": 32345,
    "neg": 1.0
   },
   {
@@ -4837,9 +4837,9 @@
    "nome": "Trend China",
    "classe": "etf",
    "i0": 2713,
-   "n": 1475,
+   "n": 1476,
    "liqMax": 30384909,
-   "liq": 1379519,
+   "liq": 1398715,
    "neg": 1.0
   },
   {
@@ -4847,9 +4847,9 @@
    "nome": "XP CRÉDITO AGRÍCOLA-FUNDO DE INVESTIMENTO NAS CADEIAS PROD",
    "classe": "fii",
    "i0": 2938,
-   "n": 1250,
+   "n": 1251,
    "liqMax": 2047122,
-   "liq": 603998,
+   "liq": 602862,
    "neg": 1.0
   },
   {
@@ -4857,7 +4857,7 @@
    "nome": "XP CREDITO IMOBILIÁRIO FII",
    "classe": "fii",
    "i0": 2464,
-   "n": 1724,
+   "n": 1725,
    "liqMax": 4458818,
    "liq": 1740042,
    "neg": 1.0
@@ -4867,7 +4867,7 @@
    "nome": "XP LOG FII RL",
    "classe": "fii",
    "i0": 2577,
-   "n": 1611,
+   "n": 1612,
    "liqMax": 10161734,
    "liq": 8708661,
    "neg": 1.0
@@ -4877,7 +4877,7 @@
    "nome": "XP MALLS FII",
    "classe": "fii",
    "i0": 2577,
-   "n": 1611,
+   "n": 1612,
    "liqMax": 25200804,
    "liq": 24873986,
    "neg": 1.0,
@@ -4897,7 +4897,7 @@
    "nome": "XP SELECTION FUNDO DE INVESTIMENTO IMOBILIÁRIO - FII",
    "classe": "fii",
    "i0": 2504,
-   "n": 1684,
+   "n": 1685,
    "liqMax": 1995841,
    "liq": 712279,
    "neg": 1.0,
@@ -4913,9 +4913,9 @@
    "nome": "Hashdex XRP",
    "classe": "etf",
    "i0": 3897,
-   "n": 291,
+   "n": 292,
    "liqMax": 1398550,
-   "liq": 670747,
+   "liq": 657617,
    "neg": 1.0
   },
   {
@@ -4923,7 +4923,7 @@
    "nome": "YDUQS PARTICIPACOES S.A.",
    "classe": "acao",
    "i0": 1,
-   "n": 4187,
+   "n": 4188,
    "liqMax": 216440595,
    "liq": 63541605,
    "neg": 1.0
@@ -11232,6 +11232,7 @@
   "2026-11-18",
   "2026-11-19",
   "2026-11-23",
-  "2026-11-24"
+  "2026-11-24",
+  "2026-11-25"
  ]
 }
